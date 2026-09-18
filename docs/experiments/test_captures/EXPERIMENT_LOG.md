@@ -356,7 +356,7 @@ girth 18.90 against a 20.5 tape). The knee plane is still the colour fit,
 lets through because the limb itself leans; its oblique slice reads 40.8 cm
 against a 30.0 tape. That is a separate defect, now on the list.
 
-## 13. Still open
+## 12. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).
