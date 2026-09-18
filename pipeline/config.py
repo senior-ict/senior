@@ -232,6 +232,43 @@ CAP_MAX_PTS = 20000
 # cannot currently determine. 0 disables.
 MLS_RADIUS_MULT = 4.0
 
+# A second, wider MLS pass on the limb only, run after the pass above.
+#
+# The 4x pass above denoises each ghost sheet but cannot merge them: on
+# inputs/test6 the two sheets sit ~1 cm apart and 4x spacing is ~1 cm, so each
+# sheet only ever sees itself. Poisson then finds two nearby surfaces, bridges
+# them, and produces a tunnelled solid (chi from -2 to -22 on 5 of 8 runs),
+# which forces the alpha-shape fallback -- and the alpha wrap loose enough to
+# close encloses 13-17% more area than the points on every slice above the
+# calf (measured, docs/experiments/test_captures/ring_gallery.png).
+#
+# A wider pass merges the sheets. Swept offline on 2026-09-18 from the pre-MLS
+# cluster, with the can as the control (its girth is +0.9% against calipers):
+#
+#     second pass    test6 girth   poisson   test6 span      can girth   can vol
+#     none (today)     +10.0%       chi=-6     +38.7% (alpha)   +0.5%     alpha
+#     16x sphere        +9.6%       chi= 2     +15.4%           +0.6%     384.4
+#     24x sphere       +10.0%       chi= 2     +16.7%           +0.6%     386.4
+#
+# 16x closes Poisson on both objects, so the fallback never fires, and the
+# solid's cross-section sits on the points (mesh/ellipse area 0.99 against
+# 1.105 today). It does NOT change the girth -- the merged ring lands between
+# the two sheets, where the ellipse fit already was -- so the residual error it
+# leaves is real and visible rather than hidden under the wrap. Ellipsoidal
+# neighbourhoods were tried and rejected: same girth, same shape, but they
+# leave a strand of the second sheet and Poisson tunnels again.
+#
+# Applied after the first pass, not instead of it: a single 24x pass distorted
+# both objects (test6 girth swung to -12.7%), while 4x-then-24x held. Stacking
+# denoises each sheet before the wide pass has to span them.
+#
+# Radius is in multiples of point spacing, like MLS_RADIUS_MULT, so on a sparser
+# cloud it is a larger physical distance. Validated on two objects only. 0
+# disables; overridable per run without editing this file:
+#
+#     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test6
+MLS_SECOND_RADIUS_MULT = float(os.environ.get("MLS_SECOND_RADIUS_MULT", 0.0))
+
 # Fit a plane rather than a quadratic when smoothing the reference cube.
 #
 # The quadratic exists to preserve curvature on a limb. The reference has none:

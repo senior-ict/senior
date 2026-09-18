@@ -348,7 +348,8 @@ def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
 
     Runs per cluster so no MLS neighbourhood ever spans two objects.
     """
-    from pipeline.config import MLS_RADIUS_MULT, MLS_BOX_POLYNOMIAL
+    from pipeline.config import (MLS_RADIUS_MULT, MLS_BOX_POLYNOMIAL,
+                                 MLS_SECOND_RADIUS_MULT)
     from pipeline.ghost import ghost_voxel_downsample, normal_aware_filter
 
     if cluster is None or len(cluster.points) == 0:
@@ -370,6 +371,15 @@ def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
         points, colours, _ = mls_project(points, colours,
                                          radius_mult=MLS_RADIUS_MULT,
                                          polynomial=use_quadratic)
+        # A second, wider pass merges the ghost double sheet that the first
+        # pass can only denoise. Limb only: the reference cube is planar and
+        # its scale must not move between runs with and without this pass.
+        if (MLS_SECOND_RADIUS_MULT and MLS_SECOND_RADIUS_MULT > 0
+                and label != "box" and len(points) > 50):
+            print(f"  MLS second pass [{label}]:", end=" ")
+            points, colours, _ = mls_project(points, colours,
+                                             radius_mult=MLS_SECOND_RADIUS_MULT,
+                                             polynomial=True)
     return points, colours
 
 
