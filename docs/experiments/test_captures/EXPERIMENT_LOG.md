@@ -162,10 +162,155 @@ the real run to 0.001 but its volume was 5% low. Girth moved about 1% inward.
 | Background job from another repo | ~2.7 GB RAM held by a headless Blender render | `SCG/auto_entity_extraction` runner, state `T` (suspended) | killed; unrelated to this project |
 | Stage 0 refuses a frame | `test5` img7 "cube missing" | cube occluded behind the ankle in that view | correct rejection; ran on the 7 clean frames |
 
-## 8. Still open
+## 8. The cube scale, checked against the 5 cm markers — 2026-09-19
 
-- **Caliper the cube edge.** Decides whether `REFERENCE_REAL_SIZE_CM` should
-  change. Worth 13% of every volume.
+The cube is 10.0 cm and its printed marker 5.0 cm (measured; the cube was 3D
+printed). `pipeline/stages/prep.py` still carried the cardboard cube's
+`FACE_CM = 14.0, MARKER_CM = 6.3`; corrected to 10.0 / 5.0. Only their ratio is
+used, to map a marker's corners out to its face for the Stage 0 crop window
+and clipping gate, so the volume never saw those numbers.
+
+The scale itself was then checked a second way (`marker_scale_check.py`): on
+every frame VGGT was given, detect the markers, read the predicted 3D point
+under each corner, and measure the marker's edges in scene units. 5.0 cm over
+that edge is a cm-per-unit that uses no mesh at all.
+
+```
+                    marker edge at cube scale     marker scale / cube scale
+                    pointmap   depth              linear (pointmap / depth)
+ test1               4.85      4.78               1.030 / 1.046
+ test2               4.89      4.86               1.023 / 1.028
+ test3               4.86      4.84               1.030 / 1.033
+ test4               4.95      4.87               1.010 / 1.026
+ test5               4.86      4.82               1.029 / 1.038
+ test6               4.89      4.88               1.023 / 1.024
+ fanta_orange (can)  4.96      4.98               1.008 / 1.005
+                     true 5.00
+```
+
+The cube-volume scale is not inflated. It reads the marker 1.5–3% **small**
+on the limbs and under 1% small on the can, and the marker's vertical and
+horizontal edges agree (`test6` 4.91 / 4.92, `test5` 4.85 / 4.86), so nothing is stretched along
+one axis. The cube mesh's extents at cube scale are 11.5 × 11.6 × 10.9 cm:
+the mesh bloats sideways from the ghost sheets on its faces while its volume
+stays near 1000, which is why a volume-derived scale is the more robust of the
+two and a face-distance scale would be 15% worse.
+
+This retracts the 2026-09-18 decomposition's "cube-derived scale +4.2%
+linear" term. Under the marker scale the numbers get slightly *larger*, not
+smaller:
+
+```
+                                cube scale      marker scale (pointmap)   truth
+ test6  band separation          28.66 cm        29.3 cm                  27.5 ruler
+ test6  volume (cold run)        1703.9          ~1805                    1398.6 tape
+ can    girth                    18.45           18.6                     18.5
+ can    height                   14.78           14.9                     14.5
+```
+
+So with the cube at 10.0 and the marker at 5.0 both confirmed, VGGT's own
+geometry puts the bands 4–6% further apart than the ruler, and the girth
+over-read is the whole remaining error, not a scale term plus a girth term.
+
+One pattern fits all seven captures: the girth error grows with height above
+the floor cube — `test6` +5% at the ankle band, +15% at the knee band, and
+the same rising shape on `test1`–`test5` — while the rigid can, which stands
+on the floor next to the cube and is only 14.5 cm tall, reads within 1–3%.
+The reference sits at the floor; the measurement is 20–30 cm above it. Scale
+drift with distance from the reference is the open hypothesis. It is testable
+with a second known length up at band height (a ruler standing beside the
+leg, or the cube raised to the upper band) — a capture, not a code change.
+
+**Field of view, checked against the phone's own lens.** The originals
+(`inputs/test6/*.zip`, iPhone 17 main camera, 26 mm equivalent, 4284 × 5712)
+give a true focal of 4290 px, which is 518.8 px on the full-width 518 crop
+VGGT was fed. VGGT's predicted focal, per frame, against that:
+
+```
+ scene         VGGT / true focal      volume error
+ test3          1.01 – 1.06  (median 1.037)   girth +7 / +10%
+ test5          1.01 – 1.07  (median 1.047)   +24.9%
+ test6          1.02 – 1.07  (median 1.037)   +21.8% (cold run)
+ fanta_orange   1.08 – 1.18  (median 1.104)   girth +0.9%, height +1.9%
+```
+
+VGGT's focal runs 2–7% long on the leg scenes (a narrower field of view than
+the lens has) and 10% long on the can scene, assuming the can was shot with
+the same lens. The scene with the largest focal error is the one that reads
+right, so the focal error does not track the volume error. VGGT takes no
+intrinsics as input, so the true focal cannot be supplied to it; a model that
+accepts a known field of view would be the way to test this further. Camera
+geometry is otherwise ordinary: phone ~32 cm above the floor, 6–17° pitch
+down, cube and upper band at the same distance from the camera (ratio 1.07
+on `test6`, 1.01 on `test5`).
+
+## 9. The original photos, and the bug they exposed — 2026-09-19
+
+`test6` was re-run from the phone's HEIC originals (4284 × 5712, iPhone 17)
+instead of the 1108 × 1477 LINE copies, converted to JPEG in
+`inputs/test6_orig/`. Same settings as the cold run (`MLS_SECOND_RADIUS_MULT=16`).
+
+```
+                              volume    err     recon (leg / cube)   voxel   leg pts
+ LINE copies (cold run)       1703.9   +21.8%   Poisson / Poisson    0.0046  27,244
+ originals, same code         1848.9   +32.2%   Poisson / Poisson    0.0079  10,012
+```
+
+Worse, and VGGT's geometry had barely moved (marker edge 4.90 both; green band
+separation 28.95 vs 28.66; raw-cluster girth at the upper band 33.2 vs 32.3).
+The difference was in Stage 3: the denser cloud (762k vs 347k points after
+the 2 mm voxel) got a **coarser** ghost voxel, and every radius downstream
+(dedup, normal filter, MLS 4× and 16×) hangs off that voxel.
+
+**Root cause** (`pipeline/ghost.py`, `compute_voxel_size`): the "mean
+nearest-neighbour distance" was measured on a random 5,000-point sample
+*against itself*. That is the sample's spacing, which grows with the square
+root of the cloud's size, not the cloud's:
+
+```
+                     real spacing   what the code measured   voxel (x0.65)
+ LINE copies          0.0016         0.0071                   0.0046
+ originals            0.0019         0.0123                   0.0079
+```
+
+Fix: build the tree on every point, sample only the queries. `GHOST_VOXEL_FACTOR`
+went from 0.65 to 2.8 so the validated runs keep the voxel they had: `test6`
+LINE gives 0.0046 exactly as before and reproduces (1704.0 vs 1703.9, Poisson
+χ=2 both, girth 19.95 both). The originals now get 0.0054 instead of 0.0079.
+Every constant in the ghost/MLS chain was tuned against the inflated value,
+which is why the factor is rescaled rather than left at 0.65.
+
+**Originals with the fix**: 1625.0 (+16.2%), leg Poisson χ=2 with 23k points
+like the LINE run — but the **cube** fell to the alpha fallback (Poisson
+χ=−2) and came out 12.5 × 12.2 × 10.2 cm, so the volume-derived scale is 6%
+small (marker edge reads 4.72 at cube scale). That number is a scale
+artefact, not an improvement. At the marker scale, which does not depend on
+the cube mesh, the three `test6` runs line up:
+
+```
+                       cube scale   marker/cube   at marker scale
+ LINE copies, fix       1704.0       1.027 lin.    ~1845
+ originals, no fix      1848.9       1.020         ~1963
+ originals, fix         1625.0       1.060         ~1936
+                                                   truth 1398.6
+```
+
+**Can control with the fix**: voxel 0.0040 → 0.0045; the cube now closes
+under Poisson (χ=2, it had fallen to alpha at χ=0) and measures
+10.6 × 10.6 × 10.2 cm; can volume 387.2 → 394.3 against the 394.9 cylinder
+bound, height 14.78 → 14.92 (truth 14.5). Control held.
+
+Full-resolution input does not help: VGGT returns a leg 3–5% fatter from
+the originals than from the LINE copies, with the same cube. Input pixels
+move the answer by a few percent either way; that is the model's noise
+floor, and the +30% at marker scale is the same girth over-read as before.
+
+## 10. Still open
+
+- ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
+  scale is not the error (section 8).
+- **A known length at band height.** Ruler beside the leg or the cube raised
+  to the upper band, to test scale drift with distance from the reference.
 - **Re-shoot `fanta_red` on the matte tile** with a ruler on the band
   separation — the span-on-a-cylinder test.
 - **The projected-plane merge defect** (section 1) is still in the pipeline

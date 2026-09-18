@@ -299,7 +299,13 @@ MLS_BOX_POLYNOMIAL = True
 #   0.5  -> ~59k
 #   0.35 -> ~120k
 #   0    -> dedup disabled entirely; every point kept, ghost layers survive
-GHOST_VOXEL_FACTOR = 0.65
+# The table above was measured with the old spacing estimate, which reported
+# a 5,000-point sample's own spacing (4.3x the real one on the LINE copies of
+# inputs/test6, more on denser clouds). Fixed 2026-09-19 in ghost.py. 2.8 x
+# the real spacing gives the same voxel the validated runs had (0.0046 on
+# test6), and a cloud with more points now gets that voxel instead of a
+# coarser one. Equivalent to the old 0.65 on a ~350k-point cloud.
+GHOST_VOXEL_FACTOR = 2.8
 
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6

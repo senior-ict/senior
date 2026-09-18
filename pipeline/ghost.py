@@ -41,11 +41,19 @@ def compute_voxel_size(points, factor=None, sample_size=5000):
 
     from scipy.spatial import cKDTree
 
+    # The tree is built on EVERY point and only the queries are sampled. The
+    # sample used to be queried against itself, which measured the spacing of
+    # a 5,000-point subset -- a number that grows with the square root of the
+    # cloud's size and says nothing about the cloud. On inputs/test6 it gave
+    # 0.0071 for a cloud whose real mean spacing is 0.0016; the same capture
+    # from the full-resolution originals (twice the points) gave 0.0123 for a
+    # real spacing of 0.0019, so the denser cloud was cleaned more coarsely
+    # and its volume came out 8.5% higher. Measured at 2026-09-19.
     rng = np.random.default_rng(42)
-    pts = points
+    query_points = points
     if len(points) > sample_size:
-        pts = points[rng.choice(len(points), sample_size, replace=False)]
-    dists, _ = cKDTree(pts).query(pts, k=2)
+        query_points = points[rng.choice(len(points), sample_size, replace=False)]
+    dists, _ = cKDTree(points).query(query_points, k=2)
     return max(dists[:, 1].mean() * factor, 0.001)
 
 
