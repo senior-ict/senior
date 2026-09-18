@@ -100,6 +100,9 @@ hf_cache/
 # Data / outputs
 output/
 outputs/
+# Per-capture runs written with --output_dir output_<name>; each holds a ~93 MB
+# predictions.npz and regenerates from inputs/<name> in a couple of minutes.
+output_*/
 results/
 data/
 datasets/

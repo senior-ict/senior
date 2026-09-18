@@ -1,0 +1,16 @@
+subject,side,height_cm,circumference_cm
+test6,leg,0.0,19
+test6,leg,1.5,19
+test6,leg,3.5,19
+test6,leg,5.5,20
+test6,leg,7.5,21
+test6,leg,9.5,22.5
+test6,leg,11.5,24.5
+test6,leg,13.5,26
+test6,leg,15.5,27.5
+test6,leg,17.5,29
+test6,leg,19.5,29.5
+test6,leg,21.5,29.5
+test6,leg,23.5,29
+test6,leg,25.5,28
+test6,leg,27.5,28
