@@ -10,7 +10,7 @@ import numpy as np
 from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
-from pipeline.config import IMAGE_EXTENSIONS
+from pipeline.config import IMAGE_EXTENSIONS, POINTCLOUD_METHOD
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
 
@@ -282,7 +282,11 @@ def main():
                 marker_colour=marker_colour,
                 cut_mode=getattr(args, "cut_mode", None),
                 n_bands=n_bands,
-                band_planes=band_planes)
+                band_planes=band_planes,
+                # A fused cloud has one sheet; the wide merge pass would only
+                # smooth it, and on its sparser spacing crushes the cube.
+                merge_ghost_sheets=(getattr(args, "pointcloud_method", None)
+                                    or POINTCLOUD_METHOD) != "tsdf")
             print(f"[DBG-stage] stage3 clean_and_extract: {time.time() - _dbg_t:.2f}s")
             if object_paths:
                 _dbg_t = time.time()

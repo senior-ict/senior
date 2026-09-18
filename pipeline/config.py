@@ -311,6 +311,36 @@ MLS_BOX_POLYNOMIAL = True
 # coarser one. Equivalent to the old 0.65 on a ~350k-point cloud.
 GHOST_VOXEL_FACTOR = 2.8
 
+# Stage 2 cloud construction
+#
+#     "pointmap"  stack every frame's pointmap, confidence-filtered (the default)
+#     "tsdf"      fuse every frame's depth map into one truncated signed-distance
+#                 volume and take its surface (pipeline/core/tsdf.py)
+#
+# Fusion removes the ghost double sheet by construction. Measured on
+# inputs/test6 on 2026-09-19: cube fill 0.73 -> 0.87, Poisson closes with no
+# MLS merge, girth profile +7.3% -> +5.8%, volume 1704 -> 1686 (tape 1398.6).
+# It is a cleaner surface, not a correction of the over-read. Off by default
+# until it has been run on the cohort against water; the can control has not
+# passed yet (its fused floor remnant merged with the can in DBSCAN).
+#
+#     POINTCLOUD_METHOD=tsdf python run.py -i inputs/test6
+POINTCLOUD_METHOD = os.environ.get("POINTCLOUD_METHOD", "pointmap")
+
+# TSDF voxel edge, in centimetres, converted to scene units through the ArUco
+# markers' scale (no mesh exists yet at Stage 2). 3 mm matches the point
+# density the pointmap path gives Stage 3; 1.5 mm gave ten times the points
+# and the MLS loop took most of an hour on the cube alone.
+TSDF_VOXEL_CM = float(os.environ.get("TSDF_VOXEL_CM", 0.3))
+# Signed-distance truncation, in voxels.
+TSDF_TRUNCATION_VOXELS = 4.0
+# Depth beyond this multiple of the confident pointmap's 95th-percentile
+# depth is not integrated (it would build the far walls and ceiling).
+TSDF_FAR_DEPTH_MULT = 1.2
+# Voxel edge in scene units when no marker is visible to size it in cm.
+# A 10 cm cube is ~0.13 units, so this is about 3 mm.
+TSDF_FALLBACK_VOXEL_UNITS = 0.004
+
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6
 

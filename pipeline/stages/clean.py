@@ -362,10 +362,15 @@ def _ghost_filter_scales(dense_cloud):
     return voxel_size, voxel_size
 
 
-def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
+def _clean_cluster(cluster, label, voxel_size, normal_filter_scale,
+                   merge_ghost_sheets=True):
     """Deduplicate, drop misoriented points, and project onto a fitted surface.
 
     Runs per cluster so no MLS neighbourhood ever spans two objects.
+    `merge_ghost_sheets` False skips the second, wide MLS pass: a cloud that
+    came from TSDF fusion has one sheet already, and on its sparser spacing
+    the 16x radius becomes a 5 cm ball that crushed the reference cube
+    (measured 2026-09-19, cube fill -0.27).
     """
     from pipeline.config import (MLS_RADIUS_MULT, MLS_BOX_POLYNOMIAL,
                                  MLS_SECOND_RADIUS_MULT)
@@ -393,7 +398,8 @@ def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
         # A second, wider pass merges the ghost double sheet that the first
         # pass can only denoise. Limb only: the reference cube is planar and
         # its scale must not move between runs with and without this pass.
-        if (MLS_SECOND_RADIUS_MULT and MLS_SECOND_RADIUS_MULT > 0
+        if (merge_ghost_sheets and MLS_SECOND_RADIUS_MULT
+                and MLS_SECOND_RADIUS_MULT > 0
                 and label != "box" and len(points) > 50):
             print(f"  MLS second pass [{label}]:", end=" ")
             points, colours, _ = mls_project(points, colours,
@@ -496,7 +502,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                             segment_leg=False, segment_height_axis="z",
                             fill_enabled=True, apply_cut=True,
                             override_planes=None, cut_mode=None, n_bands=None,
-                            band_planes=None):
+                            band_planes=None, merge_ghost_sheets=True):
     """Cluster-first clean pipeline.
 
     Phase A: Segment the dense cloud once (floor removal + DBSCAN), detect
@@ -559,8 +565,10 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # decided once, on the denser and better-conditioned cloud.
     voxel_size, nn_scale = _ghost_filter_scales(pcd_dense)
 
-    box_pts_arr, box_cols_arr = _clean_cluster(box_dense, "box", voxel_size, nn_scale)
-    leg_pts_arr, leg_cols_arr = _clean_cluster(obj_dense, "obj", voxel_size, nn_scale)
+    box_pts_arr, box_cols_arr = _clean_cluster(box_dense, "box", voxel_size, nn_scale,
+                                               merge_ghost_sheets=merge_ghost_sheets)
+    leg_pts_arr, leg_cols_arr = _clean_cluster(obj_dense, "obj", voxel_size, nn_scale,
+                                               merge_ghost_sheets=merge_ghost_sheets)
 
     if obj_dense is None and len(box_pts_arr) > 0:
         print("  Only 1 cluster — treating it as the box (no obj)")
@@ -1015,9 +1023,11 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
                       segment_leg=False, segment_height_axis="z",
                       fill_enabled=True, clean_ply_path=None, apply_cut=False,
                       marker_colour=None, override_planes=None, cut_mode=None,
-                      n_bands=None, band_planes=None):
+                      n_bands=None, band_planes=None, merge_ghost_sheets=True):
     """Pipeline wrapper. clean_ply_path is accepted for call-site compatibility
-    and ignored — Stage 3 derives its own ghost-filtered clouds from ply_path."""
+    and ignored — Stage 3 derives its own ghost-filtered clouds from ply_path.
+    `merge_ghost_sheets` False skips the wide second MLS pass, for clouds that
+    came from TSDF fusion and have no second sheet to merge."""
     print()
     print("=" * 60)
     print("STAGE 3: Cleaning point cloud and extracting objects")
@@ -1039,6 +1049,7 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
             cut_mode=cut_mode,
             n_bands=n_bands,
             band_planes=band_planes,
+            merge_ghost_sheets=merge_ghost_sheets,
         )
         print(f"  Extracted {len(object_paths)} objects:")
         for p in object_paths:

@@ -557,6 +557,12 @@ def _projected_band_planes(args, name):
     return []
 
 
+def _cloud_method(args):
+    """Which Stage 2 built the cloud this run reads: the flag, else config."""
+    from pipeline.config import POINTCLOUD_METHOD
+    return getattr(args, "pointcloud_method", None) or POINTCLOUD_METHOD
+
+
 def _review_planes(args):
     """Cutting planes supplied by an interactive review, if any.
 
@@ -601,6 +607,7 @@ def run_stage3(args, name):
         cut_mode=getattr(args, "cut_mode", None),
         n_bands=_detected_band_count(args, name),
         band_planes=_projected_band_planes(args, name),
+        merge_ghost_sheets=_cloud_method(args) != "tsdf",
         # Stage 3 no longer cuts. It segments the limb, detects the marker
         # planes and publishes both; the cut itself is applied in Stage 5,
         # to the repaired watertight solid. Cutting the mesh is what lets a
@@ -835,6 +842,10 @@ def main():
                    help="skip materialising raw stage 1 outputs (images/depth/PLY/cameras)")
     p.add_argument("--conf_thres", type=float, default=45.0)
     p.add_argument("--prediction_mode", default="pointmap", choices=["pointmap", "depth"])
+    p.add_argument("--pointcloud-method", dest="pointcloud_method", default=None,
+                   choices=["pointmap", "tsdf"],
+                   help="stage 2: stack the pointmaps (default) or fuse the depth "
+                        "maps into one TSDF surface. Default: config.POINTCLOUD_METHOD.")
     p.add_argument("--mask_black_bg", action="store_true")
     p.add_argument("--mask_white_bg", action="store_true")
     p.add_argument("--num_objects", type=int, default=2)

@@ -371,7 +371,22 @@ girth 18.90 against a 20.5 tape). The knee plane is still the colour fit,
 lets through because the limb itself leans; its oblique slice reads 40.8 cm
 against a 30.0 tape. That is a separate defect, now on the list.
 
-## 12. Still open
+## 12. TSDF fusion as Stage 2, and the inner-sheet idea — 2026-09-19
+
+Full write-up in `TSDF_STAGE2.md`. Fusing the eight depth maps into one
+signed-distance surface (`POINTCLOUD_METHOD=tsdf`, off by default) gives a
+cube that fills 0.86 of its box instead of 0.73, a scale within 1% of the
+markers, and Poisson closing with no merge pass. The limb does not shrink:
+girth at the bands identical to the default path, volume 1686 in an offline
+replay and 1778 through `run.py` against 1704 today. The can control failed
+on clustering both times. Three other attempts on the same predictions:
+picking the inner of the two ghost sheets (confidence does not separate
+them; the inner mode sits only 1–2 mm inside the fit and leaves the knee at
++12%), VGGT at 1022 px (breaks: cube fill 0.37), and a perfect cube fitted
+to the mesh's faces for scale (6.5% off the marker scale; it would cancel
+the leg's error with a manufactured one).
+
+## 13. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).

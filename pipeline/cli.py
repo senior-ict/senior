@@ -48,6 +48,10 @@ Examples:
     p.add_argument("--prediction_mode", type=str, default="pointmap",
                    choices=["pointmap", "depth"],
                    help="'pointmap' uses direct 3D point regression; 'depth' unprojects depth maps")
+    p.add_argument("--pointcloud-method", dest="pointcloud_method", default=None,
+                   choices=["pointmap", "tsdf"],
+                   help="stage 2: stack the pointmaps (default) or fuse the depth "
+                        "maps into one TSDF surface. Default: config.POINTCLOUD_METHOD.")
     p.add_argument("--mask_black_bg", action="store_true",
                    help="Mask out near-black background pixels")
     p.add_argument("--mask_white_bg", action="store_true",

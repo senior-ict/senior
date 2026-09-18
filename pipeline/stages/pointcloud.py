@@ -53,22 +53,52 @@ def _extract_base_cloud(predictions, args):
     return points_flat, colors_flat, world_points, conf_raw, conf_mask, imgs_np
 
 
+def _fused_cloud(predictions, args):
+    """Points and colours from a TSDF fusion of the depth maps (config POINTCLOUD_METHOD=tsdf).
+
+    The default path's cloud is built first and used as the fusion's support:
+    a fused point survives only near a point that path kept. That is what
+    stops the fusion handing Stage 3 the far walls the outlier removal would
+    have deleted.
+    """
+    from pipeline.core.filters import remove_spatial_outliers
+    from pipeline.core.tsdf import fuse_depth_maps, voxel_size_in_units
+
+    support_points, support_colours, _wp, conf_raw, conf_mask, _imgs = \
+        _extract_base_cloud(predictions, args)
+    support_conf = conf_raw[conf_mask].reshape(-1).astype(np.float32)
+    support_points, _colours, _conf = remove_spatial_outliers(
+        support_points, support_colours, support_conf)
+    voxel_units = voxel_size_in_units(predictions)
+    return fuse_depth_maps(predictions, voxel_units, support_points=support_points)
+
+
 def export_ply(predictions, output_dir, args):
-    """Confidence + multi-view filter, then spatial outlier removal."""
+    """Build the scene cloud and write points.ply.
+
+    Two ways, chosen by config.POINTCLOUD_METHOD or --pointcloud-method:
+    stack the confidence-filtered pointmaps and remove spatial outliers (the
+    default), or fuse the depth maps into one TSDF surface, which has no
+    outliers to remove and no ghost sheet for Stage 3 to collapse.
+    """
+    from pipeline.config import POINTCLOUD_METHOD
     from pipeline.core.filters import remove_spatial_outliers
 
+    method = getattr(args, "pointcloud_method", None) or POINTCLOUD_METHOD
     print()
     print("=" * 60)
     print("STAGE 2: Exporting PLY point cloud")
     print("=" * 60)
-    print(f"  Mode: {'pointmap regression' if args.prediction_mode == 'pointmap' else 'depth-based unprojection'}")
-
-    points_out, colors_out, _wp, conf_raw, conf_mask, _imgs = \
-        _extract_base_cloud(predictions, args)
-    conf_out = conf_raw[conf_mask].reshape(-1).astype(np.float32)
-
-    points_out, colors_out, _conf_out = remove_spatial_outliers(
-        points_out, colors_out, conf_out)
+    if method == "tsdf":
+        print("  Mode: TSDF fusion of the depth maps")
+        points_out, colors_out = _fused_cloud(predictions, args)
+    else:
+        print(f"  Mode: {'pointmap regression' if args.prediction_mode == 'pointmap' else 'depth-based unprojection'}")
+        points_out, colors_out, _wp, conf_raw, conf_mask, _imgs = \
+            _extract_base_cloud(predictions, args)
+        conf_out = conf_raw[conf_mask].reshape(-1).astype(np.float32)
+        points_out, colors_out, _conf_out = remove_spatial_outliers(
+            points_out, colors_out, conf_out)
 
     print(f"  Final point count: {points_out.shape[0]:,}")
 
