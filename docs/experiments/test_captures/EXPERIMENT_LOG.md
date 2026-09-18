@@ -350,6 +350,21 @@ stripped before the planes are published.
  test6   (regression)  1703.998                            1703.996, planes byte-identical
 ```
 
+The other two captures the defect destroyed, re-run with the fix:
+
+```
+                       before (2026-09-04)         after
+ 2_left  (water 1050)  3381.0  +222%  band lost    1442.0  +37%  both bands; both colour fits
+                                                   failed the axis gate (58°, 35°) and the
+                                                   projected planes took over; girth 19.05 /
+                                                   30.61 against 18.5 / 27.5
+ 5_right (water 1770)  9337.3  +428%  band lost    8437.8  +377%  both bands found, but the
+                                                   capture is a mirror-floor failure: RANSAC
+                                                   took 89% of the cloud as floor, 4.5k limb
+                                                   points survive, ring coverage 28-46%,
+                                                   Poisson balloons. Not a planes problem.
+```
+
 The ankle plane after the fix is the projected one (10.3° from vertical,
 girth 18.90 against a 20.5 tape). The knee plane is still the colour fit,
 144 points with a normal 51° from vertical, which the 35° limb-axis gate
