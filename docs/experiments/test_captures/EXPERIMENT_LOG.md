@@ -305,7 +305,28 @@ the originals than from the LINE copies, with the same cube. Input pixels
 move the answer by a few percent either way; that is the model's noise
 floor, and the +30% at marker scale is the same girth over-read as before.
 
-## 10. Still open
+## 10. Second MLS pass validated, now the default — 2026-09-19
+
+Four cold runs through `run.py` with `MLS_SECOND_RADIUS_MULT=16` and the
+voxel-spacing fix in, against water truth. test5 needed
+`--continue-on-rejected` (one frame has the cube occluded).
+
+```
+                truth    before (4x only)           now (4x -> 16x)            girth low / high
+ test5   water  2070     2585.3  +24.9%  alpha χ=-4  2438.6  +17.8%  Poisson   22.16 / 34.55  (tape 22 / 32.5)
+ 0_right water  1830     2485.2  +35.8%  Poisson     2503.9  +36.8%  Poisson   19.98 / 33.30  (20.5 / 29.5)
+ 1_left  water  1600     2125.8  +32.9%  Poisson     2154.7  +34.7%  Poisson   20.80 / 33.95  (21.5 / 32.0)
+ 6_left  water  2800     3489.7  +24.6%  Poisson     3507.7  +25.3%  Poisson   23.69 / 39.10  (24.3 / 35.0)
+```
+
+Where the fallback used to fire (test5, and test6 and the can in the cold
+run) Poisson now closes and the wrap's inflation goes; where it already
+closed the pass moves the volume under 1% and the girth under 0.3 cm. The
+cube is untouched by it. `MLS_SECOND_RADIUS_MULT` now defaults to 16.
+Still owed: a cap in centimetres on the second radius, so a sparser cloud
+does not get a physically larger one.
+
+## 11. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).

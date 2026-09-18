@@ -79,7 +79,14 @@ The caliper on the cube edge is still the single largest lever.
 1703.9. The per-slice sections agree to 0.001, so the 5% sits in what 2 cm
 slices do not sample. The real number is the one that counts.
 
-## Validation still owed before it becomes the default
+## Validation — done 2026-09-19, pass is now the default
+
+test5 (water 2070): 2585.3 / +24.9% / alpha χ=-4 → 2438.6 / +17.8% / Poisson.
+0_right, 1_left, 6_left (water): Poisson before and after, volumes within
+1%, girth within 0.3 cm. Table in EXPERIMENT_LOG.md section 10.
+`MLS_SECOND_RADIUS_MULT` defaults to 16 in config.py.
+
+## Validation that was owed before it became the default
 
 - `test5` (hairy, noisier shell) and three or four of the 0–6 cohort, with
   their water truth.

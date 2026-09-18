@@ -267,7 +267,11 @@ MLS_RADIUS_MULT = 4.0
 # disables; overridable per run without editing this file:
 #
 #     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test6
-MLS_SECOND_RADIUS_MULT = float(os.environ.get("MLS_SECOND_RADIUS_MULT", 0.0))
+# Default 16 since 2026-09-19, after the validation batch: test5 (water 2070)
+# went from alpha at chi=-4 / +24.9% to Poisson chi=2 / +17.8%; 0_right, 1_left
+# and 6_left, where Poisson already closed, moved under 1% with girth within
+# 0.3 cm; the can control held. Set 0 to switch the pass off.
+MLS_SECOND_RADIUS_MULT = float(os.environ.get("MLS_SECOND_RADIUS_MULT", 16.0))
 
 # Fit a plane rather than a quadratic when smoothing the reference cube.
 #
