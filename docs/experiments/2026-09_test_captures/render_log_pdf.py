@@ -5,7 +5,7 @@ is laid out verbatim in monospace so the tables keep their columns. Long
 lines wrap on spaces. Pages break at a fixed line count, never inside a table
 or code block when that can be helped.
 
-    python docs/experiments/test_captures/render_log_pdf.py
+    python docs/experiments/2026-09_test_captures/render_log_pdf.py
 """
 import pathlib
 import textwrap
@@ -90,7 +90,7 @@ def draw_page(pdf, page_lines, page_number, page_total, footer_name=SOURCE.name)
             y_position -= LINE_HEIGHT
     figure.text(0.95, 0.03, f"{page_number} / {page_total}", fontsize=7,
                 color=MUTED, ha="right")
-    figure.text(0.05, 0.03, f"docs/experiments/test_captures/{footer_name}",
+    figure.text(0.05, 0.03, f"docs/experiments/2026-09_test_captures/{footer_name}",
                 fontsize=7, color=MUTED)
     pdf.savefig(figure)
     plt.close(figure)

@@ -45,11 +45,11 @@ Conventions: blue = a file on disk · amber dashed = **not built yet**.
 >    the subject.
 > 3. **Stage 6 is reverted to main's version**, pending review by its author. The
 >    scale derivation in Figure 6 describes the *parked* method, not what runs.
->    See `docs/stage06_experiments.md`.
+>    See `docs/archive/2026-08/stage06_experiments.md`.
 > 4. **Stage 4 defaults to Poisson**, not alpha shape, with alpha as an automatic
 >    per-object fallback whenever Poisson's mesh does not repair to χ = 2.
 >    Changed 2026-08-23 after Stage 5 was fixed to call `pymeshfix.repair()`
->    rather than `fill_holes()` alone — see `experiments.md`, E-psr-adopted.
+>    rather than `fill_holes()` alone — see `../archive/2026-08/experiments.md`, E-psr-adopted.
 > 5. **The reference cube is 10 cm** on captures from August 2026 onward.
 >    `REFERENCE_REAL_SIZE_CM` defaults to 10.0 and is env-overridable; the
 >    fixtures in these figures (`small_leg`, `est_325`) need 14.
@@ -122,7 +122,7 @@ Deriving that scale without the detour was measured and rejected: an oriented
 bounding box on Stage 3's own segmented cube cloud gives **40.6 cm/unit against
 Stage 6's 60.86 — 33% out**, because that cloud carries the wall points added when
 the base is extended to the floor. The cube has to pass through reconstruction for
-its size to be known. See `docs/experiments.md`, E-preconfirm-scale.
+its size to be known. See `docs/archive/2026-08/experiments.md`, E-preconfirm-scale.
 
 | stage | time | in | out |
 |---|---|---|---|
@@ -655,7 +655,7 @@ closed-but-tunnelled mesh was integrated and reported in silence.
 
 > **Reverted to main's version**, pending review by the stage's author. The rows
 > below marked *parked* describe the method sitting commented out at the bottom of
-> `volume.py`, not what runs. See `docs/stage06_experiments.md`.
+> `volume.py`, not what runs. See `docs/archive/2026-08/stage06_experiments.md`.
 
 | sub-process | maths | state |
 |---|---|---|

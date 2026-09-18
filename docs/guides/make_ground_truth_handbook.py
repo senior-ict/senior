@@ -1,4 +1,4 @@
-"""Render docs/measuring_ground_truth.md as an illustrated PDF handbook.
+"""Render docs/guides/measuring_ground_truth.md as an illustrated PDF handbook.
 
 The diagrams are drawn here rather than photographed, so they stay correct if
 the procedure changes.
@@ -13,7 +13,7 @@ That figure is the cut solid from a real reconstruction
 from inputs/1_left -- the segment its own cut produced, whose two ends ARE the
 bands -- annotated with the heights the tape method would use.
 
-    python docs/make_ground_truth_handbook.py
+    python docs/guides/make_ground_truth_handbook.py
 """
 import os
 
@@ -26,10 +26,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import FancyArrowPatch, Polygon, Rectangle
 from PIL import Image
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CUT_SHEET = os.path.join(PROJECT_ROOT, "compare_old_vs_new", "renders",
                          "rework", "1_left", "05_cut.png")
-OUTPUT = os.path.join(PROJECT_ROOT, "docs", "measuring_ground_truth.pdf")
+OUTPUT = os.path.join(PROJECT_ROOT, "docs", "guides", "measuring_ground_truth.pdf")
 
 PAGE = (8.27, 11.69)               # A4 portrait
 INK = "#1a1a1a"
@@ -72,7 +72,7 @@ def cover(pdf):
                 "Keep water displacement as a cross-check, and only with an\n"
                 "overflow spout.",
                 fontsize=11, color=INK, va="top", linespacing=1.7)
-    figure.text(0.08, 0.10, "VGGT Volume Measurement · docs/measuring_ground_truth.md",
+    figure.text(0.08, 0.10, "VGGT Volume Measurement · docs/guides/measuring_ground_truth.md",
                 fontsize=8.5, color=MUTED)
     pdf.savefig(figure)
     plt.close(figure)

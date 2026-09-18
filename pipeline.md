@@ -379,7 +379,7 @@ open.
 > against 4.1% for the parked fitted-face method and 7.4% for its OBB form.**
 > The parked block was deleted from `volume.py` on 2026-08-31; `git log`
 > is now the record. It last appeared in commit 371d3da.
-> Full table in `docs/stage06_experiments.md`.
+> Full table in `docs/archive/2026-08/stage06_experiments.md`.
 >
 > The *epistemic* objection is untouched and still correct — calibrating on the
 > reference's own volume means it cannot report an error bar on itself. The

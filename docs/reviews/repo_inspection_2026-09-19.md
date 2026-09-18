@@ -104,11 +104,11 @@ checks the resolved path stays inside the job directory.
 
 ## Documentation
 
-Spot-checked only. Stale: `docs/full_flowchart.md`, `docs/progress.md`,
-`docs/mls_explained.md` and `docs/experiments/ghost_removal_chain.md` still
-carry `GHOST_VOXEL_FACTOR = 0.65`; `README.md` and `docs/full_flowchart.md`
-describe the 14 cm cube's axis-aligned extents; `docs/pipeline_flowchart.md`
-still shows the cut inside Stage 3. `docs/experiments/scripts_*.py` are
+Spot-checked only. Stale: `docs/pipeline/full_flowchart.md`, `docs/archive/2026-08/progress.md`,
+`docs/pipeline/mls_explained.md` and `docs/archive/2026-08/experiments/ghost_removal_chain.md` still
+carry `GHOST_VOXEL_FACTOR = 0.65`; `README.md` and `docs/pipeline/full_flowchart.md`
+describe the 14 cm cube's axis-aligned extents; `docs/pipeline/pipeline_flowchart.md`
+still shows the cut inside Stage 3. `docs/archive/2026-08/experiments/scripts_*.py` are
 referenced from `FIGURES.md` and were not run.
 
 ## Not covered

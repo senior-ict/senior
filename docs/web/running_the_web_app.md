@@ -158,7 +158,7 @@ is released between stages rather than accumulating across jobs.
   `work/<job>/job.json`.
 - **Uploads are capped** at 12 photos and 25 MB each.
 - **Stage 6 is currently main's version**, reverted pending review by its author
-  (see `docs/stage06_experiments.md`). It writes different CSV columns
+  (see `docs/archive/2026-08/stage06_experiments.md`). It writes different CSV columns
   (`ext_x/ext_y/ext_z/size_*_cm`) from the parked one
   (`obb_a/obb_b/obb_c/height_cm`). The viewer reads both, so runs display either
   way — but the *scale* is derived differently in each case, and under main's

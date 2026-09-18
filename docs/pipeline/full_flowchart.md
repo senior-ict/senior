@@ -352,7 +352,7 @@ centre_on_subject=True, output_size=518, strict=True, min_frames=6, crop=True)`
 |---|---|---|---|
 | `_cube_faces(gray, dict_name)` | grayscale `(H,W) uint8` | list of 4×2 float quads | ArUco `DICT_5X5_250`. Returns marker quads, not face quads |
 | `_face_corners(quad, face_cm, marker_cm)` | one marker quad | the whole cube face's 4 corners | homography from the marker's known size to the face's; recovers face area the marker only samples |
-| `_cube_bbox(gray, image_pil, dict_name)` | grayscale + PIL image | `(x0,y0,x1,y1)` or `None` | union of the ArUco face quads with a GroundingDINO `cardboard box` detection. **If the detector raises, the union silently falls back to the faces alone, which is smaller — see `repo_review.md` finding 5** |
+| `_cube_bbox(gray, image_pil, dict_name)` | grayscale + PIL image | `(x0,y0,x1,y1)` or `None` | union of the ArUco face quads with a GroundingDINO `cardboard box` detection. **If the detector raises, the union silently falls back to the faces alone, which is smaller — see `../reviews/repo_review.md` finding 5** |
 | `_leg_mask(image_pil, cube)` | PIL image + cube box | boolean mask `(H,W)` | GroundingDINO `leg` box, then SAM prompted with that box. The cube box is passed so a limb overlapping it is not selected |
 | `_band_bbox(image_pil, bgr, leg_box, limb_mask)` | PIL + BGR + limb box + limb mask | `(x0,y0,x1,y1)` or `None` | GroundingDINO `cord`. **Two guards**: the box must intersect the selected limb, and it must be no larger than `BAND_MAX_LIMB_FRAC` (0.35) of the limb's mask area. Without the second, a capture with no cord gets the *leg* returned as the band — which passes the overlap test trivially |
 | `trace_band_colour(bgr, box, keep_percentile=40, dilate=3)` (`core/vlm_detect.py`) | BGR image + band box | mean RGB + excess-green margin | per-column maximum-deviation trace of the cord, then **±3 rows around it**. Sampling the trace alone reports the cord's darkest pixel, which left the detector only **45** band points to fit a plane through and tilted it 27.1° from vertical against a limb leaning 19.0°. Sampling the cord's body finds **296** and tilts 19.0°. See `experiments/cut_plane_band_colour.png` |
@@ -517,7 +517,7 @@ The α ladder is now the **fallback path** rather than the default, but the rule
 it implements is unchanged and is the reason it is the fallback: it is the only
 method here that *guarantees* a single closed solid, because it selects on that
 property. Why the choice is measured this way is in
-[`experiments/recon_method_comparison.png`](experiments/recon_method_comparison.png):
+[`experiments/recon_method_comparison.png`](../archive/2026-08/experiments/recon_method_comparison.png):
 Poisson and ball pivoting fit the points **better** and still cannot be
 measured, because after repair they close at χ = 22 and χ = 256 instead of 2.
 
@@ -544,7 +544,7 @@ Runs `pipeline/workers/meshfix_worker.py` as a subprocess.
 
 > Currently **main's version**, reverted pending review by the stage's author.
 > The alternative method is parked as a commented block at the bottom of the same
-> file. See [`stage06_experiments.md`](stage06_experiments.md).
+> file. See [`stage06_experiments.md`](../archive/2026-08/stage06_experiments.md).
 
 | sub-process | in | out | notes |
 |---|---|---|---|
@@ -568,9 +568,9 @@ Stated so it is not mistaken for complete.
 - **Error paths.** Every stage has failure branches; drawing them would double
   the chart without adding to what it is for. The one exception is the deferred-cut
   invariant, which is drawn because violating it is the failure that matters most.
-- **The three latent silent failures** in `repo_review.md` items 3, 4 and 5. They
+- **The three latent silent failures** in `../reviews/repo_review.md` items 3, 4 and 5. They
   are `except` blocks inside boxes drawn here as single steps.
 - **`pipeline/multiview.py`.** Written, documented, never wired into Stage 2.
 - **The web app's own screens** beyond Review. Those are in
-  [`web_explaination.md`](web_explaination.md) and figures 7-8 of
+  [`web_explaination.md`](../web/web_explaination.md) and figures 7-8 of
   [`pipeline_flowchart.md`](pipeline_flowchart.md).

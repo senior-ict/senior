@@ -2,11 +2,11 @@
 
 What Stage 3's last step does, why each part of it is there, and what the
 arithmetic is. The implementation is `mls_project` in
-[`pipeline/ghost.py`](../pipeline/ghost.py); every line reference below points at
+[`pipeline/ghost.py`](../../pipeline/ghost.py); every line reference below points at
 it.
 
 The companion figure is
-[`experiments/mls_how_it_works.png`](experiments/mls_how_it_works.png), which
+[`experiments/mls_how_it_works.png`](../archive/2026-08/experiments/mls_how_it_works.png), which
 walks one real 72-point neighbourhood through the same five steps.
 
 ---
@@ -108,7 +108,7 @@ into rings and throw away the vertical curvature, which is exactly what the
 quadratic fit exists to keep.
 
 The only partitioning is **per object**: `_clean_cluster` in
-[`pipeline/stages/clean.py`](../pipeline/stages/clean.py) runs the whole chain
+[`pipeline/stages/clean.py`](../../pipeline/stages/clean.py) runs the whole chain
 separately for the cube and the limb, so no neighbourhood ever spans two objects
 and pulls each toward the other.
 
@@ -430,7 +430,7 @@ and compare the difference against the closed form
 `(c₃+c₅)·r²/4 − (c₃u₀² + c₄u₀v₀ + c₅v₀²)` using the coefficients the quadratic
 fit actually produced.
 
-![plane bias check](experiments/mls_plane_bias_check.png)
+![plane bias check](../archive/2026-08/experiments/mls_plane_bias_check.png)
 
 | | |
 |---|---|
@@ -548,12 +548,12 @@ too small to project. `_stats` exists to make that impossible.
 
 ## Related
 
-- [`experiments/mls_how_it_works.png`](experiments/mls_how_it_works.png) — the
+- [`experiments/mls_how_it_works.png`](../archive/2026-08/experiments/mls_how_it_works.png) — the
   five steps on one real neighbourhood
-- [`experiments/mls_ghost_limb_section.png`](experiments/mls_ghost_limb_section.png)
+- [`experiments/mls_ghost_limb_section.png`](../archive/2026-08/experiments/mls_ghost_limb_section.png)
   — plane against quadratic on a cross-section
-- [`experiments/ghost_removal_chain.png`](experiments/ghost_removal_chain.png) —
+- [`experiments/ghost_removal_chain.png`](../archive/2026-08/experiments/ghost_removal_chain.png) —
   the same slice after every function in the chain
-- `E-outline-statistic` in [`experiments.md`](experiments.md) — how the
+- `E-outline-statistic` in [`../archive/2026-08/experiments.md`](../archive/2026-08/experiments.md) — how the
   outline is measured, and the statistic that got it wrong once
-- [`experiments/mls_plane_vs_quadratic.md`](experiments/mls_plane_vs_quadratic.md)
+- [`experiments/mls_plane_vs_quadratic.md`](../archive/2026-08/experiments/mls_plane_vs_quadratic.md)

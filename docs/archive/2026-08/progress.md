@@ -741,7 +741,7 @@ is ~50 s of that and runs once either way, so this is not primarily a speed chan
 ## 3.3 `service/` — a compute service, and the web app driving it
 
 New: `service/app.py` and `service/jobs.py`, plus `serve.sh`. Documented in
-[`running_the_web_app.md`](running_the_web_app.md).
+[`../../web/running_the_web_app.md`](../../web/running_the_web_app.md).
 
 A job is a `work/<job_id>/` directory — the same layout every manual run uses — so
 `stagerun.py` *is* the backend rather than a second implementation of it, and any
@@ -2216,7 +2216,7 @@ The honest limits, which a proposal should state before someone else does.
 - **The marker-colour work is validated on one capture.** That a *learned* colour
   generalises to a red or blue band is argued from the mechanism, not shown.
 - **Three silent failure paths remain**, listed as open items 3, 4 and 5 in
-  [`repo_review.md`](repo_review.md).
+  [`../../reviews/repo_review.md`](../../reviews/repo_review.md).
 
 ---
 
@@ -2388,7 +2388,7 @@ the cube.
 ## 7. blue shirt: the failure no gate catches
 
 Excluded at its owner's instruction —
-[`inputs/blue shirt/UNUSABLE.md`](../inputs/blue%20shirt/UNUSABLE.md). VGGT's
+[`inputs/blue shirt/UNUSABLE.md`](../../../inputs/blue%20shirt/UNUSABLE.md). VGGT's
 reconstruction is wrong, so nothing downstream can correct it.
 
 What is worth keeping is that **the run still produced a confident 5280 cm³ with
@@ -2441,7 +2441,7 @@ iteration, and did not finish in 90 s on four of five cubes. It now stops once
 the unclaimed area cannot reach `min_area_frac`, which cannot skip a face it
 would otherwise find. 90 s+ → ~1 s.
 
-## 9. Every open item in `repo_review.md` is closed
+## 9. Every open item in `../../reviews/repo_review.md` is closed
 
 Items 3, 4 and 5 — the three latent silent failures — and item 11, the ignored
 flag. Each now names its exception and what the fallback costs; `orchestrator.py`

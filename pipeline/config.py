@@ -240,7 +240,7 @@ MLS_RADIUS_MULT = 4.0
 # them, and produces a tunnelled solid (chi from -2 to -22 on 5 of 8 runs),
 # which forces the alpha-shape fallback -- and the alpha wrap loose enough to
 # close encloses 13-17% more area than the points on every slice above the
-# calf (measured, docs/experiments/test_captures/ring_gallery.png).
+# calf (measured, docs/experiments/2026-09_test_captures/ring_gallery.png).
 #
 # A wider pass merges the sheets. Swept offline on 2026-09-18 from the pre-MLS
 # cluster, with the can as the control (its girth is +0.9% against calipers):

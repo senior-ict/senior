@@ -412,7 +412,7 @@ npm start        # serve the built site
 not committed.
 
 The samples path needs none of the Python pipeline running. Only Upload does.
-`docs/running_the_web_app.md` covers the rest: the API, what happens during an
+`docs/web/running_the_web_app.md` covers the rest: the API, what happens during an
 upload, and the Windows step WSL2 needs before a phone on the same wifi can
 reach it.
 
@@ -423,7 +423,7 @@ reach it.
 Worth stating plainly, because a supervisor will ask.
 
 - **The upload path needs the compute service running.** It lives in `service/`
-  now (see `docs/running_the_web_app.md`), but it is a separate process holding a
+  now (see `docs/web/running_the_web_app.md`), but it is a separate process holding a
   GPU, not something the page can do by itself. Without it, only the precomputed
   samples work. The app detects this and says so rather than pretending.
 - **The service is unauthenticated.** CORS is limited to localhost and private
@@ -441,7 +441,7 @@ Worth stating plainly, because a supervisor will ask.
   whichever stage wrote the file did, so runs display either way. What is not
   settled is the measurement: under main's method the reference cube reports
   exactly 2744.00 cm³ by construction, so the stage currently gives no error signal
-  about itself. See `docs/stage06_experiments.md`.
+  about itself. See `docs/archive/2026-08/stage06_experiments.md`.
 - **Two datasets ship with it**, both from the same session. It demonstrates the
   method; it does not demonstrate accuracy across subjects.
 - **No accuracy claim is displayed for the limb**, because none is justified —
@@ -457,7 +457,7 @@ Worth stating plainly, because a supervisor will ask.
 Because one step in the pipeline is a judgement, not a calculation. Where the limb
 is cut determines the volume, and that plane comes from detecting a coloured band,
 which can fail — it has failed, on real data, in ways described in
-`docs/progress.md`. A number produced from a wrong cut looks exactly like a
+`docs/archive/2026-08/progress.md`. A number produced from a wrong cut looks exactly like a
 number produced from a right one.
 
 The web app makes that step visible and correctable: it shows where the cut landed,

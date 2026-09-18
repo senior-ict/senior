@@ -6,7 +6,7 @@ from the state on `origin/main` (`bab2bbc`) to now.
 
 Companion documents: [`experiments.md`](experiments.md) for pipeline-wide
 experiments, [`progress.md`](progress.md) for the full change set,
-[`pipeline_flowchart.md`](pipeline_flowchart.md) figure 6 for the dataflow.
+[`../../pipeline/pipeline_flowchart.md`](../../pipeline/pipeline_flowchart.md) figure 6 for the dataflow.
 
 > `experiments.md` still describes this as "Stage 7" and states
 > `k = 2744 / box_vol`. Both are stale — the stage was renumbered to 6 and the

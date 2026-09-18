@@ -12,7 +12,7 @@ section area to ellipse area, so the wrap's excess is read off directly.
 The "after" cloud and mesh are rebuilt here with the same functions the sweep
 used; the "before" ones are what the run wrote to disk.
 
-    python docs/experiments/test_captures/ring_gallery_before_after.py
+    python docs/experiments/2026-09_test_captures/ring_gallery_before_after.py
 """
 import json
 import math
@@ -131,7 +131,7 @@ def cover_page(pdf, summaries):
     for line in summaries:
         figure.text(0.06, y_position, line, fontsize=9.5, family="monospace", color=INK)
         y_position -= 0.03
-    figure.text(0.06, 0.06, "docs/experiments/test_captures/ring_gallery_before_after.py",
+    figure.text(0.06, 0.06, "docs/experiments/2026-09_test_captures/ring_gallery_before_after.py",
                 fontsize=7, color=MUTED)
     pdf.savefig(figure)
     plt.close(figure)

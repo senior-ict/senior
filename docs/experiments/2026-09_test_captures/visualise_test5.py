@@ -20,7 +20,7 @@ import trimesh
 
 import pathlib
 
-# This file lives at docs/experiments/test_captures/, three levels below the
+# This file lives at docs/experiments/2026-09_test_captures/, three levels below the
 # repository root, and imports the pipeline from there.
 PROJECT_ROOT = str(pathlib.Path(__file__).resolve().parents[3])
 sys.path.insert(0, PROJECT_ROOT)

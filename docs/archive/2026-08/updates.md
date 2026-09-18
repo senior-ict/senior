@@ -192,8 +192,8 @@ the complete limb with the proposed plane drawn on it, drags it if it is wrong,
 and only then does the second pass (`--cut-only`) apply it and Stages 4-6 measure.
 
 The full shape, including the calibration branch, is
-[figure 1 of `pipeline_flowchart.md`](pipeline_flowchart.md#figure-1--pipeline-spine);
-every sub-process is in [`full_flowchart.md`](full_flowchart.md).
+[figure 1 of `../../pipeline/pipeline_flowchart.md`](pipeline_flowchart.md#figure-1--pipeline-spine);
+every sub-process is in [`../../pipeline/full_flowchart.md`](../../pipeline/full_flowchart.md).
 
 **Why this is an improvement.** The cut is the one parameter that changes the
 answer arbitrarily and cannot be validated from inside the pipeline — where a
@@ -553,7 +553,7 @@ Stated here so this file cannot be read as more than it is.
   `est_325` has no band. That a *learned* colour generalises to a red or blue
   marker is argued from the mechanism, not demonstrated.
 - **Three silent failure paths remain**, listed as open items 3, 4 and 5 in
-  [`repo_review.md`](repo_review.md). One of them makes the Stage 0 gate *more*
+  [`../../reviews/repo_review.md`](../../reviews/repo_review.md). One of them makes the Stage 0 gate *more*
   permissive if a detector throws.
 - **`--no-prep-crop` is ignored on the `run.py` path** — parsed, never passed to
   `prepare_frames`. Item 11 in the same file.

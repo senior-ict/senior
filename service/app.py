@@ -234,7 +234,7 @@ def run_job(job_id: str, req: RunRequest):
     # Deriving that scale more cheaply was tried and rejected: an oriented
     # bounding box on Stage 3's own cube cloud gives 40.6 cm/unit against Stage
     # 6's 60.86 — 33% out, because that cloud carries the floor-extension wall
-    # points. See docs/experiments.md, E-preconfirm-scale.
+    # points. See docs/archive/2026-08/experiments.md, E-preconfirm-scale.
     REGISTRY.submit(job, "1-6",
                     ["-i", os.path.join(job.dir, "00_prep", "images"), "--no-cut"],
                     running_state="running", done_state="awaiting-cut")

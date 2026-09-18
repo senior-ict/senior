@@ -12,7 +12,7 @@ filter, MLS -- with only the MLS radius varied, and for each radius reports:
 The can is the control: it reads +0.9% girth today, and any radius that moves
 it is over-smoothing rather than fixing anything.
 
-    python docs/experiments/test_captures/mls_radius_sweep.py
+    python docs/experiments/2026-09_test_captures/mls_radius_sweep.py
 """
 import json
 import math

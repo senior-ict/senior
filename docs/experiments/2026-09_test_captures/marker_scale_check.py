@@ -12,7 +12,7 @@ It also reports the marker edges split by their direction in the photograph,
 which shows whether VGGT stretches one axis more than the other, the green
 band separation on the cleaned cloud, and the cube mesh's extents by axis.
 
-    python docs/experiments/test_captures/marker_scale_check.py output_test6_mls16 output_test5
+    python docs/experiments/2026-09_test_captures/marker_scale_check.py output_test6_mls16 output_test5
 """
 import pathlib
 import sys

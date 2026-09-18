@@ -195,7 +195,7 @@ agree.
 > against a known volume. The failure this step guards against — misoriented points
 > seeding spurious tetrahedra in the alpha shape — is the kind that appears on a
 > *bad* capture, not a good one. **Decide it on a dataset with independent ground
-> truth**, per the rule in [`experiments.md`](../experiments.md); until then it stays.
+> truth**, per the rule in [`../experiments.md`](../experiments.md); until then it stays.
 
 ### `mls_project(radius_mult=4.0, polynomial=True)`
 **Job.** Move every point onto a surface fitted to its neighbourhood, collapsing
@@ -343,7 +343,7 @@ than A (15,057 against 14,722) and lands on nearly the same volume: the points i
 would have removed are misoriented strays that the alpha shape wraps anyway.
 
 **Neither result is settled.** Both are one capture, and both compare the pipeline
-against itself rather than against a measured volume. `experiments.md` sets the
+against itself rather than against a measured volume. `../experiments.md` sets the
 rule — a change becomes the default when it wins on ground truth — and no ground
 truth exists for a limb yet. Water displacement on a held-out object is the
 experiment that would close this.

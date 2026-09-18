@@ -11,7 +11,7 @@ All three candidates are wrapped by Poisson so the columns differ only in the
 second MLS pass. Titles carry girth and mesh/points area ratio; the last page
 tabulates the volumes.
 
-    python docs/experiments/test_captures/ring_gallery_anisotropic.py
+    python docs/experiments/2026-09_test_captures/ring_gallery_anisotropic.py
 """
 import math
 import pathlib
