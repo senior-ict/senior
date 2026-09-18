@@ -17,7 +17,7 @@ wrap — not the model's ability to measure a circumference.
 |---|---|---|---|
 | White and black cords instead of green | `sunshine_v2` | Stage 0 (colour-agnostic detector) boxed both bands on 7/7 frames; Stage 3's colour rule could not separate a neutral cord from skin; every plane rejected, no cut | no — cords re-dyed green |
 | Per-band colour instead of one capture average | `sunshine_v2` | Averaging white + black gave grey RGB[71,64,64]; per-band gave RGB[151,140,142] and [41,34,32] | reverted — moot once cords were green |
-| Keep the projected plane when its colour twin is later gated out | `sunshine_v2`, cohort 0–6 | Recovered the cut on `sunshine_v2`; on the cohort the same defect had destroyed the lower band on `0_left`, `2_left`, `5_right` (sliver / runaway volumes) | reverted at the user's request; defect still present |
+| Keep the projected plane when its colour twin is later gated out | `sunshine_v2`, cohort 0–6 | Recovered the cut on `sunshine_v2`; on the cohort the same defect had destroyed the lower band on `0_left`, `2_left`, `5_right` (sliver / runaway volumes) | reverted then; **fixed 2026-09-19**, section 11 |
 | Drop foot slices from the limb-axis fit | `sunshine_v2` | Real ankle band went from 35.7° (rejected at 35°) to 26.1° | reverted with the above |
 
 ## 2. Ground truth
@@ -326,7 +326,37 @@ cube is untouched by it. `MLS_SECOND_RADIUS_MULT` now defaults to 16.
 Still owed: a cap in centimetres on the second radius, so a sparser cloud
 does not get a physically larger one.
 
-## 11. Still open
+## 11. The projected-plane merge defect, fixed — 2026-09-19
+
+`_merge_projected_planes` kept the colour fit whenever Stage 0's projected
+plane agreed with it, and threw the projected plane away. The gates run
+later, in levelled space, and the height gate exempts *projected* planes
+(a band the detector saw on most photographs is its own corroboration) but
+not colour fits. So on a capture whose ankle band sits below one cube
+height, the colour fit was rejected, the projected plane that would have
+survived was already gone, and the band vanished. With one band left the
+span cut ran between the knee band and whatever third plane existed.
+
+Fix: the projected twin rides along as the colour plane's backup. If the
+colour fit fails the height gate or the axis gate, the backup takes its
+place (for the axis gate, only if it passes the same test). Backups are
+stripped before the planes are published.
+
+```
+                      before                              after
+ 0_left  (water 1800)  ankle colour fit rejected, 18% of   colour fit rejected, replaced by the
+                       height; cut between knee and a      1,003-pt projected plane; cut ankle to
+                       third plane: 10.1 cm³ sliver        knee: 1773.3 cm³ (-1.5%)
+ test6   (regression)  1703.998                            1703.996, planes byte-identical
+```
+
+The ankle plane after the fix is the projected one (10.3° from vertical,
+girth 18.90 against a 20.5 tape). The knee plane is still the colour fit,
+144 points with a normal 51° from vertical, which the 35° limb-axis gate
+lets through because the limb itself leans; its oblique slice reads 40.8 cm
+against a 30.0 tape. That is a separate defect, now on the list.
+
+## 13. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).
@@ -334,7 +364,8 @@ does not get a physically larger one.
   to the upper band, to test scale drift with distance from the reference.
 - **Re-shoot `fanta_red` on the matte tile** with a ruler on the band
   separation — the span-on-a-cylinder test.
-- **The projected-plane merge defect** (section 1) is still in the pipeline
-  and destroyed three of fourteen cohort captures.
+- ~~The projected-plane merge defect~~ fixed 2026-09-19 (section 11).
+- **Colour-fit plane normals** can be far off the limb (51° on `0_left`'s knee
+  band, 144 pts). The cut still lands on the band but slices it obliquely.
 - **`1_left` drifted 1.2% between identical runs** on 2026-09-04; `test6`
   reproduced to the byte on 2026-09-18. Not understood.

@@ -170,7 +170,12 @@ def _merge_projected_planes(colour_planes, band_planes, height_axis):
     Where both sources found the same band, the colour plane wins. It is fitted
     to the cord's own points; the projected one is fitted to a slab of limb
     surface centred on the cord, which is the right plane but a blunter
-    instrument for locating it.
+    instrument for locating it. The projected twin is not thrown away, though:
+    it rides along as the colour plane's `projected_backup`, and the gates in
+    Phase C fall back to it if the colour fit fails them. Discarding it here
+    used to lose the whole band whenever the colour fit was later rejected --
+    on 0_left, 2_left and 5_right of the 2026-09-04 cohort that left one cut
+    plane and a sliver or a runaway volume.
     """
     if not band_planes:
         return colour_planes
@@ -183,9 +188,14 @@ def _merge_projected_planes(colour_planes, band_planes, height_axis):
                      if abs(float(m["centroid"][axis_idx]) - height)
                      < SAME_BAND_DISTANCE), None)
         if twin is not None:
+            twin["projected_backup"] = {
+                "centroid": np.asarray(candidate["centroid"], dtype=np.float64).tolist(),
+                "normal": np.asarray(candidate["normal"], dtype=np.float64).tolist(),
+                "npts": int(candidate["npts"]),
+                "source": "projected"}
             print(f"  Band projection: {candidate['npts']:,}-pt plane agrees "
                   f"with a {twin['npts']}-pt colour plane — keeping the colour "
-                  f"fit")
+                  f"fit, projected plane held as its backup")
             continue
         merged.append({"centroid": np.asarray(candidate["centroid"], dtype=np.float64),
                        "normal": np.asarray(candidate["normal"], dtype=np.float64),
@@ -269,6 +279,15 @@ def _limb_axis_near(leg_pts_rot, z, window_frac=0.25, n_slices=10, min_pts=8):
             axis = Vt[0, :]
             return axis / (np.linalg.norm(axis) + 1e-12)
     return None
+
+
+def _rotate_plane(plane, rotation, source):
+    """A plane's centroid and unit normal carried into levelled space, as lists."""
+    centroid = (rotation @ np.asarray(plane["centroid"], dtype=np.float64)).astype(np.float64)
+    normal = (rotation @ np.asarray(plane["normal"], dtype=np.float64)).astype(np.float64)
+    normal /= np.linalg.norm(normal) + 1e-8
+    return {"centroid": centroid.tolist(), "normal": normal.tolist(),
+            "npts": plane.get("npts", 0), "source": source}
 
 
 def _plane_vs_limb_angle(leg_pts_rot, marker):
@@ -588,14 +607,11 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         # shorts alone. Nothing had looked at either survivor before the real
         # one was discarded.
         for m in markers:
-            cen = np.array(m["centroid"])
-            norm = np.array(m["normal"])
-            cen_r = (R_total @ cen).astype(np.float64)
-            norm_r = (R_total @ norm).astype(np.float64)
-            norm_r /= np.linalg.norm(norm_r) + 1e-8
-            markers_rotated.append({"centroid": cen_r.tolist(), "normal": norm_r.tolist(),
-                                    "npts": m.get("npts", 0),
-                                    "source": m.get("source", "colour")})
+            rotated = _rotate_plane(m, R_total, m.get("source", "colour"))
+            backup = m.get("projected_backup")
+            if backup is not None:
+                rotated["projected_backup"] = _rotate_plane(backup, R_total, "projected")
+            markers_rotated.append(rotated)
 
         # Drop planes sitting in the bottom fraction of the object. Feet, arch
         # shadows and the floor junction all live there, and a cut line that low
@@ -642,6 +658,19 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                               f"{rule} — projected from Stage 0's band boxes, "
                               f"which is the corroboration the gate wants")
                         low = False
+                    if low and mr.get("projected_backup") is not None:
+                        # The colour fit failed, but Stage 0 saw this band on
+                        # most photographs and projected a plane for it. That
+                        # plane is exempt from this gate, so the band survives
+                        # on it rather than vanishing with the colour fit.
+                        backup = mr.pop("projected_backup")
+                        h = (mr["centroid"][2] - lo) / span if span > 0 else 0.0
+                        print(f"  Marker colour fit rejected: {h*100:.0f}% of "
+                              f"height, {rule}, {mr['npts']} pts — replaced by "
+                              f"the plane projected from Stage 0's band boxes "
+                              f"({backup['npts']:,} pts)")
+                        keep_m.append(backup)
+                        continue
                     (drop_m if low else keep_m).append(mr)
                 for mr in drop_m:
                     h = (mr["centroid"][2] - lo) / span if span > 0 else 0.0
@@ -662,12 +691,32 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
             keep_m, drop_m = [], []
             for mr in markers_rotated:
                 ang = _plane_vs_limb_angle(leg_pts_rot, mr)
-                (drop_m if (ang is not None and ang > MARKER_MAX_AXIS_ANGLE_DEG)
-                 else keep_m).append((mr, ang))
+                rejected = ang is not None and ang > MARKER_MAX_AXIS_ANGLE_DEG
+                if rejected and mr.get("projected_backup") is not None:
+                    # The projected plane is fitted to the limb surface around
+                    # the band, so its normal follows the limb where a colour
+                    # fit to a blob of cord can point anywhere. Use it if it
+                    # passes the same test.
+                    backup = mr.pop("projected_backup")
+                    backup_ang = _plane_vs_limb_angle(leg_pts_rot, backup)
+                    if backup_ang is None or backup_ang <= MARKER_MAX_AXIS_ANGLE_DEG:
+                        print(f"  Marker colour fit rejected: {ang:.0f}° off the "
+                              f"limb's own axis (> {MARKER_MAX_AXIS_ANGLE_DEG:.0f}°), "
+                              f"{mr['npts']} pts — replaced by the plane projected "
+                              f"from Stage 0's band boxes at "
+                              f"{-1 if backup_ang is None else backup_ang:.0f}°")
+                        keep_m.append((backup, backup_ang))
+                        continue
+                (drop_m if rejected else keep_m).append((mr, ang))
             for mr, ang in drop_m:
                 print(f"  Marker rejected: {ang:.0f}° off the limb's own axis "
                       f"(> {MARKER_MAX_AXIS_ANGLE_DEG:.0f}°), {mr['npts']} pts")
             markers_rotated = [mr for mr, _ in keep_m]
+
+        # A colour plane that passed every gate no longer needs its backup, and
+        # the published planes should carry only what cuts.
+        for mr in markers_rotated:
+            mr.pop("projected_backup", None)
 
         # Select which validated planes actually cut. Done LAST, once every
         # survivor has passed the gates above, and here rather than inside the
