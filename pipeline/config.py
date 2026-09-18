@@ -334,3 +334,14 @@ IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp", ".heic", 
 # ArUco family on the reference cube: ids 10-14, one per visible face, detected
 # on every frame of both datasets.
 REFERENCE_MARKER_DICT = "DICT_5X5_250"
+
+# Side of the black square printed on each cube face, in cm. The cube is 3D
+# printed to REFERENCE_REAL_SIZE_CM with a 5 cm marker; only the ratio of the
+# two is used by Stage 0, and the marker's own size gives Stage 6 a second
+# scale that needs no mesh (pipeline/core/marker_scale.py).
+REFERENCE_MARKER_CM = float(os.environ.get("REFERENCE_MARKER_CM", 5.0))
+
+# Stage 6 warns when the cube-volume scale and the marker scale differ by more
+# than this fraction, linear. Sound captures measure 0.5-3%; a cube that fell
+# to the alpha fallback measured 6% on 2026-09-19.
+MARKER_SCALE_WARN_FRAC = 0.03

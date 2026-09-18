@@ -20,7 +20,7 @@ import pandas as pd
 import trimesh
 from scipy import ndimage
 
-from pipeline.config import REFERENCE_REAL_SIZE_CM
+from pipeline.config import MARKER_SCALE_WARN_FRAC, REFERENCE_REAL_SIZE_CM
 from pipeline.core.crosssection import report_cut_circumference
 
 DEFAULT_VOXEL_RES = 150
@@ -304,10 +304,46 @@ def _check_reference_reconstruction(ref, object_mesh_paths):
               f"({type(exc).__name__}: {exc})")
 
 
+def _check_marker_scale(linear_scale, predictions_path):
+    """Warn when the cube-volume scale disagrees with the markers' own scale.
+
+    The cube mesh is the product of every cleaning and reconstruction step;
+    the markers' scale comes straight from the model's point map. When they
+    differ by more than MARKER_SCALE_WARN_FRAC the cube did not reconstruct
+    as a cube and every volume in the run carries that error. Reports rather
+    than aborts, like `_check_reference_reconstruction`, and never raises.
+    """
+    if not predictions_path or not os.path.exists(predictions_path):
+        return
+    try:
+        from pipeline.core.marker_scale import marker_scale_from_predictions
+
+        marker = marker_scale_from_predictions(predictions_path)
+        print(f"\n  Marker scale check:")
+        if marker is None:
+            print("    no ArUco marker found on any frame -- check skipped")
+            return
+        ratio = marker["cm_per_unit"] / linear_scale
+        print(f"    markers   {marker['cm_per_unit']:.4f} cm/unit "
+              f"({marker['edge_count']} edges on {marker['frames_with_markers']} frames)")
+        print(f"    cube mesh {linear_scale:.4f} cm/unit")
+        print(f"    marker / cube = {ratio:.4f} linear, {ratio ** 3:.4f} volume")
+        if abs(ratio - 1.0) > MARKER_SCALE_WARN_FRAC:
+            print(f"    WARNING: the two scales differ by {100 * abs(ratio - 1):.1f}% "
+                  f"(limit {100 * MARKER_SCALE_WARN_FRAC:.0f}%). The cube mesh did not")
+            print(f"    reconstruct at the size the markers say it has, so every volume")
+            print(f"    below is off by about {100 * abs(ratio ** 3 - 1):.0f}%. Look at the")
+            print(f"    cube's reconstruction (alpha fallback? ghost sheet?) before")
+            print(f"    trusting the numbers.")
+    except Exception as exc:
+        print(f"  marker scale check skipped ({type(exc).__name__}: {exc})")
+
+
 def compute_volumes(object_mesh_paths: list[str],
                     voxel_res: int = DEFAULT_VOXEL_RES,
                     auto_res: bool = True,
-                    clean_dir: str | None = None):
+                    clean_dir: str | None = None,
+                    predictions_path: str | None = None):
     """Compute real-world volume of each object using ArUco box for scale.
 
     Runs `_check_reference_reconstruction` first: the reference cube is the
@@ -317,6 +353,10 @@ def compute_volumes(object_mesh_paths: list[str],
     `clean_dir` is Stage 3's output directory. Given it, the stage also reports
     the limb's circumference at the cutting plane — the one dimension a tape
     measure can check without water, on the same scale as everything else here.
+
+    `predictions_path` is Stage 1's predictions.npz. Given it, the stage also
+    compares the cube-volume scale with the scale the ArUco markers give
+    directly from the point map (`_check_marker_scale`).
     """
     res_label = "auto" if auto_res else str(voxel_res)
     print()
@@ -370,6 +410,8 @@ def compute_volumes(object_mesh_paths: list[str],
     print(f"    real ref vol  = {REFERENCE_REAL_SIZE_CM}³ = {real_ref_vol:.2f} cm³")
     print(f"    k             = {real_ref_vol:.2f} / {ref['volume']:.6f} = {k:.6f} cm³/unit³")
     print(f"    linear_scale  = k^(1/3) = {linear_scale:.6f} cm/unit")
+
+    _check_marker_scale(linear_scale, predictions_path)
 
     df["real_vol_cm3"] = df["volume"] * k
     df["real_vol_L"]   = df["real_vol_cm3"] / 1000.0

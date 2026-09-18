@@ -763,7 +763,9 @@ def run_stage6(args, name):
     d = stage_dir(name, 6)
     df = compute_volumes(meshes, voxel_res=args.voxel_res,
                          auto_res=args.auto_res,
-                         clean_dir=src_dir(args, name, 3))
+                         clean_dir=src_dir(args, name, 3),
+                         predictions_path=os.path.join(
+                             src_dir(args, name, 1), "predictions.npz"))
     lines = [f"STAGE 6 — volume   (from {prev})", ""]
     if df is not None:
         df.to_csv(os.path.join(d, "volumes.csv"), index=False)

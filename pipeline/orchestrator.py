@@ -322,7 +322,9 @@ def main():
             vol_df = compute_volumes(vol_objects,
                                      voxel_res=args.voxel_res,
                                      auto_res=args.auto_res,
-                                     clean_dir=stage_dirs[3])
+                                     clean_dir=stage_dirs[3],
+                                     predictions_path=os.path.join(
+                                         stage_dirs[1], "predictions.npz"))
             print(f"[DBG-stage] stage6 volumes: {time.time() - _dbg_t:.2f}s")
             if vol_df is not None:
                 vol_df.to_csv(os.path.join(stage_dirs[6], "volumes.csv"), index=False)

@@ -43,13 +43,14 @@ import os
 import cv2
 import numpy as np
 
-from pipeline.config import IMAGE_EXTENSIONS, REFERENCE_MARKER_DICT
+from pipeline.config import (IMAGE_EXTENSIONS, REFERENCE_MARKER_CM,
+                             REFERENCE_MARKER_DICT, REFERENCE_REAL_SIZE_CM)
 from pipeline.core import vlm_detect as vlm
 
 # The reference cube's edge, and the printed marker's black square, in cm. Only
 # their ratio is used here, to recover a face's corners from the marker on it.
-FACE_CM = 10.0
-MARKER_CM = 5.0
+FACE_CM = REFERENCE_REAL_SIZE_CM
+MARKER_CM = REFERENCE_MARKER_CM
 
 # Largest a detected marker band may be, as a fraction of the limb's mask area.
 # An open-vocabulary detector always returns its best candidate for "cord", and
