@@ -1,6 +1,7 @@
 # Documentation
 
-Start with `../pipeline.md` for what the pipeline does stage by stage. The
+Start with `pipeline/current_pipeline.pdf` (source `pipeline/current_pipeline.md`)
+for the pipeline as it stands; `../pipeline.md` is the older, longer reference. The
 rest is grouped by what it is for.
 
 | folder | what is in it | status |

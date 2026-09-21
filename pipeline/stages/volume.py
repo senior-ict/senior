@@ -1,4 +1,4 @@
-"""Stage 7 — Compute real-world volumes using the ArUco reference (box).
+"""Stage 6 — Compute real-world volumes using the ArUco reference (box).
 
 Scale derivation:
     k            = real_ref_vol_cm3 / ref_mesh_vol          # cm³ per mesh-unit³
@@ -12,7 +12,8 @@ Volume method priority (per mesh):
     3. trimesh voxel     — CPU fallback
     4. convex_hull       — last resort, overestimates concave shapes
 
-The reference is a 14 × 14 × 14 cm ArUco cube identified by 'box' in its filename.
+The reference is an ArUco cube of side config.REFERENCE_REAL_SIZE_CM (10 cm),
+identified by 'box' in its filename.
 """
 import os
 import numpy as np
