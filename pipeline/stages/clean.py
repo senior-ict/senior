@@ -911,6 +911,19 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # cut is applied to Stage 5's solid instead, so there is nothing left to
     # sequence around -- but the limb must now be closed at the top as well as
     # the bottom, because it is reconstructed uncut.
+    # Optional: hold each cross-section to its neighbours' radius around a
+    # skeleton, and fill arcs no frame reconstructed (pipeline/core/limb_skeleton.py).
+    from pipeline.config import LIMB_SKELETON
+    if LIMB_SKELETON and len(markers_rotated) >= 2 and len(leg_pts_rot) > 0:
+        from pipeline.core.limb_skeleton import regularize_limb_radii
+        band_heights = sorted(float(marker["centroid"][2]) for marker in markers_rotated)
+        leg_pts_rot, leg_cols_arr, skeleton_report = regularize_limb_radii(
+            leg_pts_rot, leg_cols_arr, band_heights[0], band_heights[-1], seed=seed)
+        print(f"Limb skeleton: {skeleton_report['outer_moved_in']:,} outer moved in, "
+              f"{skeleton_report['inner_moved_out']:,} inner moved out, "
+              f"added {skeleton_report['points_added']:,} in {skeleton_report['arcs_filled']} "
+              f"empty arcs, over {skeleton_report['slices_used']} slices")
+
     nc_pts, nc_cols = _close_to_floor(leg_pts_rot, leg_cols_arr)
     nc_pts, nc_cols = _close_top(nc_pts, nc_cols)
     _quick_save_ply(nc_pts, nc_cols, leg_path)

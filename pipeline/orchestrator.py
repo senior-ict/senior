@@ -10,7 +10,7 @@ import numpy as np
 from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
-from pipeline.config import FRAME_FIT, IMAGE_EXTENSIONS, POINTCLOUD_METHOD
+from pipeline.config import CUT_STAGE, FRAME_FIT, IMAGE_EXTENSIONS, LIMB_SKELETON, POINTCLOUD_METHOD
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
 
@@ -59,6 +59,8 @@ def _print_banner(args, device):
     print(f"║  Seed          : {args.seed:<40}║")
     print(f"║  Leg segment   : {str(args.segment_leg):<40}║")
     print(f"║  Frame fit     : {args.frame_fit:<40}║")
+    print(f"║  Cut at        : {'Stage 3, on the cloud' if CUT_STAGE == 'cloud' else 'Stage 5, on the mesh':<40}║")
+    print(f"║  Limb skeleton : {'on' if LIMB_SKELETON else 'off':<40}║")
     from pipeline.stages.clean import resolve_cut_mode
     cut_label = {"upper": "upper (below top band)",
                  "span": "span (between bands)",
@@ -288,6 +290,9 @@ def main():
                 cut_mode=getattr(args, "cut_mode", None),
                 n_bands=n_bands,
                 band_planes=band_planes,
+                # CUT_STAGE = "cloud" cuts the point cloud here, as v2 did;
+                # Stage 5 then finds no uncut limb and leaves the solid as is.
+                apply_cut=(CUT_STAGE == "cloud"),
                 # A fused cloud has one sheet; the wide merge pass would only
                 # smooth it, and on its sparser spacing crushes the cube.
                 merge_ghost_sheets=(getattr(args, "pointcloud_method", None)

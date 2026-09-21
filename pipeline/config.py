@@ -362,6 +362,23 @@ TSDF_FALLBACK_VOXEL_UNITS = 0.004
 # cropping. See docs/experiments/2026-09_test_captures/PAD_NOT_CROP.md.
 FRAME_FIT = os.environ.get("FRAME_FIT", "pad")
 
+# Where the marker cut is applied.
+#
+#     "mesh"   Stage 5 slices the repaired watertight solid (the default since
+#              31 Aug 2026; what the web review places planes on)
+#     "cloud"  Stage 3 cuts the point cloud and caps the cut faces, and Stage 4
+#              reconstructs the already-cut limb (the v2 behaviour)
+#
+# Compared on the six padded captures (2026-09-21): five agree within 8 cm3,
+# and on 1_left the cloud cut lands 58 cm3 further from water, so "mesh" stays.
+CUT_STAGE = os.environ.get("CUT_STAGE", "mesh")
+
+# Fit each limb cross-section with one smooth curve around a slice-centre
+# skeleton, move outer spurs in and dents out toward it, and fill empty arcs
+# on it, after the stacked MLS passes (pipeline/core/limb_skeleton.py). On since 2026-09-21: six captures, mean error
+# 5.8% off vs 5.7% on; the rings lose their spurs and gap bridges.
+LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "on") == "on"
+
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6
 
