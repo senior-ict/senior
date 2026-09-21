@@ -137,6 +137,32 @@ def empty_arcs(angles):
     return runs, typical_count
 
 
+def slice_skeleton(points, lower_band_height, upper_band_height):
+    """Cut the limb into slices between the bands and find the skeleton through them.
+
+    Returns a dictionary: slice_edges (heights), slice_of_point (each point's
+    slice index), inside_range (points that fall in some slice), raw_centres
+    (one circle-fit centre per slice, NaN where too few points) and skeleton
+    (those centres smoothed along the height).
+    """
+    band_span = upper_band_height - lower_band_height
+    margin = band_span * BAND_MARGIN_FRACTION
+    slice_edges = np.linspace(lower_band_height - margin, upper_band_height + margin,
+                              SLICES_BETWEEN_BANDS + 1)
+    slice_count = len(slice_edges) - 1
+    slice_of_point = np.digitize(points[:, 2], slice_edges) - 1
+    inside_range = (slice_of_point >= 0) & (slice_of_point < slice_count)
+
+    raw_centres = np.full((slice_count, 2), np.nan)
+    for slice_index in range(slice_count):
+        in_slice = inside_range & (slice_of_point == slice_index)
+        if in_slice.sum() >= MINIMUM_POINTS_PER_SLICE:
+            raw_centres[slice_index] = fit_circle_centre(points[in_slice, :2])
+    skeleton = moving_median(raw_centres, SKELETON_SMOOTHING_SLICES)
+    return {"slice_edges": slice_edges, "slice_of_point": slice_of_point,
+            "inside_range": inside_range, "raw_centres": raw_centres, "skeleton": skeleton}
+
+
 def regularize_limb_radii(points, colours, lower_band_height, upper_band_height, seed=0):
     """Move outer and inner defects back toward each slice's smooth curve, and fill empty arcs.
 
@@ -147,21 +173,12 @@ def regularize_limb_radii(points, colours, lower_band_height, upper_band_height,
     points = np.asarray(points, dtype=np.float64).copy()
     colours = np.asarray(colours).copy()
 
-    band_span = upper_band_height - lower_band_height
-    margin = band_span * BAND_MARGIN_FRACTION
-    slice_edges = np.linspace(lower_band_height - margin, upper_band_height + margin,
-                              SLICES_BETWEEN_BANDS + 1)
+    slices = slice_skeleton(points, lower_band_height, upper_band_height)
+    slice_edges = slices["slice_edges"]
+    slice_of_point = slices["slice_of_point"]
+    inside_range = slices["inside_range"]
+    skeleton = slices["skeleton"]
     slice_count = len(slice_edges) - 1
-    slice_of_point = np.digitize(points[:, 2], slice_edges) - 1
-    inside_range = (slice_of_point >= 0) & (slice_of_point < slice_count)
-
-    # The skeleton: one circle-fit centre per slice, smoothed along the height.
-    raw_centres = np.full((slice_count, 2), np.nan)
-    for slice_index in range(slice_count):
-        in_slice = inside_range & (slice_of_point == slice_index)
-        if in_slice.sum() >= MINIMUM_POINTS_PER_SLICE:
-            raw_centres[slice_index] = fit_circle_centre(points[in_slice, :2])
-    skeleton = moving_median(raw_centres, SKELETON_SMOOTHING_SLICES)
 
     original_points = points.copy()
     outer_count = 0

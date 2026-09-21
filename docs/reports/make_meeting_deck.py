@@ -498,6 +498,22 @@ SKELETON_GALLERY = pathlib.Path(__file__).resolve().parent / "2026-09-21_ring_ga
 VERSION_GALLERY = pathlib.Path(__file__).resolve().parent / "2026-09-21_ring_gallery_versions.png"
 
 
+SKELETON_FIGURE = pathlib.Path(__file__).resolve().parent / "2026-09-21_skeleton_figure.png"
+
+
+def slide_skeleton_how(pdf):
+    """How the limb skeleton step works: the skeleton through the mesh, one slice, and its unrolled curve."""
+    figure = new_slide("Limb skeleton: how it works",
+                       "Centre of each 0.5 cm slice, smoothed up the leg; each ring fitted with one smooth curve")
+    image = plt.imread(str(SKELETON_FIGURE))
+    axes = figure.add_axes([0.03, 0.08, 0.94, 0.74])
+    axes.imshow(image)
+    axes.axis("off")
+    footer(figure, "work/test6_skel_off (points), work/test6_skel_on (mesh); docs/reports/make_skeleton_figure.py")
+    pdf.savefig(figure)
+    plt.close(figure)
+
+
 def slide_skeleton_rings(pdf):
     """test6 rings without and with the limb skeleton step (image drawn by the experiment script)."""
     figure = new_slide("Limb skeleton: smoothing each ring",
@@ -618,6 +634,7 @@ def main():
         slide_v3_v4_stages(pdf)
         slide_v3_v4_effects(pdf)
         slide_rings(pdf)
+        slide_skeleton_how(pdf)
         slide_skeleton_rings(pdf)
         slide_skeleton_volumes(pdf)
         slide_problems(pdf)
