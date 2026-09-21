@@ -386,7 +386,17 @@ them; the inner mode sits only 1–2 mm inside the fit and leaves the knee at
 to the mesh's faces for scale (6.5% off the marker scale; it would cancel
 the leg's error with a manufactured one).
 
-## 13. Still open
+## 13. Pad, do not crop: mean error 29% -> 6% — 2026-09-21
+
+Stage 0's sliding crop moved each frame's optical centre 19–74 px off the
+middle, where VGGT assumes it is, and VGGT distorted the whole scene to fit.
+Handing VGGT the whole photo, padded to a square (`config.FRAME_FIT = "pad"`,
+now the default), took the six captures with truth from a mean absolute
+error of 29.0% (bias +29.0%) to 5.7% (bias +2.0%). Full table and the can
+caveat in `PAD_NOT_CROP.md`. The Stage 6 marker-scale check was removed at
+the same time.
+
+## 14. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).
