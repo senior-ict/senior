@@ -278,6 +278,10 @@ combined transform `R_total` is applied to the marker planes too; applying only
    The cut itself is `core/segmentation.py:apply_marker_cut`: 0 planes no cut,
    1 keeps below, 2 keep between, each normal flipped along world up first so
    the detected sign cannot change the outcome
+   **Limb skeleton** (`core/limb_skeleton.py`, on by default, `LIMB_SKELETON=off`
+   to skip) — between the bands, each 0.5 cm horizontal chunk is fitted with one
+   smooth radius curve around a slice-centre skeleton; spurs are moved in, dents
+   out, and empty arcs filled on the curve. See `docs/pipeline/limb_skeleton.md`
 3. **Cut-plane cap** (`core/fill.py:cap_points_on_plane`) — fills the exposed
    cross-section with a grid built in the marker plane's own (u,v) basis, so it
    stays coplanar with the cut however the marker is tilted
