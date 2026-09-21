@@ -10,7 +10,7 @@ import numpy as np
 from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
-from pipeline.config import IMAGE_EXTENSIONS, POINTCLOUD_METHOD
+from pipeline.config import FRAME_FIT, IMAGE_EXTENSIONS, POINTCLOUD_METHOD
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
 
@@ -58,6 +58,7 @@ def _print_banner(args, device):
     print(f"║  Watertight    : {str(not args.no_watertight):<40}║")
     print(f"║  Seed          : {args.seed:<40}║")
     print(f"║  Leg segment   : {str(args.segment_leg):<40}║")
+    print(f"║  Frame fit     : {args.frame_fit:<40}║")
     from pipeline.stages.clean import resolve_cut_mode
     cut_label = {"upper": "upper (below top band)",
                  "span": "span (between bands)",
@@ -161,6 +162,7 @@ def _print_summary(total_time, inference_time, ply_path, scene_recon_path,
 def main():
     """Runs Stages 0-6 end to end, then publishes the final meshes and writes the run log."""
     args = parse_args()
+    args.frame_fit = getattr(args, "frame_fit", None) or FRAME_FIT
     device = get_device()
     total_t0 = time.time()
 
@@ -220,9 +222,10 @@ def main():
                            band_heights=args.prep_band, pad=args.prep_pad,
                            centre_on_subject=args.prep_recentre,
                            strict=args.prep_strict,
-                           crop=getattr(args, "prep_crop", True),
+                           crop=getattr(args, "prep_crop", True) and args.frame_fit == "crop",
                            output_size=getattr(args, "prep_size", 518),
-                           min_frames=args.prep_min_frames)
+                           min_frames=args.prep_min_frames,
+                           vggt_preprocess="pad" if args.frame_fit == "pad" else "crop")
             inference_input = prep_images
             # Stage 3 uses the colour Stage 0 measured, so a marker of any
             # colour works without editing the config's khaki defaults.
@@ -238,7 +241,9 @@ def main():
         _copy_images_to_target(inference_input, target_images_dir)
 
         # ── Stage 1: Inference ──
-        predictions, inference_time = run_inference(inference_input, device, args.max_frames)
+        predictions, inference_time = run_inference(
+            inference_input, device, args.max_frames,
+            preprocess_mode="pad" if args.frame_fit == "pad" else "crop")
         print(f"[DBG-stage] stage1 inference: {inference_time:.2f}s")
 
         # Save predictions (compatible with demo_gradio)
@@ -326,9 +331,7 @@ def main():
             vol_df = compute_volumes(vol_objects,
                                      voxel_res=args.voxel_res,
                                      auto_res=args.auto_res,
-                                     clean_dir=stage_dirs[3],
-                                     predictions_path=os.path.join(
-                                         stage_dirs[1], "predictions.npz"))
+                                     clean_dir=stage_dirs[3])
             print(f"[DBG-stage] stage6 volumes: {time.time() - _dbg_t:.2f}s")
             if vol_df is not None:
                 vol_df.to_csv(os.path.join(stage_dirs[6], "volumes.csv"), index=False)

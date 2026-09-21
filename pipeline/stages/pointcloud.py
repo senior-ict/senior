@@ -35,6 +35,12 @@ def _extract_base_cloud(predictions, args):
     conf_mask = (conf_raw >= conf_thresh) & (conf_raw > 1e-5)
 
 
+    # VGGT still predicts a 3D point for every pixel of the white padding it
+    # adds in pad mode; those pixels are exactly 1.0 in all three channels.
+    if getattr(args, "frame_fit", None) == "pad":
+        padding = (colors_4d >= 1.0).all(axis=-1)
+        conf_mask &= ~padding
+
     if getattr(args, "mask_black_bg", False):
         brightness = colors_4d.reshape(-1, 3).astype(np.float32).mean(axis=1)
         bg_mask = (brightness > 15.0).reshape(S, H, W_shape)

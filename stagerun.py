@@ -330,8 +330,9 @@ def run_stage0(args, name):
                               centre_on_subject=args.prep_recentre,
                               output_size=args.prep_size,
                               strict=args.prep_strict,
-                              crop=args.prep_crop,
-                              min_frames=args.prep_min_frames)
+                              crop=args.prep_crop and args.frame_fit == "crop",
+                              min_frames=args.prep_min_frames,
+                              vggt_preprocess="pad" if args.frame_fit == "pad" else "crop")
     frames = manifest["frames"]
     lines = [f"STAGE 0 — prep   (from {args.image_folder})", ""]
     lines.append(f"  band              : {manifest['band_cube_heights']} cube heights")
@@ -770,9 +771,7 @@ def run_stage6(args, name):
     d = stage_dir(name, 6)
     df = compute_volumes(meshes, voxel_res=args.voxel_res,
                          auto_res=args.auto_res,
-                         clean_dir=src_dir(args, name, 3),
-                         predictions_path=os.path.join(
-                             src_dir(args, name, 1), "predictions.npz"))
+                         clean_dir=src_dir(args, name, 3))
     lines = [f"STAGE 6 — volume   (from {prev})", ""]
     if df is not None:
         df.to_csv(os.path.join(d, "volumes.csv"), index=False)
@@ -850,9 +849,13 @@ def main():
     p.add_argument("--mask_white_bg", action="store_true")
     p.add_argument("--num_objects", type=int, default=2)
     p.add_argument("--max_frames", type=int, default=None)
-    p.add_argument("--preprocess-mode", dest="preprocess_mode", default="crop",
+    p.add_argument("--preprocess-mode", dest="preprocess_mode", default=None,
                    choices=["crop", "pad"],
-                   help="crop (default, centre-crops height) or pad (keeps whole frame)")
+                   help="how VGGT squares the frames: crop (centre-crops height) or pad "
+                        "(keeps whole frame). Default: follows --frame-fit.")
+    p.add_argument("--frame-fit", dest="frame_fit", default=None, choices=["pad", "crop"],
+                   help="pad: Stage 0 passes photos whole and VGGT pads them; crop: Stage 0's "
+                        "sliding square crop. Default: config.FRAME_FIT.")
     p.add_argument("--input-res", dest="input_res", type=int, default=518,
                    help="VGGT input resolution, must be divisible by 14 (518 native, 1022 hi-res)")
     p.add_argument("--no-fill", action="store_true")
@@ -883,6 +886,10 @@ def main():
     args = p.parse_args()
 
     name = args.name or os.path.basename(os.path.normpath(args.image_folder))
+    from pipeline.config import FRAME_FIT
+    args.frame_fit = args.frame_fit or FRAME_FIT
+    if args.preprocess_mode is None:
+        args.preprocess_mode = "pad" if args.frame_fit == "pad" else "crop"
 
     from pipeline.utils.seeding import seed_everything
     seed_everything(args.seed)

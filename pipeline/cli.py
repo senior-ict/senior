@@ -27,6 +27,9 @@ Examples:
                    help="stage 0: margin around the cube and the band")
     p.add_argument("--prep-min-frames", dest="prep_min_frames", type=int,
                    default=6, help="stage 0: frames required to proceed")
+    p.add_argument("--frame-fit", dest="frame_fit", default=None, choices=["pad", "crop"],
+                   help="pad: Stage 0 passes photos whole and VGGT pads them to a square; "
+                        "crop: Stage 0's sliding square crop. Default: config.FRAME_FIT.")
     p.add_argument("--no-prep-crop", dest="prep_crop",
                    action="store_false",
                    help="hand VGGT the original frames instead of stage 0's crop.\n"

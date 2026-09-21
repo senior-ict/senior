@@ -15,6 +15,12 @@ three times more closely, 1.10% -> 0.37% — but the subject shrank from 518 to
 the full frame re-admitted the chair and the seated body, and Stage 3 selected
 the chair as the reference cube.
 
+That judgement was made without ground truth. Against the tape and water
+measured in September 2026, padding is the better input by a wide margin:
+the crop's off-centre optical centre distorts VGGT's whole scene, and the
+"lost" volume was error. config.FRAME_FIT now defaults to "pad", and this
+stage only crops under FRAME_FIT = "crop".
+
 So the centre crop was doing two jobs, and only one of them was wasteful. It
 threw away pixels, but it also isolated the subject. This stage keeps the second
 job and drops the first: find the cube and the limb, and cut a square that
@@ -385,8 +391,11 @@ def _debug_overlay(img, window, cube, bands, ok, mode, notes, max_side=1200,
 
 
 
-def _vggt_window(shape, target=518, patch=14):
+def _vggt_window(shape, target=518, patch=14, preprocess="crop"):
     """The region VGGT will keep from a frame handed to it uncropped.
+
+    When VGGT pads rather than crops (config.FRAME_FIT = "pad") it keeps the
+    whole frame, so the window is the frame itself.
 
     Declining to crop does not mean nothing is cropped. VGGT resizes the width
     to its input size and centre-crops the height, which on a 9:16 photo throws
@@ -395,6 +404,8 @@ def _vggt_window(shape, target=518, patch=14):
     stage is not supplying one of its own.
     """
     h, w = shape[:2]
+    if preprocess == "pad":
+        return np.array([0.0, 0.0, float(w), float(h)])
     new_h = round(h * (target / w) / patch) * patch
     if new_h <= target:
         return np.array([0.0, 0.0, float(w), float(h)])
@@ -805,7 +816,8 @@ def _subject_bounds(cube_box, band_boxes, limb_mask, band_heights, pad):
 def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
                    pad=PAD_FRAC, centre_on_subject=CENTRE_ON_SUBJECT,
                    output_size=OUTPUT_SIZE, strict=True,
-                   min_frames=MIN_FRAMES, crop=CROP_ENABLED):
+                   min_frames=MIN_FRAMES, crop=CROP_ENABLED,
+                   vggt_preprocess="crop"):
     """Crop every frame to its subject; return the manifest.
 
     A frame that cannot be cropped to hold the whole reference and the marker
@@ -910,7 +922,7 @@ def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
                     and _fits(window, cube)
                     and all(_fits(window, b) for b in bands))
 
-        vggt_win = _vggt_window(img.shape)
+        vggt_win = _vggt_window(img.shape, preprocess=vggt_preprocess)
         # Uncropped is acceptable when whatever IS visible of the reference
         # survives VGGT's crop, and any band we found does too.
         can_pass_through = (_fits(vggt_win, visible_cube)
@@ -1016,6 +1028,9 @@ def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
         "output_size": output_size,
         "pad_frac": pad,
         "centre_on_subject": centre_on_subject,
+        # How VGGT squares the frames it is handed whole: "crop" (its centre
+        # crop) or "pad". core/bands3d.py maps band boxes through it.
+        "vggt_preprocess": vggt_preprocess,
         "frames": records,
     }
     with open(os.path.join(out_dir, "..", "manifest.json"), "w") as f:

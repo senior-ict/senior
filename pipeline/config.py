@@ -341,6 +341,27 @@ TSDF_FAR_DEPTH_MULT = 1.2
 # A 10 cm cube is ~0.13 units, so this is about 3 mm.
 TSDF_FALLBACK_VOXEL_UNITS = 0.004
 
+# How a portrait photo is made square for VGGT.
+#
+#     "pad"   the whole photo, shrunk to fit and padded with white to a square
+#     "crop"  Stage 0's full-width square, slid up or down to hold the cube and
+#             the bands (the behaviour until 2026-09-21)
+#
+# VGGT assumes every frame's optical centre is the middle of the image. The
+# sliding crop moves the photo's real centre 19-74 px (of 518) off the middle,
+# differently on every frame, and VGGT stretches the whole scene to reconcile
+# it. Measured on inputs/test6 against the tape, same measurement for both:
+#
+#                 length (ruler 27.5)   girth    volume (tape 1398.6)
+#     crop          30.25  +10.0%       +7.2%    1764  +26.1%
+#     pad           29.40   +6.9%       +4.1%    1587  +13.4%
+#
+# Padding also never cuts the cube or a band. Its cost is resolution: the leg
+# is about 25% fewer pixels across. Stage 0 still runs either way -- it gates
+# the frames, learns the band colour and finds the band boxes -- it only stops
+# cropping. See docs/experiments/2026-09_test_captures/PAD_NOT_CROP.md.
+FRAME_FIT = os.environ.get("FRAME_FIT", "pad")
+
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6
 
@@ -370,12 +391,12 @@ IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp", ".heic", 
 REFERENCE_MARKER_DICT = "DICT_5X5_250"
 
 # Side of the black square printed on each cube face, in cm. The cube is 3D
-# printed to REFERENCE_REAL_SIZE_CM with a 5 cm marker; only the ratio of the
-# two is used by Stage 0, and the marker's own size gives Stage 6 a second
-# scale that needs no mesh (pipeline/core/marker_scale.py).
+# printed to REFERENCE_REAL_SIZE_CM with a 5 cm marker; Stage 0 uses the ratio
+# of the two, and the TSDF option sizes its voxels through the markers.
+#
+# Stage 6 no longer compares the cube scale with a scale read from the markers
+# (removed 2026-09-21). The markers' 3D corners come from VGGT's points at the
+# busiest texture in the frame, where its placement is least reliable, and on
+# the padded test6 run the ruler agreed with the cube (length +5.0%) and not
+# the markers (+8.8%). The cube's own volume is the scale.
 REFERENCE_MARKER_CM = float(os.environ.get("REFERENCE_MARKER_CM", 5.0))
-
-# Stage 6 warns when the cube-volume scale and the marker scale differ by more
-# than this fraction, linear. Sound captures measure 0.5-3%; a cube that fell
-# to the alpha fallback measured 6% on 2026-09-19.
-MARKER_SCALE_WARN_FRAC = 0.03
