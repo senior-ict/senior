@@ -482,56 +482,31 @@ def draw_ring(axes, run, fraction, tape_girth):
 
 
 def slide_rings(pdf):
-    """test6 sliced low, middle and high: v3, v4 after the stacked MLS, and v4 final."""
-    import sys
-
-    sys.path.insert(0, str(PROJECT_ROOT))
-    sys.path.insert(0, str(PROJECT_ROOT / "docs/experiments/2026-09_test_captures"))
-
+    """test6 rings for v3, v4 after the stacked MLS, and v4 final (image from make_ring_galleries.py)."""
     figure = new_slide("Ring gallery: test6 cross-sections",
-                       "Dark dots = cleaned points (on top),  red = mesh outline,  grey dashed = tape;  every panel is the same 13 cm window")
-    runs = [load_ring_run(run_name) for _, run_name, _ in RING_RUNS]
-    column_left = 0.2
-    column_width = 0.24
-    row_top = 0.705
-    row_height = 0.165
-    for column_index, (version, _, label) in enumerate(RING_RUNS):
-        run = runs[column_index]
-        centre_x = column_left + column_index * column_width + column_width / 2
-        title, detail = label.split("\n")
-        volume_error = 100 * (run["volume_cm3"] / TEST6_TAPE_VOLUME_CM3 - 1)
-        figure.text(centre_x, 0.785, title, fontsize=13, weight="bold", ha="center", va="bottom", color=INK)
-        figure.text(centre_x, 0.755, detail, fontsize=11, ha="center", va="bottom", color=INK_SECONDARY)
-        figure.text(centre_x, 0.722, f"{run['volume_cm3']:.0f} cm³  ({volume_error:+.1f}%)", fontsize=12,
-                    ha="center", va="bottom", color=INK, weight="bold" if version == "v4 final" else "normal")
-    figure.text(0.05, 0.722, "volume (tape 1398.6 cm³)", fontsize=11, color=INK_SECONDARY, va="bottom")
-    for row_index, fraction in enumerate(RING_FRACTIONS):
-        tape_girth = tape_girth_at(fraction)
-        bottom = row_top - (row_index + 1) * row_height - row_index * 0.04
-        position_name = ("near lower band", "middle", "near upper band")[row_index]
-        figure.text(0.05, bottom + row_height / 2, f"{position_name}\n{fraction:.0%} of the way\ntape {tape_girth:.1f} cm",
-                    fontsize=11, color=INK_SECONDARY, va="center", linespacing=1.4)
-        for column_index, run in enumerate(runs):
-            axes = figure.add_axes([column_left + column_index * column_width + (column_width - row_height * 0.5625) / 2,
-                                    bottom, row_height * 0.5625, row_height])
-            draw_ring(axes, run, fraction, tape_girth)
-    footer(figure, "output_test6, output_test6_mls16, output_test6_pad; mesh = leg_no_cut.ply")
+                       "Dark dots = cleaned points,  red = mesh outline,  grey dashed = tape;  same 13 cm window everywhere")
+    image = plt.imread(str(VERSION_GALLERY))
+    axes = figure.add_axes([0.05, 0.07, 0.90, 0.735])
+    axes.imshow(image)
+    axes.axis("off")
+    footer(figure, "output_test6, output_test6_mls16, output_test6_pad; docs/reports/make_ring_galleries.py")
     pdf.savefig(figure)
     plt.close(figure)
 
 
 SKELETON_GALLERY = pathlib.Path(__file__).resolve().parent / "2026-09-21_ring_gallery_skeleton.png"
+VERSION_GALLERY = pathlib.Path(__file__).resolve().parent / "2026-09-21_ring_gallery_versions.png"
 
 
 def slide_skeleton_rings(pdf):
     """test6 rings without and with the limb skeleton step (image drawn by the experiment script)."""
     figure = new_slide("Limb skeleton: smoothing each ring",
-                       "Each slice fitted with one smooth curve; outer spurs moved in, dents moved out, gaps filled on the curve")
+                       "One smooth curve per slice: spurs moved in, dents moved out, gaps filled.  Dots = points, red = mesh, dashed = tape")
     image = plt.imread(str(SKELETON_GALLERY))
     axes = figure.add_axes([0.05, 0.08, 0.90, 0.74])
     axes.imshow(image)
     axes.axis("off")
-    footer(figure, "work/test6_skel_off, work/test6_skel_on; pipeline/core/limb_skeleton.py (LIMB_SKELETON=on)")
+    footer(figure, "work/test6_skel_off, work/test6_skel_on; docs/reports/make_ring_galleries.py")
     pdf.savefig(figure)
     plt.close(figure)
 
