@@ -1,4 +1,7 @@
-"""Fit an ideal cube to the reference cube's points, and compare the scale it implies.
+"""Compare the scale three ways on a finished run: fitted cube, mesh volume, printed markers.
+
+The fit itself is pipeline/core/cube_fit.py, which Stage 6 also uses as its
+reference check; this script only runs it over several runs and draws it.
 
 Stage 6 takes its scale from the reference cube's MESH volume: the mesh is
 declared to be 1000 cm3, so the scale is the cube root of a volume. That cube
@@ -26,110 +29,27 @@ import sys
 import numpy as np
 import open3d as o3d
 import trimesh
-from scipy.optimize import minimize
 
 HERE = pathlib.Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from pipeline.core.cube_fit import distance_to_cube_surface, fit_cube  # noqa: E402
 from pipeline.core.marker_scale import marker_scale_from_predictions  # noqa: E402
 
 REFERENCE_SIDE_CM = 10.0
-REFERENCE_VOLUME_CM3 = REFERENCE_SIDE_CM ** 3
-FABRICATED_BASE_CM = 1.0          # Stage 3 invents points here to close the base
-YAW_STEP_DEGREES = 1.0            # a cube repeats every quarter turn
-POLISH_COUNT = 5                  # how many of the best sweep angles to refine
-OUTLIER_ROUNDS = 3
-OUTLIER_SPREAD_MULTIPLE = 3.0
 
-
-def load_run(run_directory):
-    """Cube points (levelled), the cube mesh, the floor height, and the predictions path."""
-    run = pathlib.Path(run_directory)
-    stage_root = run / "for_debug" if (run / "for_debug").is_dir() else run
-    points = np.asarray(o3d.io.read_point_cloud(str(stage_root / "03_clean/objects/box.ply")).points)
-    mesh = trimesh.load(str(stage_root / "05_watertight/mesh/box.ply"), process=False)
-    floor_height = json.load(open(stage_root / "03_clean/debug/levelling.json"))["floor_z"]
-    predictions = stage_root / "01_inference/predictions.npz"
-    return points, mesh, floor_height, predictions
-
-
-def distance_to_cube_surface(points, yaw, centre_x, centre_y, bottom, side):
-    """Each point's distance to the surface of an upright cube of this side, yaw and centre."""
-    cosine, sine = np.cos(-yaw), np.sin(-yaw)
-    local_x = (points[:, 0] - centre_x) * cosine - (points[:, 1] - centre_y) * sine
-    local_y = (points[:, 0] - centre_x) * sine + (points[:, 1] - centre_y) * cosine
-    local_z = points[:, 2] - (bottom + side / 2.0)
-    half = side / 2.0
-    offsets = np.abs(np.column_stack([local_x, local_y, local_z])) - half
-    outside = np.linalg.norm(np.maximum(offsets, 0.0), axis=1)
-    inside = np.minimum(offsets.max(axis=1), 0.0)
-    return np.abs(outside + inside)
-
-
-def fit_at_yaw(points, yaw, start_bottom, start_side, start_centre):
-    """Best centre, base height and side for a fixed yaw; returns (cost, parameters)."""
-    def cost(parameters):
-        """Mean squared distance from the points to the cube these parameters describe."""
-        centre_x, centre_y, bottom, side = parameters
-        if side <= 0:
-            return 1e6
-        return float(np.mean(distance_to_cube_surface(points, yaw, centre_x, centre_y, bottom, side) ** 2))
-
-    result = minimize(cost, [start_centre[0], start_centre[1], start_bottom, start_side],
-                      method="Nelder-Mead", options={"xatol": 1e-5, "fatol": 1e-10, "maxiter": 3000})
-    return float(result.fun), result.x
-
-
-def fit_cube(points, floor_height):
-    """Fit an ideal upright cube to the points. Returns a dictionary of the fit and its quality."""
-    # Stage 3 fabricates the base to close the cube, and where the floor was
-    # never detected (the can capture) there is no floor height to stand on, so
-    # the base height is fitted like everything else.
-    kept = points[points[:, 2] > points[:, 2].min()]
-    start_bottom = float(floor_height) if floor_height is not None else float(np.percentile(kept[:, 2], 1))
-    start_side = float(np.percentile(kept[:, 2], 99) - start_bottom)
-    start_centre = kept[:, :2].mean(axis=0)
-
-    working = kept
-    best = None
-    for _ in range(OUTLIER_ROUNDS):
-        sweep = []
-        for yaw_degrees in np.arange(0.0, 90.0, YAW_STEP_DEGREES):
-            yaw = np.radians(yaw_degrees)
-            cost, parameters = fit_at_yaw(working, yaw, start_bottom, start_side, start_centre)
-            sweep.append((cost, yaw, parameters))
-        sweep.sort(key=lambda entry: entry[0])
-
-        best = None
-        for cost, yaw, parameters in sweep[:POLISH_COUNT]:
-            def full_cost(values):
-                """Mean squared distance with the yaw free as well."""
-                yaw_value, centre_x, centre_y, bottom_value, side = values
-                if side <= 0:
-                    return 1e6
-                return float(np.mean(
-                    distance_to_cube_surface(working, yaw_value, centre_x, centre_y, bottom_value, side) ** 2))
-
-            polished = minimize(full_cost, [yaw, parameters[0], parameters[1], parameters[2], parameters[3]],
-                                method="Nelder-Mead", options={"xatol": 1e-6, "fatol": 1e-12, "maxiter": 6000})
-            if best is None or polished.fun < best.fun:
-                best = polished
-
-        yaw, centre_x, centre_y, bottom, side = best.x
-        distances = distance_to_cube_surface(kept, yaw, centre_x, centre_y, bottom, side)
-        spread = 1.4826 * np.median(np.abs(distances - np.median(distances)))
-        working = kept[distances <= np.median(distances) + OUTLIER_SPREAD_MULTIPLE * max(spread, 1e-9)]
-        start_side, start_centre, start_bottom = side, (centre_x, centre_y), bottom
-
-    yaw, centre_x, centre_y, bottom, side = best.x
-    distances = distance_to_cube_surface(kept, yaw, centre_x, centre_y, bottom, side)
-    inliers = distances <= np.median(distances) + OUTLIER_SPREAD_MULTIPLE * (
-        1.4826 * np.median(np.abs(distances - np.median(distances))))
-    return {"side": float(side), "yaw_degrees": float(np.degrees(yaw) % 90.0),
-            "centre": (float(centre_x), float(centre_y)), "bottom": float(bottom),
-            "residual_units": float(np.sqrt(np.mean(distances[inliers] ** 2))),
-            "inlier_fraction": float(inliers.mean()), "points": kept, "inliers": inliers}
+def fit_run_cube(points):
+    """Fit the cube and add the point set the figure draws."""
+    fit = fit_cube(points)
+    if fit is None:
+        raise SystemExit("too few reference points to fit a cube")
+    distances = distance_to_cube_surface(points, np.radians(fit["yaw_degrees"]), fit["centre"][0],
+                                         fit["centre"][1], fit["bottom"], fit["side"])
+    spread = 1.4826 * np.median(np.abs(distances - np.median(distances)))
+    fit["points"] = points
+    fit["inliers"] = distances <= np.median(distances) + 3.0 * max(spread, 1e-9)
+    return fit
 
 
 def ideal_cube_faces(fit):
@@ -208,7 +128,7 @@ def draw_figure(fit, points, output_path, scale_cm, title):
     side_view.set_aspect("equal")
     side_view.set_xlabel("cm")
     side_view.set_ylabel("height above the cube's base (cm)")
-    side_view.set_title(f"from the side — residual {fit['residual_units'] * scale_cm * 10:.2f} mm", fontsize=11)
+    side_view.set_title(f"from the side — residual {fit['residual'] * scale_cm * 10:.2f} mm", fontsize=11)
     side_view.grid(alpha=0.25)
 
     figure.suptitle(f"{title}: dark = points the fit kept, orange = points it set aside", fontsize=12)
@@ -228,8 +148,8 @@ def main():
     print(f"{'run':<22}{'fitted side':>13}{'mesh side':>11}{'marker side':>13}"
           f"{'residual':>10}{'inliers':>9}{'yaw':>7}{'limb change':>13}")
     for index, run_directory in enumerate(arguments.runs):
-        points, mesh, floor_height, predictions_path = load_run(run_directory)
-        fit = fit_cube(points, floor_height)
+        points, mesh, _, predictions_path = load_run(run_directory)
+        fit = fit_run_cube(points)
 
         mesh_side = abs(mesh.volume) ** (1.0 / 3.0)
         fitted_scale_cm = REFERENCE_SIDE_CM / fit["side"]

@@ -3,6 +3,15 @@
 Measures the real-world volume of an object from a handful of phone photos,
 using an ArUco-marked cube of known size as the scale reference.
 
+> **Read `docs/pipeline/current_pipeline.md` (or its PDF) first.** That
+> document describes the pipeline as it stands. This one is the longer
+> reference, and parts of it predate September 2026: the cube is 10 cm rather
+> than 14, Stage 0 pads the photos instead of cropping them, the cut is
+> applied to the mesh in Stage 5 rather than to the cloud in Stage 3, Stage 3
+> ends with the limb skeleton step, and Stage 6 checks the reference by
+> fitting a cube to its points. Where the two disagree, the current document
+> and the code are right.
+
 ```
 Input images
   → [0] Framing gate          frame_NN.png (518²), framing.json

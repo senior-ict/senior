@@ -396,7 +396,76 @@ error of 29.0% (bias +29.0%) to 5.7% (bias +2.0%). Full table and the can
 caveat in `PAD_NOT_CROP.md`. The Stage 6 marker-scale check was removed at
 the same time.
 
-## 14. Still open
+## 14. The limb skeleton: smoother rings, same volumes — 2026-09-21
+
+Between the bands, each 0.5 cm horizontal chunk of the limb is fitted with one
+smooth radius curve around a slice-centre skeleton; points outside it are
+pulled in, points inside pushed out, and arcs with no points are filled on the
+curve (`pipeline/core/limb_skeleton.py`, `LIMB_SKELETON=on` by default).
+
+Measured by rerunning Stages 3-6 on the six padded captures, step off and on:
+mean absolute error 5.8% -> 5.7%, bias +2.3% -> +2.1%, and no capture got
+worse. The shape is what changed: `test6`'s mesh outline against the tape went
+from +3-5% to +1-2% at 70-90% of the way up, and the flat bridge and spur near
+the upper band are gone. Full account in `docs/pipeline/limb_skeleton.md`.
+
+## 15. The cut at Stage 3 is not better than at Stage 5 — 2026-09-21
+
+`CUT_STAGE=cloud` cuts the point cloud as v2 did. On the six padded captures
+five agree with the mesh cut within 8 cm3; on `1_left` the cloud cut lands
+58 cm3 further from the water truth. The mesh cut stays the default.
+
+## 16. The cube fits a cube; the fill ratio was measuring the mesh — 2026-09-24
+
+An ideal cube fitted to the reference POINTS (`pipeline/core/cube_fit.py`:
+side, yaw, centre and base, with a yaw sweep so a 45-degree fit cannot win)
+sits 0.7-1.5 mm from them on all seven captures, at or below the surface-noise
+floor, including the four the fill ratio warned about. So the cube reconstructs
+well and the loose alpha wrap was what filled the box badly.
+
+| capture | fitted side | residual | inliers | yaw | fill ratio |
+|---|---|---|---|---|---|
+| can | 9.85 cm | 0.66 mm | 93% | 89.1 deg | 0.781 |
+| test6 | 9.96 cm | 1.54 mm | 99% | 2.8 deg | 0.851 |
+| test5 | 9.93 cm | 1.03 mm | 95% | 6.4 deg | 0.798 |
+| 0_right | 9.97 cm | 1.14 mm | 97% | 33.5 deg | 0.830 |
+| 1_left | 9.91 cm | 1.04 mm | 92% | 42.4 deg | 0.783 |
+| 6_left | 10.05 cm | 1.10 mm | 96% | 38.0 deg | 0.885 |
+| 2_left | 10.01 cm | 1.33 mm | 97% | 52.9 deg | 0.826 |
+
+Sides are in the current scale's centimetres, where the mesh-volume scale
+reads 10.00 by construction, so the two agree to about 1% and the scale is not
+where the remaining error lives. **Scaling on the fitted side instead is
+worse**: mean absolute error 5.7% -> 6.6%, bias +2.1% -> +3.0%, helping two
+captures and hurting four. So the fit is reported as a check and the scale is
+unchanged. The printed 5 cm markers remain the odd reading out, 3-4% short on
+every capture.
+
+Stage 6 now runs this fit as its reference check and warns past 3 mm. Verified
+on a scene built to order: 1 mm noise on a true cube reports 0.99 mm and
+passes; the same cube sheared 35% reports 5.78 mm and warns. The residual is
+measured over every point, not the inliers -- over inliers alone the sheared
+cube read 1.88 mm, because the rejection step had already discarded the
+evidence.
+
+## 17. Voxel counting is a cross-check, not a measurement — 2026-09-24
+
+Stage 6 measures a closed mesh exactly. Voxel counting, its fallback for a
+mesh that will not close, was run on `test6` and the can for comparison:
+
+| run | exact | voxel 150 | voxel 300 |
+|---|---|---|---|
+| test6 | 1485.2 | 1595.3 (+7.4%) | 1539.9 (+3.7%) |
+| can | 354.4 | 371.2 (+4.7%) | 362.7 (+2.3%) |
+
+Boundary cells are counted whole, so voxel reads high and halves its error
+when the grid doubles -- converging onto the exact value from above. Measuring
+the cube the same way cancels part of it (test6 +4.9% at 150, +2.5% at 300)
+but never beats exact. Against the tape, exact is +6.2% where voxel at 300 is
++10.1%. Stage 6 now runs the comparison at 120 cells and warns when a voxel
+volume comes out BELOW the exact one, which a closed shell cannot do.
+
+## 18. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).
@@ -409,3 +478,23 @@ the same time.
   band, 144 pts). The cut still lands on the band but slices it obliquely.
 - **`1_left` drifted 1.2% between identical runs** on 2026-09-04; `test6`
   reproduced to the byte on 2026-09-18. Not understood.
+- **How repeatable is any of this?** Nobody has shot one limb three times and
+  run all three, nor measured one limb's water volume three times. Reruns of
+  Stages 3-6 alone move a volume 10-20 cm3 (~1%). Until the spread of the
+  pipeline and of the truth are known, a few percent cannot be judged, and
+  this now blocks everything else.
+- **`test6`'s length, +5%.** 28.87 cm between band centres against a 27.5 cm
+  ruler, which is most of that capture's error. Was the ruler read centre to
+  centre, or between the bands' inner edges?
+- **`2_left` reads +12.4%,** twice any other capture, while its band girths
+  match the tape to 0.2 cm. So the error is length or truth, not girth.
+- **Three cohort captures read their LOWER band 8-10% thin** (`0_right`,
+  `1_left`, `6_left`) while their upper bands match, which looks like the tape
+  and the cutting plane sitting at different heights on the limb.
+- **No working rigid control.** The can capture has no detected floor, its
+  cube would not close under Poisson, and 325 ml is its fill volume, not its
+  displacement. Geometry puts the outside at 371-379 cm3 against the
+  pipeline's 354.4; a displacement measurement would settle it.
+- **The band planes are found before the skeleton step corrects the points,**
+  and they set both the cut and where girth is measured. Whether re-fitting
+  them afterwards moves anything is unmeasured.

@@ -269,7 +269,7 @@ def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict |
 REFERENCE_FILL_MIN = 0.83
 
 
-def _check_reference_reconstruction(ref, object_mesh_paths):
+def _check_reference_reconstruction(ref, object_mesh_paths, clean_dir=None):
     """Warn when the reference cube did not reconstruct like a cube.
 
     Reports rather than aborts, in keeping with the rest of the stage: the
@@ -304,6 +304,89 @@ def _check_reference_reconstruction(ref, object_mesh_paths):
         print(f"  reference reconstruction check skipped "
               f"({type(exc).__name__}: {exc})")
 
+    fitted_scale = (REFERENCE_REAL_SIZE_CM ** 3 / ref["volume"]) ** (1.0 / 3.0)
+    _report_cube_fit(clean_dir, fitted_scale)
+
+
+# An ideal cube fitted to the reference POINTS sat 0.7-1.5 mm from them on all
+# seven captures measured on 2026-09-24, at or below the surface-noise floor,
+# including the captures the fill ratio above warned about. So a residual well
+# past that floor means the capture itself is bad, not the mesher.
+CUBE_FIT_RESIDUAL_WARN_MM = 3.0
+
+
+def _report_cube_fit(clean_dir, linear_scale):
+    """Fit an ideal cube to Stage 3's reference points and report the fit, as a check on the capture.
+
+    Never raises and never changes a number: the scale still comes from the
+    reference mesh's volume. The fitted side is printed beside it because it
+    is an independent reading of the same length -- the two agreed to about 1%
+    on every capture measured so far.
+    """
+    if not clean_dir:
+        return
+    try:
+        import os
+
+        from pipeline.core.cube_fit import fit_cube_from_ply
+
+        points_path = os.path.join(clean_dir, "objects", "box.ply")
+        if not os.path.exists(points_path):
+            return
+        fit = fit_cube_from_ply(points_path)
+        if fit is None:
+            return
+
+        residual_mm = fit["residual"] * linear_scale * 10.0
+        fitted_side_cm = fit["side"] * linear_scale
+        side_difference = 100.0 * (fitted_side_cm / REFERENCE_REAL_SIZE_CM - 1.0)
+        print(f"    an ideal cube fits the reference points to "
+              f"{residual_mm:.2f} mm ({100 * fit['inlier_fraction']:.0f}% of points, "
+              f"yaw {fit['yaw_degrees']:.0f} deg)")
+        print(f"    its side reads {fitted_side_cm:.2f} cm against the "
+              f"{REFERENCE_REAL_SIZE_CM:.0f} cm the mesh volume implies ({side_difference:+.1f}%)")
+        if residual_mm > CUBE_FIT_RESIDUAL_WARN_MM:
+            print(f"    ** WARNING: {residual_mm:.2f} mm is past "
+                  f"{CUBE_FIT_RESIDUAL_WARN_MM} mm — the reference did not reconstruct as a cube,")
+            print(f"    so the subject beside it did not reconstruct well either. Re-shoot the "
+                  f"capture: more angles on the cube, and nothing occluding it.")
+    except Exception as exc:
+        print(f"  cube fit skipped ({type(exc).__name__}: {exc})")
+
+
+# A voxel grid counts every boundary cell whole, so a voxel volume sits a few
+# percent ABOVE the exact one and converges down onto it as the grid tightens
+# (measured 2026-09-24 on test6: +7.4% at 150 cells, +3.7% at 300). A voxel
+# volume BELOW the exact one, or far above it, therefore means the surface is
+# not a simple closed shell -- inverted, or self-intersecting -- and the exact
+# volume is then confidently wrong rather than noisy.
+VOXEL_CROSS_CHECK_RESOLUTION = 120
+VOXEL_CROSS_CHECK_HIGH_FRAC = 0.25
+VOXEL_CROSS_CHECK_LOW_FRAC = 0.0
+
+
+def _voxel_cross_check(mesh, name):
+    """Compare a watertight mesh's exact volume with a voxel count, and warn when they disagree."""
+    try:
+        exact = float(abs(mesh.volume))
+        if exact <= 0:
+            return
+        pitch = float(max(mesh.extents)) / VOXEL_CROSS_CHECK_RESOLUTION
+        voxel = float(mesh.voxelized(pitch=pitch).fill().volume)
+        difference = voxel / exact - 1.0
+        print(f"    {name}: voxel cross-check {100 * difference:+.1f}% "
+              f"(expected a few percent high at {VOXEL_CROSS_CHECK_RESOLUTION} cells)")
+        if difference < VOXEL_CROSS_CHECK_LOW_FRAC:
+            print(f"    ** WARNING: the voxel count came out BELOW the exact volume. A closed "
+                  f"shell cannot do that,")
+            print(f"    so the surface is inverted or self-intersecting and its exact volume "
+                  f"cannot be trusted.")
+        elif difference > VOXEL_CROSS_CHECK_HIGH_FRAC:
+            print(f"    ** WARNING: the voxel count is {100 * difference:.0f}% above the exact "
+                  f"volume, far more than boundary cells explain.")
+    except Exception as exc:
+        print(f"    {name}: voxel cross-check skipped ({type(exc).__name__}: {exc})")
+
 
 def compute_volumes(object_mesh_paths: list[str],
                     voxel_res: int = DEFAULT_VOXEL_RES,
@@ -322,7 +405,7 @@ def compute_volumes(object_mesh_paths: list[str],
     res_label = "auto" if auto_res else str(voxel_res)
     print()
     print("=" * 60)
-    print(f"STAGE 7: real-world volumes  "
+    print(f"STAGE 6: real-world volumes  "
           f"(ref = {REFERENCE_REAL_SIZE_CM} cm ArUco cube  |  voxel_res={res_label})")
     print("=" * 60)
 
@@ -340,6 +423,17 @@ def compute_volumes(object_mesh_paths: list[str],
 
     rows = [_load_mesh_info(p, voxel_res, auto_res=auto_res) for p in measurable_paths]
     rows = [r for r in rows if r is not None]
+
+    # Every exact volume above came from a closed surface; this says whether
+    # that surface is also a simple one.
+    print("\n  Voxel cross-check:")
+    for mesh_path in measurable_paths:
+        try:
+            mesh = trimesh.load(mesh_path, force="mesh", process=False)
+        except Exception:
+            continue
+        if mesh.is_watertight:
+            _voxel_cross_check(mesh, os.path.basename(mesh_path))
     if not rows:
         print("  No meshes loaded.")
         return
@@ -360,7 +454,7 @@ def compute_volumes(object_mesh_paths: list[str],
         print(f"\n  Reference mesh '{ref['name']}' has zero volume. Aborting.")
         return
 
-    _check_reference_reconstruction(ref, object_mesh_paths)
+    _check_reference_reconstruction(ref, object_mesh_paths, clean_dir)
 
     real_ref_vol = REFERENCE_REAL_SIZE_CM ** 3
     k            = real_ref_vol / ref["volume"]

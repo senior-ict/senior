@@ -210,8 +210,19 @@ and the cloud cut is further from water on the sixth, so the mesh cut stays.
   cm³ per scene unit, and its cube root cm per unit. The printed 5 cm markers
   were tried as a second scale and dropped: VGGT does not place their corners
   well enough, and a ruler agreed with the cube.
-- **Cube check:** the cube should fill 0.87–0.89 of its own oriented box on a
-  sound capture; below 0.83 the run warns that the reconstruction is suspect.
+- **Cube checks, two of them.** An ideal cube is fitted to the reference
+  *points* (`pipeline/core/cube_fit.py`): its residual says whether the cube
+  reconstructed as a cube, and a residual past 3 mm warns that the capture
+  itself is bad. Across seven captures the residual ran 0.7–1.5 mm, and the
+  fitted side agreed with the mesh-volume scale to about 1%, so the fit is a
+  cross-check and does not set the scale. The older check, how much of its own
+  box the cube's *mesh* fills, is still printed; it warned on four of those
+  seven captures, which the fit showed was the alpha wrap's doing rather than
+  the capture's.
+- **Voxel cross-check:** each closed mesh is also measured by filling a voxel
+  grid. Counting boundary cells whole puts that a few percent above the exact
+  volume, so a voxel result *below* the exact one means the surface is
+  inverted or self-intersecting, and the run says so.
 - **Limb volume:** the exact enclosed volume of the closed `leg_cut.ply`.
   Voxel counting is only a fallback for a mesh that is not closed, and warns
   when used.
