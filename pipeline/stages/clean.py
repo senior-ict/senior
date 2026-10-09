@@ -19,7 +19,8 @@ from pipeline.core.segmentation import (segment_point_cloud, apply_marker_cut,
                                         MAX_MARKERS, AXIS_MAP)
 from pipeline.config import (MARKER_MIN_HEIGHT_FRAC, MARKER_MIN_HEIGHT_CUBES,
                              MARKER_CUT_MODE,
-                             MARKER_MAX_AXIS_ANGLE_DEG)
+                             MARKER_MAX_AXIS_ANGLE_DEG,
+                             REFERENCE_REAL_SIZE_CM)
 from pipeline.core.fill import (
     cap_point_cloud_bottom,
     cap_points_on_plane,
@@ -776,6 +777,27 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                   "Cutting on it alone (keep below); this is NOT a span "
                   "measurement.")
 
+        # The bands are stripes ~2 cm wide, and a plane fitted to the whole
+        # stripe lands in its middle. The tape is read between the stripes'
+        # INNER edges, so the planes are slid there before anything cuts on
+        # them. Worth 15-35% of the limb volume; see pipeline/core/band_edges.py.
+        from pipeline.config import BAND_CUT_EDGE
+        if BAND_CUT_EDGE == "inner" and len(markers_rotated) == 2:
+            from pipeline.core.band_edges import describe as describe_band_move
+            from pipeline.core.band_edges import move_planes_to_inner_edges
+            cube_side_units = (float(box_pts_rot[:, 2].max() - box_pts_rot[:, 2].min())
+                               if len(box_pts_rot) > 10 else 0.0)
+            scale_cm_per_unit = (REFERENCE_REAL_SIZE_CM / cube_side_units
+                                 if cube_side_units > 0 else None)
+            markers_rotated, band_move = move_planes_to_inner_edges(
+                markers_rotated, leg_pts_rot, leg_cols_arr, scale_cm_per_unit)
+            moved_line = describe_band_move(band_move, scale_cm_per_unit)
+            if moved_line:
+                print(f"  {moved_line}")
+            else:
+                print("  Band planes left at the stripe centres — "
+                      "no band colour found around both planes")
+
         # Also publish the planes in LEVELLED space. cutting_line.json is written
         # pre-levelling, but leg_no_cut.ply is post-levelling, so the two do not
         # share a frame — anything drawing them together (a UI, a debug viewer)
@@ -857,6 +879,22 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # leg_no_cut.ply is exempt: it is the review cloud and what gets measured
     # if the user declines to cut, so it is always floor-closed. It is built
     # from its own copy, and the cut runs on the unfilled cloud.
+    # Flatten the reference cube's fuzz onto the cube that fits it and fill the
+    # empty patches on its faces, so Poisson can close it without falling back
+    # to a loose alpha wrap that floats clear of the points and skews the scale.
+    from pipeline.config import BOX_MEND_CELL_MM, BOX_MEND_TOLERANCE_MM, BOX_MENDING
+    if BOX_MENDING and len(box_pts_rot) > 0:
+        from pipeline.core.box_mending import describe as describe_mending
+        from pipeline.core.box_mending import mend_reference_points
+        box_pts_rot, box_cols_arr, mending_report = mend_reference_points(
+            box_pts_rot, box_cols_arr,
+            tolerance_mm=BOX_MEND_TOLERANCE_MM, cell_mm=BOX_MEND_CELL_MM)
+        mending_line = describe_mending(mending_report)
+        if mending_line:
+            print(f"  {mending_line}")
+        else:
+            print("  Box mending skipped — too few reference points to fit a cube")
+
     o3d_box = _array_to_o3d(box_pts_rot, box_cols_arr)
     if fill_enabled and len(o3d_box.points) > 0:
         # The box is never cut, so its base is always the floor.

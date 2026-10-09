@@ -222,7 +222,7 @@ with a second known length up at band height (a ruler standing beside the
 leg, or the cube raised to the upper band) — a capture, not a code change.
 
 **Field of view, checked against the phone's own lens.** The originals
-(`inputs/test6/*.zip`, iPhone 17 main camera, 26 mm equivalent, 4284 × 5712)
+(`inputs/test1_6/*.zip`, iPhone 17 main camera, 26 mm equivalent, 4284 × 5712)
 give a true focal of 4290 px, which is 518.8 px on the full-width 518 crop
 VGGT was fed. VGGT's predicted focal, per frame, against that:
 
@@ -465,7 +465,217 @@ but never beats exact. Against the tape, exact is +6.2% where voxel at 300 is
 +10.1%. Stage 6 now runs the comparison at 120 cells and warns when a voxel
 volume comes out BELOW the exact one, which a closed shell cannot do.
 
-## 18. Still open
+## 18. New captures and their truth: `test2_keng` -- 2026-10-09
+
+`inputs/test2_keng` (8 photos) arrived with a 1 cm tape profile, and
+`inputs/test6_orig` (8 photos) arrived without one.
+
+The profile is 27 slabs of 1 cm, each recorded as the circumference at its
+bottom and top, and the chain is consistent (every slab's top equals the next
+slab's bottom), so it is 28 circumferences over 27.0 cm:
+
+| | lower band | peak | upper band |
+|---|---|---|---|
+| height above the lower band | 0 cm | 19-20 cm | 27.0 cm |
+| circumference | 18.5 cm | 30.0 cm | 28.2 cm |
+
+`tape_volume.py` sums truncated cones over the profile
+(`test2_keng_tape_profile.csv`):
+
+| rule | volume |
+|---|---|
+| frustum (quoted) | **1420.2 cm3** |
+| disc, cylinders of the mean circumference | 1420.1 cm3 (-0.00%) |
+
+The two rules agree to 0.1 cm3 at this spacing, as they do on `test6`
+(1398.6 against 1398.4), which is the answer to the earlier worry that a
+different interval count changes the truth: it does not. A profile of the same
+limb that jumps 0.9% between interval counts gained or lost measurements.
+
+The frustum sum is an upper bound, because a tape measures perimeter and a
+circle holds the most area for a given perimeter. An oval of axis ratio 1.1
+reads ~0.2% high, 1.2 ~0.8% high.
+
+**The run, same day.** `python run.py -i inputs/test2_keng
+--output_dir output_test2_keng`, 103 s, inference 23.6 s. Poisson closed both
+meshes at chi=2, so no alpha fallback.
+
+| | tape | pipeline | error |
+|---|---|---|---|
+| volume between the bands | 1420.2 cm3 | **1517.5 cm3** | **+6.9%** |
+| lower band girth | 18.5 cm | 19.02 cm | +2.8% |
+| upper band girth | 28.2 cm | 28.88 cm | +2.4% |
+| span between the bands | 27.0 cm | 27.96 cm | +3.6% |
+
+`profile_vs_tape.py` slices the cleaned cloud at each of the 28 tape heights
+and fits the same ellipse Stage 6 uses
+(`2026-10-09_test2_keng_profile_vs_tape.png`). That separates the error:
+
+| | volume | against the tape |
+|---|---|---|
+| tape | 1420.2 | - |
+| pipeline girths over the tape's 27.0 cm | 1474.7 | +3.8% |
+| the same, stretched to the measured 27.96 cm | 1527.1 | +7.5% |
+| the mesh Stage 6 actually measures | 1517.5 | +6.9% |
+
+So roughly half the error is girth and half is length, and the two multiply.
+
+The girth error is not spread evenly. It is **+4.6 to +7.4% from 0 to 12 cm**
+(the thin ankle end) and **within 1% from 17 cm up** (the calf), which is the
+same pattern as the earlier captures: the thinner the section, the worse the
+over-read. The ellipse axis ratio tells the same story -- 1.36 at the ankle
+against 1.02-1.05 at the calf.
+
+The **mesh z extent is 30.21 cm**, which is NOT the length to compare with the
+tape. Both band planes lean (19 deg and 14 deg from the vertical), so the cut
+leaves a slanted rim and the bounding height runs past the band centroids. The
+band separation, 27.96 cm, is the number the ruler measures.
+
+Stage 6's reference check **warned**: the cube fills 0.775 of its oriented box
+against the 0.83 threshold. Section 16 says what that means -- the fill ratio
+describes the mesh, not the capture -- and the cube fit agrees it is a false
+alarm: an ideal cube fits the points to 2.19 mm over 99% of them, and its side
+reads 9.99 cm against the 10 cm the mesh volume implies, so the scale is right
+to 0.1%. The 2.19 mm residual is the largest seen so far (0.66-1.54 mm on the
+September captures) but below the 3 mm warn.
+
+`test6_orig` has not been run and has no measurement.
+
+**The truth carries +/-2.5%.** The band tilted between the tape measurement
+and the photographs, so 1420.2 cm3 means 1385-1456, and the +6.9% reading
+means +4.2% to +9.6%.
+
+
+## 19. Mending the reference cube does not help -- 2026-10-09
+
+The `test2_keng` cube mesh looks bad by eye: Poisson left holes in two faces,
+Stage 3's floor extension leaves a skirt, and the bounding box reads
+10.58 x 11.29 x 10.95 cm for a 10 cm cube. The question was whether the limb's
++6.9% is hiding in there.
+
+**First, what the cube actually is.** `box_skeleton.py` slices it the way the
+limb skeleton slices the leg -- horizontal chunks, a square fitted to each --
+and then does the same along the cube's own x and y:
+
+| what the slices say | reading |
+|---|---|
+| centre drift with height | +/-0.5 mm over 8 cm: no lean, no shear |
+| side by height | 9.63-9.78 cm, 1.6% spread: no taper, no bow |
+| twist by height | none (a square repeats every 90 deg, so 89.8 deg is -0.2 deg) |
+| corner reach along the diagonal | 7.82-8.95 cm against 8.65: **14.5% spread** |
+
+So the cube is a correct cube with about 2 mm of fuzz on its faces and
+rounded corners. **Corners are the worst place to measure it**: smoothing
+rounds a convex corner inward, each corner holds the fewest points, and seven
+of the eight read short. A cube built from the corners would have a 9.55 cm
+side, 871 cm3 against the faces' 996, and would move every limb volume
+**+14.3%**. Faces disagree with each other by 1.6%, corners by 14.5%.
+
+**Then, mending it.** `snap_box_and_remeasure.py` moves every cube point more
+than a tolerance off its nearest ideal face onto that face, re-meshes with the
+pipeline's own Stage 4 and Stage 5, and re-measures the limb with the new
+scale. The limb mesh is untouched, so only the reference moves. On
+`test2_keng` the tolerance makes almost no difference (0.5 mm: +6.1%, 1 mm:
++6.1%, 2 mm: +6.4%, 3 mm: +6.3%), so 1 mm was used across the cohort:
+
+| capture | truth | as it stands | snapped at 1 mm | a perfect cube instead |
+|---|---|---|---|---|
+| test6 | 1398.6 tape | +6.9% | +5.3% | +6.9% |
+| test2_keng | 1420.2 tape +/-2.5% | +6.9% | +6.1% | +7.3% |
+| test5 | 2070 water | +4.8% | +4.0% | +5.7% |
+| 0_right | 1830 water | -4.9% | -6.0% | -1.5% |
+| 1_left | 1600 water | -0.7% | -6.5% | +5.1% |
+| 6_left | 2800 water | -5.6% | -6.1% | -6.1% |
+| 2_left | 1050 water | +11.3% | +10.8% | +11.9% |
+| **mean, ignoring sign** | | **5.9%** | **6.4%** | **6.4%** |
+| mean, with sign | | +2.7% | +1.1% | +4.2% |
+
+**Not adopted.** Mending lowers every capture by 0.5-6%, which flatters the
+ones reading high and ruins the ones reading low (`1_left`, -0.7% to -6.5%).
+It does cut the bias, +2.7% to +1.1%, but by sliding the whole set down, so
+the spread grows and the mean error is worse. The explainer page is
+`docs/reports/2026-10-09_box_mending.png`
+(`docs/reports/make_box_mending_explainer.py`).
+
+**What the exercise did find.** Snap `test2_keng`'s cube until its points lie
+on a cube to 0.35 mm, and the mesh still measures 1.1% more than that cube:
+**Poisson's surface sits about 0.4 mm outside the points.** The same skin is
+on the limb, where it is worth roughly +1.6% of volume against the reference's
+-1.1%, so about +0.5% net. Small, but it is a measurable mesher bias rather
+than noise, and it is the same sign on every capture.
+
+**The reruns themselves** (9 October 2026, all seven captures, skeleton on,
+cut at Stage 5) reproduced September's numbers within 0.5% except `test6`
+(+6.2% then, +6.9% now) and `2_left` (+12.4% then, +11.3% now). Cube-fit
+residuals were 1.31-1.78 mm on the cohort and **2.19 mm on `test2_keng`**, the
+noisiest capture in the set.
+
+**`test5` no longer passes Stage 0.** Frame `S__120897546_0.jpg` has no cube
+in shot and the gate rejects the whole set; the number above comes from
+`--continue-on-rejected`. The capture needs a re-shoot.
+
+## 20. The cut moves to the bands' inner edges, and the box gets mended -- 2026-10-09
+
+Two changes went into the pipeline, both on by default.
+
+**The cut now lands on the bands' INNER edges** (`pipeline/core/band_edges.py`,
+`BAND_CUT_EDGE`). The bands are painted stripes 1.5-3.9 cm wide, and a plane
+fitted to the whole stripe lands in its middle, while the tape is read between
+the facing edges. Sliding both planes from inner edge to outer edge swings the
+volume 15-35%, which is larger than every other choice in the pipeline put
+together. The planes keep the orientation Stage 3 fitted; only their position
+moves.
+
+**The reference cube's points are mended before meshing**
+(`pipeline/core/box_mending.py`, `BOX_MENDING`). Points more than 1 mm off
+their nearest face are moved onto it, then each face is gridded at 4 mm and a
+point is dropped into every empty cell. The gaps are what make Poisson tunnel
+on the cube, forcing the alpha ladder's loosest rung, which floats clear of
+the points: on `test2_champ` that wrap was 9.1% larger than the cube its own
+points describe. Mending lets Poisson close instead, and is nearly a no-op on
+a sound capture (`test2_sunshine`: 1000.0 -> 1004 cm3).
+
+| capture | truth | before | after both changes |
+|---|---|---|---|
+| test1_6 | 1398.6 tape | +6.9% | **+0.2%** |
+| test2_keng | 1420.2 tape | +6.9% | **+1.7%** |
+| test1_5 | 2070 water | +4.8% | **+0.1%** |
+| test2_sunshine (hairy) | 1831.2 tape | +22.6% | +10.2% |
+| test2_sunshine (shaved) | 1847.1 tape | - | **+2.2%** |
+| test2_champ | 1981.7 tape | +14.6% | +23.0% |
+
+**Hair is worth about 4%, not 10%.** The shaving experiment settled a question
+a fitted correction could not. A hair term added to the tape truth can always
+be solved for, and doing so "explained" sunshine at 0.41 cm and champ at
+0.90 cm -- both inside the ranges measured on those legs, which looked like
+confirmation and was not: one free parameter against one target always fits.
+
+Shaving one leg and re-capturing measured it instead. Comparing the hairy and
+shaved runs at the same fraction along the limb:
+
+| region | girth removed by shaving | implied hair |
+|---|---|---|
+| lower half | +0.11 cm | 0.02 cm |
+| upper half, where the hair was | +0.49 cm | 0.08 cm |
+| peak, 70-95% along | +0.80 to +0.89 cm | 0.13-0.14 cm |
+
+So VGGT reads 0.8-1.4 mm of apparent radius off hair that stands 4-8 mm: it
+sees mostly through it, sits a little proud, and only where the hair is.
+Volume fell 6.4% between the two captures, of which ~2.4% is the band planes
+landing differently and ~4% is girth in the hairy region. The tape saw +0.9%
+between the same two measurements, i.e. nothing.
+
+**A bad capture costs more than hair does.** The first shaved upload read
++9.6% and the re-shoot of the same leg against the same tape read +2.2% --
+7.3% apart. Its span came out 26.29 cm against the re-shoot's 26.97 (the tape
+says 27.0), and its girth +6.2% against +1.2%. Nothing about the subject
+changed between them.
+
+**What this implies for the protocol:** shave the band region, or measure the
+truth by water displacement, which submerges the hair and needs no correction
+(`test1_5` is a hairy leg with a water truth and reads +0.1%).
+
+## 21. Still open
 
 - ~~Caliper the cube edge.~~ Done 2026-09-19: cube 10.0, marker 5.0. The
   scale is not the error (section 8).
@@ -498,3 +708,13 @@ volume comes out BELOW the exact one, which a closed shell cannot do.
 - **The band planes are found before the skeleton step corrects the points,**
   and they set both the cut and where girth is measured. Whether re-fitting
   them afterwards moves anything is unmeasured.
+- **`test6_orig` is unrun and unmeasured.** `test2_keng` ran: +6.9% against a
+  1420.2 cm3 tape truth (section 18).
+- **The fill-ratio warning fires on a sound capture again** (`test2_keng`,
+  0.775, cube fit 2.19 mm). Section 16 already showed the ratio measures the
+  mesh; the threshold is still in Stage 6 and still cries wolf.
+- **Poisson's surface sits ~0.4 mm outside the points** (section 19), worth
+  about +0.5% of limb volume after the reference's own inflation cancels part
+  of it. Whether a tighter mesher or a shrink-to-points step is worth it is
+  unmeasured.
+- **`test5` must be re-shot** -- one frame has no cube in it (section 19).

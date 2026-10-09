@@ -39,6 +39,17 @@ from pipeline.core.marker_scale import marker_scale_from_predictions  # noqa: E4
 
 REFERENCE_SIDE_CM = 10.0
 
+def load_run(run_directory):
+    """Cube points (levelled), the cube mesh, the floor height, and the predictions path."""
+    run = pathlib.Path(run_directory)
+    stage_root = run / "for_debug" if (run / "for_debug").is_dir() else run
+    points = np.asarray(o3d.io.read_point_cloud(str(stage_root / "03_clean/objects/box.ply")).points)
+    mesh = trimesh.load(str(stage_root / "05_watertight/mesh/box.ply"), process=False)
+    floor_height = json.load(open(stage_root / "03_clean/debug/levelling.json"))["floor_z"]
+    predictions = stage_root / "01_inference/predictions.npz"
+    return points, mesh, floor_height, predictions
+
+
 def fit_run_cube(points):
     """Fit the cube and add the point set the figure draws."""
     fit = fit_cube(points)
@@ -161,7 +172,7 @@ def main():
 
         name = pathlib.Path(run_directory).name
         print(f"{name:<22}{fit['side'] * mesh_scale_cm:>12.2f}c{mesh_side * mesh_scale_cm:>10.2f}c"
-              f"{marker_side * mesh_scale_cm:>12.2f}c{fit['residual_units'] * mesh_scale_cm * 10:>8.2f}mm"
+              f"{marker_side * mesh_scale_cm:>12.2f}c{fit['residual'] * mesh_scale_cm * 10:>8.2f}mm"
               f"{100 * fit['inlier_fraction']:>8.0f}%{fit['yaw_degrees']:>6.1f}°{volume_change:>12.1f}%")
 
         if arguments.figure:

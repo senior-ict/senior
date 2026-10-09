@@ -235,7 +235,7 @@ MLS_RADIUS_MULT = 4.0
 # A second, wider MLS pass on the limb only, run after the pass above.
 #
 # The 4x pass above denoises each ghost sheet but cannot merge them: on
-# inputs/test6 the two sheets sit ~1 cm apart and 4x spacing is ~1 cm, so each
+# inputs/test1_6 the two sheets sit ~1 cm apart and 4x spacing is ~1 cm, so each
 # sheet only ever sees itself. Poisson then finds two nearby surfaces, bridges
 # them, and produces a tunnelled solid (chi from -2 to -22 on 5 of 8 runs),
 # which forces the alpha-shape fallback -- and the alpha wrap loose enough to
@@ -266,7 +266,7 @@ MLS_RADIUS_MULT = 4.0
 # cloud it is a larger physical distance. Validated on two objects only. 0
 # disables; overridable per run without editing this file:
 #
-#     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test6
+#     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test1_6
 # Default 16 since 2026-09-19, after the validation batch: test5 (water 2070)
 # went from alpha at chi=-4 / +24.9% to Poisson chi=2 / +17.8%; 0_right, 1_left
 # and 6_left, where Poisson already closed, moved under 1% with girth within
@@ -305,7 +305,7 @@ MLS_BOX_POLYNOMIAL = True
 #   0    -> dedup disabled entirely; every point kept, ghost layers survive
 # The table above was measured with the old spacing estimate, which reported
 # a 5,000-point sample's own spacing (4.3x the real one on the LINE copies of
-# inputs/test6, more on denser clouds). Fixed 2026-09-19 in ghost.py. 2.8 x
+# inputs/test1_6, more on denser clouds). Fixed 2026-09-19 in ghost.py. 2.8 x
 # the real spacing gives the same voxel the validated runs had (0.0046 on
 # test6), and a cloud with more points now gets that voxel instead of a
 # coarser one. Equivalent to the old 0.65 on a ~350k-point cloud.
@@ -318,13 +318,13 @@ GHOST_VOXEL_FACTOR = 2.8
 #                 volume and take its surface (pipeline/core/tsdf.py)
 #
 # Fusion removes the ghost double sheet by construction. Measured on
-# inputs/test6 on 2026-09-19: cube fill 0.73 -> 0.87, Poisson closes with no
+# inputs/test1_6 on 2026-09-19: cube fill 0.73 -> 0.87, Poisson closes with no
 # MLS merge, girth profile +7.3% -> +5.8%, volume 1704 -> 1686 (tape 1398.6).
 # It is a cleaner surface, not a correction of the over-read. Off by default
 # until it has been run on the cohort against water; the can control has not
 # passed yet (its fused floor remnant merged with the can in DBSCAN).
 #
-#     POINTCLOUD_METHOD=tsdf python run.py -i inputs/test6
+#     POINTCLOUD_METHOD=tsdf python run.py -i inputs/test1_6
 POINTCLOUD_METHOD = os.environ.get("POINTCLOUD_METHOD", "pointmap")
 
 # TSDF voxel edge, in centimetres, converted to scene units through the ArUco
@@ -350,7 +350,7 @@ TSDF_FALLBACK_VOXEL_UNITS = 0.004
 # VGGT assumes every frame's optical centre is the middle of the image. The
 # sliding crop moves the photo's real centre 19-74 px (of 518) off the middle,
 # differently on every frame, and VGGT stretches the whole scene to reconcile
-# it. Measured on inputs/test6 against the tape, same measurement for both:
+# it. Measured on inputs/test1_6 against the tape, same measurement for both:
 #
 #                 length (ruler 27.5)   girth    volume (tape 1398.6)
 #     crop          30.25  +10.0%       +7.2%    1764  +26.1%
@@ -378,6 +378,33 @@ CUT_STAGE = os.environ.get("CUT_STAGE", "mesh")
 # on it, after the stacked MLS passes (pipeline/core/limb_skeleton.py). On since 2026-09-21: six captures, mean error
 # 5.8% off vs 5.7% on; the rings lose their spurs and gap bridges.
 LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "on") == "on"
+
+# Where on a painted band the cutting plane belongs. The bands are stripes
+# about 2 cm wide, so this is worth 15-35% of the limb volume -- more than
+# every other choice in the pipeline put together.
+#
+#   "inner"   the stripes' facing edges, which is where a tape is read
+#   "centre"  the middle of each stripe, which is where a plane fitted to the
+#             whole stripe lands (the behaviour before 2026-10-09)
+#
+# Measured against the three tape captures on 2026-10-09:
+#   centre -> test2_keng +6.9%, test6 +6.9%, test5 +4.8%
+#   inner  -> test2_keng -0.2%, test6 -1.9%, test5 -1.6%
+# The water captures move further negative under "inner", which is unresolved:
+# a limb dunked to a band includes the band, so their truth may belong to a
+# different plane. See docs/experiments/2026-09_test_captures/EXPERIMENT_LOG.md.
+BAND_CUT_EDGE = os.environ.get("BAND_CUT_EDGE", "inner")
+
+# Flatten the reference cube's points onto the cube that fits them, and fill
+# the empty patches on its faces (pipeline/core/box_mending.py). The gaps are
+# what make Poisson tunnel on the cube, which forces Stage 4's loosest alpha
+# rung, which floats millimetres clear of the points and corrupts the scale:
+# on test2_champ (2026-10-09) that wrap was 9.1% larger than the cube its own
+# points describe. Mending closes Poisson instead, and is a no-op on a sound
+# capture (test2_sunshine: 1000.0 -> 1004.4 cm3, limb +22.6% -> +22.1%).
+BOX_MENDING = os.environ.get("BOX_MENDING", "on") == "on"
+BOX_MEND_TOLERANCE_MM = float(os.environ.get("BOX_MEND_TOLERANCE_MM", 1.0))
+BOX_MEND_CELL_MM = float(os.environ.get("BOX_MEND_CELL_MM", 4.0))
 
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6

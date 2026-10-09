@@ -10,7 +10,7 @@ before Stage 3 sees the cloud. Every frame's depth votes for the cells along
 its rays, the votes are averaged, and the surface is where the averaged
 signed distance crosses zero. One skin, by construction.
 
-Measured on inputs/test6 (2026-09-19, docs/experiments/2026-09_test_captures/
+Measured on inputs/test1_6 (2026-09-19, docs/experiments/2026-09_test_captures/
 TSDF_STAGE2.md): the reference cube fills 0.87 of its oriented box instead of
 0.73, Poisson closes on both objects with no MLS merge and no alpha
 fallback, and the girth profile drops from +7.3% to +5.8% against the tape.

@@ -44,7 +44,7 @@ def compute_voxel_size(points, factor=None, sample_size=5000):
     # The tree is built on EVERY point and only the queries are sampled. The
     # sample used to be queried against itself, which measured the spacing of
     # a 5,000-point subset -- a number that grows with the square root of the
-    # cloud's size and says nothing about the cloud. On inputs/test6 it gave
+    # cloud's size and says nothing about the cloud. On inputs/test1_6 it gave
     # 0.0071 for a cloud whose real mean spacing is 0.0016; the same capture
     # from the full-resolution originals (twice the points) gave 0.0123 for a
     # real spacing of 0.0019, so the denser cloud was cleaned more coarsely

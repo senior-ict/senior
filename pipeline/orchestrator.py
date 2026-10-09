@@ -10,7 +10,8 @@ import numpy as np
 from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
-from pipeline.config import CUT_STAGE, FRAME_FIT, IMAGE_EXTENSIONS, LIMB_SKELETON, POINTCLOUD_METHOD
+from pipeline.config import (BAND_CUT_EDGE, BOX_MENDING, CUT_STAGE, FRAME_FIT,
+                             IMAGE_EXTENSIONS, LIMB_SKELETON, POINTCLOUD_METHOD)
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
 
@@ -61,6 +62,9 @@ def _print_banner(args, device):
     print(f"║  Frame fit     : {args.frame_fit:<40}║")
     print(f"║  Cut at        : {'Stage 3, on the cloud' if CUT_STAGE == 'cloud' else 'Stage 5, on the mesh':<40}║")
     print(f"║  Limb skeleton : {'on' if LIMB_SKELETON else 'off':<40}║")
+    band_edge_label = "the stripes' inner edges" if BAND_CUT_EDGE == "inner" else "the stripe centres"
+    print(f"║  Band cut at   : {band_edge_label:<40}║")
+    print(f"║  Box mending   : {'on' if BOX_MENDING else 'off':<40}║")
     from pipeline.stages.clean import resolve_cut_mode
     cut_label = {"upper": "upper (below top band)",
                  "span": "span (between bands)",
