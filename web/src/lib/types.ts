@@ -52,6 +52,22 @@ export interface VolumeRow {
   depth_cm: number;
 }
 
+/** A truth MEASURED for one capture, and how it was measured.
+ *
+ * Separate from `nominalMl`, which is a figure printed on a product and is a
+ * fill volume — a different quantity from what the pipeline reports. A truth
+ * here was taken against the same surface the cameras see, between the same
+ * two band edges, so the two numbers ARE comparable and an error may be
+ * quoted. */
+export interface MeasuredTruth {
+  /** Millilitres, which for these captures is the same number as cm³. */
+  volumeMl: number;
+  /** How it was taken, e.g. "tape profile" or "water displacement". */
+  method: string;
+  /** Anything a reader needs in order not to over-trust it. */
+  note: string;
+}
+
 export interface SampleDataset {
   id: string;
   label: string;
@@ -59,6 +75,8 @@ export interface SampleDataset {
   subject: string;
   /** Nominal truth if known, else null. Never invent one. */
   nominalMl: number | null;
+  /** A truth measured for this capture, else null. Never invent one. */
+  truth: MeasuredTruth | null;
   frames: number;
   meshes: {
     leg: string;

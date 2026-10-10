@@ -162,13 +162,24 @@ is released between stages rather than accumulating across jobs.
   (`ext_x/ext_y/ext_z/size_*_cm`) from the parked one
   (`obb_a/obb_b/obb_c/height_cm`). The viewer reads both, so runs display either
   way — but the *scale* is derived differently in each case, and under main's
-  method the reference cube reports exactly 2744.00 cm³ by construction, which is
+  method the reference cube reports exactly 1000.00 cm³ by construction, which is
   an identity rather than a measurement. Treat volumes as provisional until
   Stage 6 settles.
-- **The two shipped samples were measured with the parked Stage 6**, so they do
-  not match what a live job now produces. `small_leg` ships as 1071.46 cm³ with
-  the reference at 2692.89; uploading the same six photos today gives 1081.94 cm³
-  with the reference at 2744.00. Both are the same capture — the gap is the two
-  scale derivations, not a regression. The samples are kept as they are because
-  regenerating them would lose the only worked example of the parked schema the
-  viewer has to keep supporting.
+- **The three shipped samples are current** (10 October 2026). `test2_keng`,
+  `test2_sunshine` and `test2_champ` were produced by the pipeline as it stands:
+  the cut on the bands' inner edges, the reference cube mended before meshing,
+  and main's Stage 6. A live job on the same photos reproduces them, which was
+  not true of the samples they replaced.
+
+  Each ships with a truth measured on the same leg between the same two band
+  edges, so the result screen quotes a signed error: +1.7%, +2.2% and −0.6%.
+  `test2_sunshine` and `test2_champ` were shaved before being photographed; the
+  hairy captures of those two legs read +10.2% and +23.0% against a tape, which
+  is a disagreement about which surface the truth describes rather than a
+  pipeline error, and they are not shipped as samples for that reason.
+
+  Removing `small_leg` and `est_325` also removed the only worked example of the
+  PARKED Stage 6 schema (`obb_a/obb_b/obb_c/height_cm`). The viewer still reads
+  it — `parseVolumesCsv` branches on which columns are present — but nothing in
+  the repo exercises that branch any more. Recover one with
+  `git show <commit>^:web/public/samples/small_leg/volumes.csv` if it is needed.

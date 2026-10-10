@@ -440,7 +440,7 @@ Worth stating plainly, because a supervisor will ask.
   columns from the parked version; the app reads both and scales the scene the way
   whichever stage wrote the file did, so runs display either way. What is not
   settled is the measurement: under main's method the reference cube reports
-  exactly 2744.00 cm³ by construction, so the stage currently gives no error signal
+  exactly 1000.00 cm³ by construction, so the stage currently gives no error signal
   about itself. See `docs/archive/2026-08/stage06_experiments.md`.
 - **Two datasets ship with it**, both from the same session. It demonstrates the
   method; it does not demonstrate accuracy across subjects.

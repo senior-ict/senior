@@ -1,37 +1,79 @@
 import type { CutPlane, SampleDataset, VolumeRow } from "./types";
 
 /** Precomputed runs shipped with the site. These work with no backend at all —
- *  see prompt.md §4c. Only new uploads need the GPU service. */
+ *  see prompt.md §4c. Only new uploads need the GPU service.
+ *
+ *  All three were produced by the current pipeline (commit 5ab597f onwards):
+ *  the cut lands on the bands' INNER edges, and the reference cube's points
+ *  are mended before meshing. Each one has a truth measured on the same leg,
+ *  between the same two band edges, with a tape; the result screen quotes the
+ *  error against it.
+ *
+ *  champ and sunshine were shaved before their capture. On a hairy leg a tape
+ *  flattens the hair and reads the skin while the cameras see the outside of
+ *  it, so the two are not measuring the same surface and the error is not the
+ *  pipeline's — those runs read +23.0% and +10.2% and are deliberately not
+ *  shipped here as if they were comparable. */
 export const SAMPLES: SampleDataset[] = [
   {
-    id: "small_leg",
-    label: "Lower leg",
-    subject: "Human lower leg, marker band below the knee",
-    nominalMl: null, // no ground truth for a limb — do not invent one
-    frames: 6,
-    meshes: {
-      leg: "/samples/small_leg/leg_mesh.ply",
-      box: "/samples/small_leg/box_mesh.ply",
-      scene: "/samples/small_leg/scene_mesh.ply",
-      legNoCut: "/samples/small_leg/leg_no_cut.ply",
+    id: "test2_keng",
+    label: "Lower leg — subject K",
+    subject: "Human lower leg between two green bands",
+    nominalMl: null,
+    truth: {
+      volumeMl: 1420.2,
+      method: "tape profile, 27 circumferences",
+      note: "Measured inner edge to inner edge of the two bands, the same span the pipeline cuts on.",
     },
-    volumesCsv: "/samples/small_leg/volumes.csv",
-    cuttingLine: "/samples/small_leg/cutting_line.json",
-  },
-  {
-    id: "est_325",
-    label: "est 325",
-    subject: "325 ml drink can, no marker band",
-    nominalMl: 325,
     frames: 8,
     meshes: {
-      leg: "/samples/est_325/leg_mesh.ply",
-      box: "/samples/est_325/box_mesh.ply",
-      scene: "/samples/est_325/scene_mesh.ply",
-      legNoCut: "/samples/est_325/leg_no_cut.ply",
+      leg: "/samples/test2_keng/leg_mesh.ply",
+      box: "/samples/test2_keng/box_mesh.ply",
+      scene: "/samples/test2_keng/scene_mesh.ply",
+      legNoCut: "/samples/test2_keng/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/est_325/volumes.csv",
-    cuttingLine: "/samples/est_325/cutting_line.json",
+    volumesCsv: "/samples/test2_keng/volumes.csv",
+    cuttingLine: "/samples/test2_keng/cutting_line.json",
+  },
+  {
+    id: "test2_sunshine",
+    label: "Lower leg — subject S",
+    subject: "Human lower leg, shaved before the capture",
+    nominalMl: null,
+    truth: {
+      volumeMl: 1847.1,
+      method: "tape profile, taken after shaving",
+      note: "The leg was shaved and re-measured so the tape and the cameras read the same surface.",
+    },
+    frames: 7,
+    meshes: {
+      leg: "/samples/test2_sunshine/leg_mesh.ply",
+      box: "/samples/test2_sunshine/box_mesh.ply",
+      scene: "/samples/test2_sunshine/scene_mesh.ply",
+      legNoCut: "/samples/test2_sunshine/leg_no_cut.ply",
+    },
+    volumesCsv: "/samples/test2_sunshine/volumes.csv",
+    cuttingLine: "/samples/test2_sunshine/cutting_line.json",
+  },
+  {
+    id: "test2_champ",
+    label: "Lower leg — subject C",
+    subject: "Human lower leg, shaved before the capture",
+    nominalMl: null,
+    truth: {
+      volumeMl: 1954.7,
+      method: "tape profile, taken after shaving",
+      note: "The leg was shaved and re-measured so the tape and the cameras read the same surface.",
+    },
+    frames: 7,
+    meshes: {
+      leg: "/samples/test2_champ/leg_mesh.ply",
+      box: "/samples/test2_champ/box_mesh.ply",
+      scene: "/samples/test2_champ/scene_mesh.ply",
+      legNoCut: "/samples/test2_champ/leg_no_cut.ply",
+    },
+    volumesCsv: "/samples/test2_champ/volumes.csv",
+    cuttingLine: "/samples/test2_champ/cutting_line.json",
   },
 ];
 
@@ -46,7 +88,7 @@ export const SAMPLES: SampleDataset[] = [
 export const MEASURE_STAGES = [
   { n: 1, label: "VGGT inference", out: "predictions.npz", seconds: 50 },
   { n: 2, label: "Point cloud export", out: "points.ply", seconds: 2 },
-  { n: 3, label: "Segment & find the cut", out: "leg.ply", seconds: 8 },
+  { n: 3, label: "Segment, mend the cube, find the cut", out: "leg.ply", seconds: 8 },
   { n: 4, label: "Surface reconstruction", out: "leg_recon.ply", seconds: 8 },
   { n: 5, label: "Watertight solid, left uncut", out: "leg_no_cut.ply", seconds: 2 },
   { n: 6, label: "Measure the reference", out: "volumes.csv", seconds: 2 },
@@ -115,7 +157,9 @@ export async function loadVolumes(url: string): Promise<VolumeRow[]> {
   return parseVolumesCsv(await res.text());
 }
 
-export const REFERENCE_CM = 14.0;
+/** The reference cube's edge in centimetres. The shipped runs all use the
+ *  10 cm ArUco cube; the 14 cm block it replaced is no longer in any sample. */
+export const REFERENCE_CM = 10.0;
 
 /** cm per mesh unit — derived the way the Stage 6 that produced this CSV did it.
  *
@@ -162,28 +206,47 @@ export async function loadCutPlanes(url: string): Promise<CutPlane[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const json = await res.json();
-    // "candidates" is every band detection validated; "markers" is the subset
-    // the run happened to cut on, which --cut-mode upper trims to one even on a
-    // two-band capture. The reviewer is choosing what to cut, so they get the
-    // full set. Older files carry only "markers" — fall back to it.
-    const raw = json.candidates?.length ? json.candidates : (json.markers ?? []);
-    // Lowest first, so a caller picking "the outermost two" can take the ends.
-    // The pipeline already writes candidates in this order; sorting here means
-    // an older file, or a hand-edited one, cannot quietly break that.
-    return raw
-      .slice()
-      .sort((a: any, b: any) => a.centroid[2] - b.centroid[2])
-      .map((m: any) => ({
+    // Lowest first in both lists, so the two can be paired end to end.
+    const byHeight = (a: any, b: any) => a.centroid[2] - b.centroid[2];
+    const candidates = (json.candidates ?? []).slice().sort(byHeight);
+    const markers = (json.markers ?? []).slice().sort(byHeight);
+
+    // "candidates" is every band detection, at the CENTRE of its painted
+    // stripe. "markers" is what the run would actually cut on: since 5ab597f
+    // Stage 3 slides each plane from the stripe's centre to its INNER edge,
+    // which is the span a tape measures and is worth 15-35% of the volume.
+    //
+    // Showing the reviewer the candidates would quietly undo that — they would
+    // confirm the centres, those would come back as override_planes, and the
+    // cut would land where it used to. So the markers are what is shown, with
+    // the candidate they came from kept as each plane's `origin`, which is the
+    // "marker detected at …" row and its reset button on the review screen.
+    const paired =
+      markers.length > 0 && candidates.length === markers.length;
+
+    // Falls back to whichever list exists when they cannot be paired — an
+    // older file with only "markers", or a run where --cut-mode trimmed the
+    // markers to one and the reviewer still needs to see both bands.
+    const raw = paired
+      ? markers
+      : candidates.length
+        ? candidates
+        : markers;
+
+    return raw.map((m: any, index: number) => {
+      const detected = paired ? candidates[index] : m;
+      return {
         id: newPlaneId(),
         centroid: m.centroid as [number, number, number],
         normal: m.normal as [number, number, number],
         npts: m.npts ?? 0,
         source: "detected" as const,
         origin: {
-          centroid: m.centroid as [number, number, number],
-          normal: m.normal as [number, number, number],
+          centroid: detected.centroid as [number, number, number],
+          normal: detected.normal as [number, number, number],
         },
-      }));
+      };
+    });
   } catch {
     return [];
   }
