@@ -41,7 +41,8 @@ PROJECT_ROOT = HERE.parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline.core import band_edges, box_mending  # noqa: E402
-from pipeline.core.cube_fit import fit_cube  # noqa: E402
+from pipeline.core.cube_fit import (  # noqa: E402
+    YAW_STEP_DEGREES, fit_cube, guess_cube_at_yaw, mean_squared_distance)
 
 OUTPUT_PDF = HERE / "2026-10-10_pipeline_change_deck.pdf"
 SLIDE_PNG_DIRECTORY = HERE / "figures/2026-10-10_deck_slides"
@@ -63,6 +64,9 @@ ADDED_COLOUR = "#c2410c"
 BAND_COLOUR = "#2f7d32"
 TRUTH_COLOUR = INK
 CUBE_VIEW_FACES = (("top", 2, 1), ("x-", 0, -1), ("y-", 1, -1))   # the faces this view lights
+FACE_COLOURS = {"x+": "#2a78d6", "x-": "#7fb0e8", "y+": "#1b7f5a", "y-": "#7cc3a5",
+                "top": "#b07d2a", "bottom": "#c2410c"}
+NEAR_EDGE_MILLIMETRES = 2.0      # a point this close to an edge could go to either face
 
 SLIDE_COUNTER = {"number": 0}
 
@@ -263,7 +267,8 @@ def mend_one_box(run_directory):
 
     return {"raw": raw_local_cm, "snapped": snapped_local_cm, "added": added_local_cm,
             "half_side_cm": half_side_cm, "cell_cm": cell_cm, "report": report,
-            "raw_count": len(raw_points)}
+            "raw_count": len(raw_points), "scene_points": raw_points,
+            "yaw_degrees": fit["yaw_degrees"]}
 
 
 def face_cell_occupancy(capture, face_axis, face_side):
@@ -295,6 +300,33 @@ def face_cell_occupancy(capture, face_axis, face_side):
                          0, steps - 1)
         occupied[first, second] = True
     return edges, occupied
+
+
+def face_assignment(capture):
+    """How the mender assigns each point to a face, and how clear-cut that was.
+
+    Returns the yaw sweep the fit runs, the face each point was given, and the
+    gap in millimetres between a point's largest coordinate and its
+    second-largest -- the margin by which its face won.
+    """
+    local_points_cm = capture["raw"]
+    axis_index, side_sign = box_mending.nearest_face(local_points_cm)
+
+    magnitudes = np.abs(local_points_cm)
+    ordered = np.sort(magnitudes, axis=1)
+    margin_millimetres = (ordered[:, 2] - ordered[:, 1]) * 10.0
+
+    yaw_degrees = np.arange(0.0, 90.0, YAW_STEP_DEGREES)
+    costs = []
+    for one_yaw_degrees in yaw_degrees:
+        yaw = np.radians(one_yaw_degrees)
+        centre_x, centre_y, bottom, side = guess_cube_at_yaw(capture["scene_points"], yaw)
+        costs.append(mean_squared_distance(capture["scene_points"], yaw, centre_x,
+                                           centre_y, bottom, side))
+    return {"axis_index": axis_index, "side_sign": side_sign,
+            "margin_millimetres": margin_millimetres,
+            "yaw_degrees": yaw_degrees, "costs": np.array(costs),
+            "best_yaw_degrees": capture["yaw_degrees"]}
 
 
 def isometric(corner_x, corner_y, corner_z):
@@ -718,6 +750,115 @@ def slide_the_four_steps(pdf, bad_capture):
 
 # --------------------------------------------------------------------- slide 8
 
+def draw_yaw_sweep(axes, assignment):
+    """Panel 1: what every trial yaw costs, and where the fit settled."""
+    axes.plot(assignment["yaw_degrees"], assignment["costs"], color=AFTER_COLOUR, lw=2)
+    best_yaw = assignment["best_yaw_degrees"]
+    axes.axvline(best_yaw, color=ADDED_COLOUR, lw=1.8, ls="--")
+    axes.annotate(f"settles at {best_yaw:.0f}°", xy=(best_yaw, assignment["costs"].min()),
+                  xytext=(best_yaw - 42, assignment["costs"].max() * 0.55),
+                  fontsize=10, color=ADDED_COLOUR,
+                  arrowprops=dict(arrowstyle="-|>", color=ADDED_COLOUR, lw=1.2))
+    tidy_axes(axes, "1 · sweep the yaw to find the cube")
+    axes.set_xlabel("yaw of the trial cube (degrees)", fontsize=10, color=INK_SECONDARY)
+    axes.set_ylabel("mean squared distance to its surface", fontsize=9.5,
+                    color=INK_SECONDARY)
+    axes.set_xlim(0, 90)
+    axes.set_yticks([])
+
+
+def draw_assigned_faces(axes, capture, assignment):
+    """Panel 2: the points in the cube's frame, coloured by the face each was given."""
+    local_points_cm = capture["raw"]
+    half_side_cm = capture["half_side_cm"]
+    for face_axis in (0, 1, 2):
+        for face_side in (1, -1):
+            on_face = ((assignment["axis_index"] == face_axis)
+                       & (assignment["side_sign"] == face_side))
+            if not on_face.any():
+                continue
+            name = box_mending.FACE_NAMES[(face_axis, face_side)]
+            screen_x, screen_y = isometric(local_points_cm[on_face, 0],
+                                           local_points_cm[on_face, 1],
+                                           local_points_cm[on_face, 2])
+            axes.scatter(screen_x, screen_y, s=1.4, color=FACE_COLOURS[name], lw=0,
+                         label=f"{name} ({int(on_face.sum()):,})")
+
+    corners = []
+    for corner_x in (-half_side_cm, half_side_cm):
+        for corner_y in (-half_side_cm, half_side_cm):
+            for corner_z in (-half_side_cm, half_side_cm):
+                corners.append((corner_x, corner_y, corner_z))
+    for first_index, first_corner in enumerate(corners):
+        for second_corner in corners[first_index + 1:]:
+            shared_axes = 0
+            for first_value, second_value in zip(first_corner, second_corner):
+                if first_value == second_value:
+                    shared_axes += 1
+            if shared_axes == 2:
+                start_x, start_y = isometric(*first_corner)
+                end_x, end_y = isometric(*second_corner)
+                axes.plot([start_x, end_x], [start_y, end_y], color=INK, lw=0.9,
+                          alpha=0.5, zorder=0)
+
+    axes.set_aspect("equal")
+    axes.axis("off")
+    axes.set_title("2 · the largest coordinate names the face", fontsize=12, color=INK,
+                   loc="left", pad=8)
+    axes.legend(fontsize=8.5, frameon=False, loc="lower center", ncol=3,
+                bbox_to_anchor=(0.5, -0.11), handletextpad=0.1, columnspacing=0.8,
+                markerscale=5)
+
+
+def draw_margin_histogram(axes, assignment):
+    """Panel 3: how far the winning face led the runner-up, for every point."""
+    margin_millimetres = assignment["margin_millimetres"]
+    axes.hist(margin_millimetres, bins=70, range=(0, 50), color=BEFORE_COLOUR)
+    axes.axvline(NEAR_EDGE_MILLIMETRES, color=ADDED_COLOUR, lw=1.8)
+    near_edge_share = 100 * float(np.mean(margin_millimetres < NEAR_EDGE_MILLIMETRES))
+    axes.text(0.97, 0.88,
+              f"median lead {np.median(margin_millimetres):.0f} mm\n\n"
+              f"{near_edge_share:.1f}% of points lead by\nunder "
+              f"{NEAR_EDGE_MILLIMETRES:.0f} mm — those sit on an\nedge, where either "
+              f"face is an\nequally good answer",
+              transform=axes.transAxes, ha="right", va="top", fontsize=10,
+              color=INK_SECONDARY, linespacing=1.7)
+    tidy_axes(axes, "3 · how decisive each assignment is")
+    axes.set_xlabel("how far the winning coordinate leads the runner-up (mm)",
+                    fontsize=10, color=INK_SECONDARY)
+    axes.set_ylabel("points", fontsize=10, color=INK_SECONDARY)
+
+
+def slide_which_face(pdf, capture, assignment):
+    """How a point is told which face it belongs to -- no neighbours consulted."""
+    figure = new_slide("How each point is told which face it is on",
+                       "A fair question when the cube is seen corner-on. The faces are "
+                       "not worked out from edges or from neighbouring faces: the "
+                       "cube's pose is fitted first, then each point is judged alone.")
+
+    draw_yaw_sweep(figure.add_axes([0.05, 0.36, 0.23, 0.38]), assignment)
+    draw_assigned_faces(figure.add_axes([0.345, 0.32, 0.22, 0.46]), capture, assignment)
+    draw_margin_histogram(figure.add_axes([0.655, 0.36, 0.29, 0.38]), assignment)
+
+    figure.text(0.05, 0.27, "The rule, in full", fontsize=13, weight="bold", color=INK,
+                va="top")
+    figure.text(0.05, 0.215,
+                "rotate the point by minus the fitted yaw, move the cube's centre to the "
+                "origin, then take whichever of |x|, |y|, |z| is largest:\n"
+                "that axis is the face, and its sign is the side.",
+                fontsize=11.5, color=INK, va="top", linespacing=1.8)
+    paragraph(figure, 0.05, 0.125,
+              "The fit itself solves five unknowns — yaw, centre x and y, base height "
+              "and side — by minimising every point's distance to the trial cube's "
+              "surface. The yaw is swept before any local fitting because a cube fitted "
+              "45° out would wrap its own diagonal and read about 40% large.",
+              width_characters=150, font_size=11, colour=INK_SECONDARY)
+    footer(figure, "cube_fit.fit_cube and box_mending.nearest_face on output_test2_champ")
+    pdf.savefig(figure)
+    save_slide_png(figure, "08_which_face")
+    plt.close(figure)
+
+
 def draw_gridded_cube(axes, steps):
     """The cube seen from a corner above it, with the grid drawn on its three lit faces."""
     half = 5.0
@@ -854,7 +995,7 @@ def slide_how_the_cube_is_sliced(pdf, bad_capture):
               width_characters=152, font_size=11)
     footer(figure, "pipeline/core/box_mending.py run live on output_test2_champ")
     pdf.savefig(figure)
-    save_slide_png(figure, "08_how_the_cube_is_sliced")
+    save_slide_png(figure, "09_how_the_cube_is_sliced")
     plt.close(figure)
 
 
@@ -922,7 +1063,7 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
     footer(figure, "box_mending.py on output_test2_champ and output_test6; "
                    "EXPERIMENT_LOG §20")
     pdf.savefig(figure)
-    save_slide_png(figure, "09_mending_effect")
+    save_slide_png(figure, "10_mending_effect")
     plt.close(figure)
 
 
@@ -983,7 +1124,7 @@ def slide_results(pdf):
               width_characters=38, font_size=11, colour=INK_SECONDARY)
     footer(figure, "EXPERIMENT_LOG §20; run logs of 2026-10-09")
     pdf.savefig(figure)
-    save_slide_png(figure, "10_results")
+    save_slide_png(figure, "11_results")
     plt.close(figure)
 
 
@@ -1051,7 +1192,7 @@ def slide_hair(pdf):
               width_characters=130, font_size=11.5)
     footer(figure, "EXPERIMENT_LOG §20; the test2_*_hairless tape profiles")
     pdf.savefig(figure)
-    save_slide_png(figure, "11_hair")
+    save_slide_png(figure, "12_hair")
     plt.close(figure)
 
 
@@ -1091,7 +1232,7 @@ def slide_where_we_stand(pdf):
     ], line_gap=0.055, font_size=12, width_characters=104)
     footer(figure, "EXPERIMENT_LOG §21")
     pdf.savefig(figure)
-    save_slide_png(figure, "12_where_we_stand")
+    save_slide_png(figure, "13_where_we_stand")
     plt.close(figure)
 
 
@@ -1130,6 +1271,7 @@ def main():
     span_rows = build_span_rows()
     bad_capture = mend_one_box(BAD_CAPTURE_RUN)
     sound_capture = mend_one_box(SOUND_CAPTURE_RUN)
+    assignment = face_assignment(bad_capture)
 
     with PdfPages(OUTPUT_PDF) as pdf:
         slide_title(pdf)
@@ -1139,6 +1281,7 @@ def main():
         slide_why_the_cube_matters(pdf)
         slide_two_defects(pdf, bad_capture)
         slide_the_four_steps(pdf, bad_capture)
+        slide_which_face(pdf, bad_capture, assignment)
         slide_how_the_cube_is_sliced(pdf, bad_capture)
         slide_mending_effect(pdf, bad_capture, sound_capture)
         slide_results(pdf)
