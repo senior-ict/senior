@@ -688,9 +688,9 @@ def slide_the_four_steps(pdf, bad_capture):
     captions = [
         "A band of scatter either side of where each face must be, and whole "
         "stretches with nothing on them at all.",
-        "Yaw sweep, then Nelder–Mead. The side is fixed at 10 cm and the residual is "
-        "taken over ALL points, so the fit sits in the middle of the scatter rather "
-        "than on its outside.",
+        "Yaw sweep, then Nelder–Mead on five unknowns: yaw, centre x and y, base "
+        "height and side. The residual is taken over ALL points, so the fit sits in "
+        "the middle of the scatter rather than on its outside.",
         f"Every point more than 1 mm off its nearest face is moved onto it.\n\n"
         f"{report['pulled_in']:,} pulled in, {report['pushed_out']:,} pushed out, "
         f"{report['untouched']:,} already close enough.",
