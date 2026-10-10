@@ -619,9 +619,10 @@ def draw_face_from_outside(axes, capture, title):
 def slide_the_four_steps(pdf, bad_capture):
     """The mending algorithm itself, four panels, all real points."""
     figure = new_slide("How mending works: four steps, nothing invented",
-                       "Panels 1–3 are the same 1 cm slice through test2_champ's cube, "
-                       "seen from above. Panel 4 looks straight at the bottom face, the "
-                       "one the floor hides.")
+                       "Panels 1–3 are one horizontal 1 cm slab at the cube's "
+                       "mid-height, seen from above; panel 4 looks straight at the "
+                       "bottom face. The cube is never chopped into chunks — that is "
+                       "only how the picture is drawn.")
 
     half_side_cm = bad_capture["half_side_cm"]
     panel_bottom = 0.46
@@ -654,9 +655,9 @@ def slide_the_four_steps(pdf, bad_capture):
         f"Every point more than 1 mm off its nearest face is moved onto it.\n\n"
         f"{report['pulled_in']:,} pulled in, {report['pushed_out']:,} pushed out, "
         f"{report['untouched']:,} already close enough.",
-        f"Each face is gridded at 4 mm and a point (orange) is dropped into every "
-        f"empty cell.\n\n"
-        f"{report['added']:,} added here — this face was only 43% covered. "
+        f"Each face is gridded into 25 × 25 cells of 4 mm, and a point (orange) goes "
+        f"into every empty one.\n\n"
+        f"{report['added']:,} added here; this face was only 43% covered. "
         f"{bad_capture['raw_count']:,} → {bad_capture['raw_count'] + report['added']:,}.",
     ]
     for left, caption in zip(panel_lefts, captions):
@@ -669,7 +670,7 @@ def slide_the_four_steps(pdf, bad_capture):
               "and 58% inside, mean offset +0.10 mm. Where the points say the cube "
               "reconstructed small, mending makes the mesh say so too, instead of "
               "hiding it under a loose wrap.",
-              width_characters=132, font_size=11.5)
+              width_characters=140, font_size=11)
     footer(figure, "pipeline/core/box_mending.py run live on output_test2_champ")
     pdf.savefig(figure)
     save_slide_png(figure, "07_four_steps")
