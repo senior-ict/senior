@@ -42,7 +42,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline.core import band_edges, box_mending  # noqa: E402
 from pipeline.core.cube_fit import fit_cube  # noqa: E402
-from pipeline.core.limb_skeleton import SLICES_BETWEEN_BANDS, slice_skeleton  # noqa: E402
 
 OUTPUT_PDF = HERE / "2026-10-10_pipeline_change_deck.pdf"
 SLIDE_PNG_DIRECTORY = HERE / "figures/2026-10-10_deck_slides"
@@ -63,7 +62,7 @@ AFTER_COLOUR = "#2a78d6"
 ADDED_COLOUR = "#c2410c"
 BAND_COLOUR = "#2f7d32"
 TRUTH_COLOUR = INK
-EXAMPLE_CHUNK_FRACTION = 0.85    # which chunk of the limb the middle panel shows
+CUBE_VIEW_FACES = (("top", 2, 1), ("x-", 0, -1), ("y-", 1, -1))   # the faces this view lights
 
 SLIDE_COUNTER = {"number": 0}
 
@@ -267,56 +266,42 @@ def mend_one_box(run_directory):
             "raw_count": len(raw_points)}
 
 
-def load_limb_chunks(run_directory):
-    """Cut a run's limb into the skeleton step's chunks and return them in centimetres.
+def face_cell_occupancy(capture, face_axis, face_side):
+    """Which cells of one cube face held a point before the filler ran.
 
-    Heights are measured from the lower band, so 0% is the lower band and 100%
-    the upper one. The example chunk is the one holding EXAMPLE_CHUNK_FRACTION
-    of the way up.
+    `face_axis` is 0, 1 or 2 and `face_side` is +1 or -1, the same way
+    box_mending names a face. Returns the cell edges in centimetres and a
+    square boolean grid, laid out exactly as box_mending.fill_empty_cells
+    lays it out so the counts match the pipeline's own report.
     """
-    leg_points, _ = load_leg_points(run_directory)
-    box_points, _ = load_box_points(run_directory)
-    scale, _ = centimetres_per_unit(box_points)
-
-    cutting_line = json.loads(
-        (run_directory / "for_debug/03_clean/debug/cutting_line_levelled.json").read_text())
-    band_heights = []
-    for plane in cutting_line["markers"]:
-        band_heights.append(plane["centroid"][2])
-    band_heights.sort()
-    lower_band, upper_band = band_heights[0], band_heights[-1]
-    chunks = slice_skeleton(leg_points, lower_band, upper_band)
-
-    skeleton_centre = np.nanmean(chunks["skeleton"], axis=0)
-    example_height = lower_band + EXAMPLE_CHUNK_FRACTION * (upper_band - lower_band)
-    example_index = int(np.digitize([example_height], chunks["slice_edges"])[0] - 1)
-    in_example = chunks["inside_range"] & (chunks["slice_of_point"] == example_index)
-
-    return {"side_x_cm": (leg_points[:, 0] - skeleton_centre[0]) * scale,
-            "side_y_cm": (leg_points[:, 1] - skeleton_centre[1]) * scale,
-            "height_cm": (leg_points[:, 2] - lower_band) * scale,
-            "edges_cm": (chunks["slice_edges"] - lower_band) * scale,
-            "span_cm": (upper_band - lower_band) * scale,
-            "example_mask": in_example,
-            "example_centre_cm": (chunks["skeleton"][example_index] - skeleton_centre) * scale,
-            "example_height_cm": (example_height - lower_band) * scale}
-
-
-def face_cell_occupancy(capture):
-    """Which cells of the cube's bottom face held a point before the filler ran."""
     half_side_cm = capture["half_side_cm"]
     cell_cm = capture["cell_cm"]
     snapped = capture["snapped"]
     axis, side = box_mending.nearest_face(snapped)
-    on_bottom = (axis == 2) & (side == -1)
+    on_face = (axis == face_axis) & (side == face_side)
+
+    other_axes = []
+    for candidate_axis in (0, 1, 2):
+        if candidate_axis != face_axis:
+            other_axes.append(candidate_axis)
 
     steps = max(2, int(np.ceil(2 * half_side_cm / cell_cm)))
     edges = np.linspace(-half_side_cm, half_side_cm, steps + 1)
     occupied = np.zeros((steps, steps), dtype=bool)
-    first = np.clip(np.digitize(snapped[on_bottom, 0], edges) - 1, 0, steps - 1)
-    second = np.clip(np.digitize(snapped[on_bottom, 1], edges) - 1, 0, steps - 1)
-    occupied[first, second] = True
+    if on_face.any():
+        first = np.clip(np.digitize(snapped[on_face, other_axes[0]], edges) - 1,
+                        0, steps - 1)
+        second = np.clip(np.digitize(snapped[on_face, other_axes[1]], edges) - 1,
+                         0, steps - 1)
+        occupied[first, second] = True
     return edges, occupied
+
+
+def isometric(corner_x, corner_y, corner_z):
+    """Project a point of the cube onto the page, seen from a corner above it."""
+    horizontal = (corner_x - corner_y) * np.cos(np.radians(30))
+    vertical = (corner_x + corner_y) * np.sin(np.radians(30)) + corner_z
+    return horizontal, vertical
 
 
 def offsets_from_faces(local_points_cm, half_side_cm):
@@ -733,136 +718,143 @@ def slide_the_four_steps(pdf, bad_capture):
 
 # --------------------------------------------------------------------- slide 8
 
-def slide_two_kinds_of_cut(pdf, limb_chunks, bad_capture):
-    """The leg is cut into stacked chunks; the cube is gridded on its faces."""
-    figure = new_slide("Two different cuts: the leg is chunked, the cube is gridded",
-                       "The same word, 'slice', means two different things here, and "
-                       "neither cuts the object into blocks.")
+def draw_gridded_cube(axes, steps):
+    """The cube seen from a corner above it, with the grid drawn on its three lit faces."""
+    half = 5.0
+    edges = np.linspace(-half, half, steps + 1)
+    for face_name, face_axis, face_side in CUBE_VIEW_FACES:
+        other_axes = []
+        for candidate_axis in (0, 1, 2):
+            if candidate_axis != face_axis:
+                other_axes.append(candidate_axis)
 
-    axes_leg = figure.add_axes([0.055, 0.34, 0.25, 0.44])
-    side_x_cm = limb_chunks["side_x_cm"]
-    height_cm = limb_chunks["height_cm"]
-    half_width_cm = float(np.percentile(np.abs(side_x_cm), 97)) + 1.5
-    axes_leg.scatter(side_x_cm, height_cm, s=0.6, color="#c2bfb7", lw=0)
+        corner_points = []
+        for first_sign, second_sign in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+            corner = np.zeros(3)
+            corner[face_axis] = face_side * half
+            corner[other_axes[0]] = first_sign * half
+            corner[other_axes[1]] = second_sign * half
+            corner_points.append(isometric(*corner))
+        axes.add_patch(plt.Polygon(corner_points, closed=True, facecolor="#f2f0ea",
+                                   edgecolor=INK, lw=1.6, zorder=1))
 
-    # Each chunk's line is drawn only as wide as the limb is at that height, so the
-    # panel reads as slices of the leg rather than stripes across the page.
-    def limb_half_width_at(height):
-        """Half the limb's width at one height, in centimetres."""
-        nearby = np.abs(height_cm - height) < 0.8
-        if nearby.sum() < 20:
-            return half_width_cm * 0.5
-        return float(np.percentile(np.abs(side_x_cm[nearby]), 98))
+        # One line per cell boundary, in both directions across the face.
+        for moving_axis, fixed_axis in ((other_axes[0], other_axes[1]),
+                                        (other_axes[1], other_axes[0])):
+            for edge in edges:
+                line_start = np.zeros(3)
+                line_end = np.zeros(3)
+                line_start[face_axis] = face_side * half
+                line_end[face_axis] = face_side * half
+                line_start[fixed_axis] = edge
+                line_end[fixed_axis] = edge
+                line_start[moving_axis] = -half
+                line_end[moving_axis] = half
+                start_x, start_y = isometric(*line_start)
+                end_x, end_y = isometric(*line_end)
+                axes.plot([start_x, end_x], [start_y, end_y], color=AFTER_COLOUR,
+                          lw=0.35, alpha=0.75, zorder=2)
 
-    for edge_cm in limb_chunks["edges_cm"]:
-        reach = limb_half_width_at(edge_cm)
-        axes_leg.plot([-reach, reach], [edge_cm, edge_cm], color=AFTER_COLOUR,
-                      lw=0.6, alpha=0.8)
-    for band_height_cm in (0.0, limb_chunks["span_cm"]):
-        reach = limb_half_width_at(band_height_cm)
-        axes_leg.plot([-reach, reach], [band_height_cm, band_height_cm],
-                      color=BAND_COLOUR, lw=2.4)
-    example_height_cm = limb_chunks["example_height_cm"]
-    example_reach = limb_half_width_at(example_height_cm)
-    axes_leg.plot([-example_reach, example_reach],
-                  [example_height_cm, example_height_cm], color=ADDED_COLOUR, lw=2.2)
-    axes_leg.text(0.03, 0.02, "lower band = 0%", transform=axes_leg.transAxes,
-                  fontsize=9, color=BAND_COLOUR, weight="bold")
-    axes_leg.text(0.03, 0.95, "upper band = 100%", transform=axes_leg.transAxes,
-                  fontsize=9, color=BAND_COLOUR, weight="bold", va="top")
-    axes_leg.set_ylim(-6, limb_chunks["span_cm"] + 6)
-    axes_leg.set_xlim(-half_width_cm, half_width_cm)
-    axes_leg.set_xticks([])
-    tidy_axes(axes_leg, "the leg: stacked chunks")
-    axes_leg.set_ylabel("height above the lower band (cm)", fontsize=10,
-                        color=INK_SECONDARY)
+    axes.set_aspect("equal")
+    axes.axis("off")
+    axes.set_xlim(-11, 11)
+    axes.set_ylim(-11, 13)
 
-    axes_ring = figure.add_axes([0.375, 0.40, 0.20, 0.36])
-    in_example = limb_chunks["example_mask"]
-    axes_ring.scatter(limb_chunks["side_x_cm"][in_example],
-                      limb_chunks["side_y_cm"][in_example], s=3.5,
-                      color=ADDED_COLOUR, lw=0)
-    axes_ring.plot(limb_chunks["example_centre_cm"][0],
-                   limb_chunks["example_centre_cm"][1], marker="+", markersize=12,
-                   color=INK, markeredgewidth=2)
-    axes_ring.set_aspect("equal")
-    axes_ring.set_xticks([])
-    axes_ring.set_yticks([])
-    for spine in axes_ring.spines.values():
-        spine.set_color(RULE)
-    axes_ring.set_title("one chunk from above: a ring", fontsize=12, color=INK,
-                        loc="left", pad=8)
-    paragraph(figure, 0.375, 0.335,
-              f"The chunk marked orange on the left, 85% of the way up: "
-              f"{int(in_example.sum()):,} points, about 0.5 cm tall. + is its "
-              f"fitted centre.",
-              width_characters=44, font_size=10, colour=INK_SECONDARY)
 
-    axes_face = figure.add_axes([0.655, 0.40, 0.20, 0.36])
-    edges, occupied = face_cell_occupancy(bad_capture)
+def draw_face_grid(axes, edges, occupied, title):
+    """One face of the net: a square of cells, shaded by whether each held a point."""
     steps = len(edges) - 1
+    cell_size = edges[1] - edges[0]
     for first_index in range(steps):
         for second_index in range(steps):
             if occupied[first_index, second_index]:
                 cell_colour = "#cfe1f7"
             else:
                 cell_colour = "#f6ddd0"
-            axes_face.add_patch(Rectangle((edges[first_index], edges[second_index]),
-                                          edges[1] - edges[0], edges[1] - edges[0],
-                                          facecolor=cell_colour, edgecolor=RULE, lw=0.3))
-    axes_face.set_xlim(edges[0], edges[-1])
-    axes_face.set_ylim(edges[0], edges[-1])
-    axes_face.set_aspect("equal")
-    axes_face.set_xticks([])
-    axes_face.set_yticks([])
-    for spine in axes_face.spines.values():
+            axes.add_patch(Rectangle((edges[first_index], edges[second_index]),
+                                     cell_size, cell_size, facecolor=cell_colour,
+                                     edgecolor="#ffffff", lw=0.2))
+    axes.set_xlim(edges[0], edges[-1])
+    axes.set_ylim(edges[0], edges[-1])
+    axes.set_aspect("equal")
+    axes.set_xticks([])
+    axes.set_yticks([])
+    for spine in axes.spines.values():
         spine.set_color(INK)
-    axes_face.set_title("one cube face: a 25 × 25 grid", fontsize=12, color=INK,
-                        loc="left", pad=8)
-    axes_face.scatter([], [], marker="s", s=60, color="#cfe1f7",
-                      label="cell that held a point")
-    axes_face.scatter([], [], marker="s", s=60, color="#f6ddd0",
-                      label="empty cell — the filler fills it")
-    axes_face.legend(fontsize=9, frameon=False, loc="lower center",
-                     bbox_to_anchor=(0.5, -0.17), handletextpad=0.2)
-    cell_count = steps * steps
-    filled_count = int(occupied.sum())
-    paragraph(figure, 0.655, 0.335,
-              f"Before filling, {filled_count} of these {cell_count} cells held a point; "
-              f"the other {cell_count - filled_count} each got one dropped in.",
-              width_characters=44, font_size=10, colour=INK_SECONDARY)
+        spine.set_linewidth(1.2)
+    axes.set_title(title, fontsize=9.5, color=INK, loc="center", pad=3)
 
-    figure.text(0.878, 0.78, "the leg's chunks", fontsize=11, weight="bold",
-                color=INK, va="top")
-    draw_table(figure, (0.878, 0.62, 0.108, 0.13),
-               ["cut along", "the limb axis"],
-               [["how many", f"{SLICES_BETWEEN_BANDS}"],
-                ["each is", "≈0.5 cm tall"],
-                ["shape", "a flat disc"]],
-               [0.50, 0.50], font_size=8.5)
 
-    figure.text(0.878, 0.55, "the cube's cells", fontsize=11, weight="bold",
-                color=INK, va="top")
-    draw_table(figure, (0.878, 0.39, 0.108, 0.13),
-               ["cut along", "each face"],
-               [["how many", "625 × 6"],
-                ["each is", "4 × 4 mm"],
-                ["shape", "a flat square"]],
-               [0.50, 0.50], font_size=8.5)
+def slide_how_the_cube_is_sliced(pdf, bad_capture):
+    """Where the cube's cells come from: a 4 mm grid laid on each of its six faces."""
+    figure = new_slide("How the cube is sliced: a 4 mm grid on each of its six faces",
+                       "The cube is never cut into blocks or layers. Each face is "
+                       "gridded on its own, and only on the surface.")
 
-    paragraph(figure, 0.055, 0.245,
-              "The leg is cut because its shape is unknown: each chunk is squashed flat, "
-              "a smooth curve is fitted round its ring of points, and points far off that "
-              "curve are pulled back. Chunks stack along the limb, so a chunk is a disc, "
-              "never a block.\n\n"
-              "The cube is not cut at all. Its six faces are each divided into a flat grid "
-              "of 4 mm cells, and a point is dropped into any cell that is empty. The grid "
-              "lies ON the surface; it never goes inside the cube.",
-              width_characters=146, font_size=11)
-    footer(figure, "limb_skeleton.slice_skeleton on output_test2_champ_hairless; "
-                   "box_mending.py on output_test2_champ")
+    steps = len(face_cell_occupancy(bad_capture, 2, -1)[0]) - 1
+    axes_cube = figure.add_axes([0.03, 0.30, 0.33, 0.46])
+    draw_gridded_cube(axes_cube, steps)
+    axes_cube.set_title(f"the 10 cm cube, {steps} × {steps} cells per face",
+                        fontsize=12, color=INK, loc="left", pad=6)
+    axes_cube.annotate("each cell is 4 × 4 mm",
+                       xy=isometric(5.0, -1.2, 1.2), xytext=(6.2, 8.4),
+                       fontsize=10, color=INK_SECONDARY,
+                       arrowprops=dict(arrowstyle="-|>", color=INK_MUTED, lw=1.2))
+
+    # The cube unfolded: the four side faces in a row, the top above and bottom below.
+    net_positions = {("top", 2, 1): (1, 2), ("x-", 0, -1): (0, 1), ("y+", 1, 1): (1, 1),
+                     ("x+", 0, 1): (2, 1), ("y-", 1, -1): (3, 1),
+                     ("bottom", 2, -1): (1, 0)}
+    net_left = 0.40
+    net_bottom = 0.27
+    tile_width = 0.105
+    tile_height = 0.160
+    total_cells = 0
+    total_filled = 0
+    for (face_name, face_axis, face_side), (column, row) in net_positions.items():
+        edges, occupied = face_cell_occupancy(bad_capture, face_axis, face_side)
+        filled = int(occupied.sum())
+        cells = occupied.size
+        total_cells += cells
+        total_filled += filled
+        axes_face = figure.add_axes([net_left + column * tile_width,
+                                     net_bottom + row * tile_height,
+                                     tile_width * 0.88, tile_height * 0.88])
+        draw_face_grid(axes_face, edges, occupied,
+                       f"{face_name} · {100 * filled / cells:.0f}%")
+
+    figure.text(0.40, 0.815, "the same cube unfolded, one square per cell",
+                fontsize=12, color=INK, va="top")
+    figure.text(0.40, 0.783,
+                "shaded by what test2_champ's capture actually reached",
+                fontsize=10, color=INK_MUTED, va="top")
+
+    figure.text(0.845, 0.72, "Reading it", fontsize=12.5, weight="bold", color=INK,
+                va="top")
+    figure.add_artist(plt.Rectangle((0.847, 0.655), 0.018, 0.024, facecolor="#cfe1f7",
+                                    edgecolor=INK, lw=0.6, transform=figure.transFigure))
+    figure.text(0.872, 0.681, "a cell that held\na point", fontsize=10,
+                color=INK_SECONDARY, va="top", linespacing=1.6)
+    figure.add_artist(plt.Rectangle((0.847, 0.555), 0.018, 0.024, facecolor="#f6ddd0",
+                                    edgecolor=INK, lw=0.6, transform=figure.transFigure))
+    figure.text(0.872, 0.581, "an empty cell —\nthe filler drops\none point in",
+                fontsize=10, color=INK_SECONDARY, va="top", linespacing=1.6)
+    paragraph(figure, 0.845, 0.45,
+              f"{total_filled:,} of the {total_cells:,} cells held a point, so "
+              f"{total_cells - total_filled:,} were filled.",
+              width_characters=22, font_size=10, colour=INK_SECONDARY)
+
+    paragraph(figure, 0.04, 0.20,
+              "Why a grid and not a stack of slices: the cube's error is that parts of "
+              "its SURFACE were never photographed, and a hole in a surface is what makes "
+              "Poisson reconstruction tunnel. A flat grid on each face finds exactly those "
+              "holes; cutting the cube into layers would not say which patch of which face "
+              "is missing. The bottom face looks at the floor, so it is always the "
+              "thinnest — 43% here — and it is most of the filler's work.",
+              width_characters=152, font_size=11)
+    footer(figure, "pipeline/core/box_mending.py run live on output_test2_champ")
     pdf.savefig(figure)
-    save_slide_png(figure, "08_two_kinds_of_cut")
+    save_slide_png(figure, "08_how_the_cube_is_sliced")
     plt.close(figure)
 
 
@@ -1138,7 +1130,6 @@ def main():
     span_rows = build_span_rows()
     bad_capture = mend_one_box(BAD_CAPTURE_RUN)
     sound_capture = mend_one_box(SOUND_CAPTURE_RUN)
-    limb_chunks = load_limb_chunks(NEW_PIPELINE_RUN)
 
     with PdfPages(OUTPUT_PDF) as pdf:
         slide_title(pdf)
@@ -1148,7 +1139,7 @@ def main():
         slide_why_the_cube_matters(pdf)
         slide_two_defects(pdf, bad_capture)
         slide_the_four_steps(pdf, bad_capture)
-        slide_two_kinds_of_cut(pdf, limb_chunks, bad_capture)
+        slide_how_the_cube_is_sliced(pdf, bad_capture)
         slide_mending_effect(pdf, bad_capture, sound_capture)
         slide_results(pdf)
         slide_hair(pdf)
