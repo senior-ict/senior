@@ -750,6 +750,114 @@ def slide_the_four_steps(pdf, bad_capture):
 
 # --------------------------------------------------------------------- slide 8
 
+# Three dots invented for the plain-language slide: one clearly on the right wall,
+# one clearly on the top wall, and one in a corner where the rule nearly ties.
+PLAIN_EXAMPLE_DOTS = (("A", 4.8, 1.2), ("B", -1.5, 4.9), ("C", 4.6, 4.4))
+SIDEWAYS_COLOUR = "#2a78d6"
+UP_DOWN_COLOUR = "#b07d2a"
+
+
+def draw_box_from_above(axes, half_side_cm):
+    """The box seen from above as a plain square, with each dot and its two distances."""
+    axes.add_patch(Rectangle((-half_side_cm, -half_side_cm), 2 * half_side_cm,
+                             2 * half_side_cm, facecolor="#f4f2ec", edgecolor=INK,
+                             lw=2.2))
+    axes.plot(0, 0, marker="+", markersize=14, color=INK, markeredgewidth=2)
+    axes.text(0.25, 0.25, "the middle", fontsize=10, color=INK_SECONDARY)
+    axes.text(0, half_side_cm + 0.45, "top wall", fontsize=10, color=INK_SECONDARY,
+              ha="center")
+    axes.text(half_side_cm + 0.35, -2.2, "right wall", fontsize=10,
+              color=INK_SECONDARY, va="center", rotation=-90)
+
+    for name, dot_x, dot_y in PLAIN_EXAMPLE_DOTS:
+        axes.plot([0, dot_x], [0, 0], color=SIDEWAYS_COLOUR, lw=2.0, ls=":")
+        axes.plot([dot_x, dot_x], [0, dot_y], color=UP_DOWN_COLOUR, lw=2.0, ls=":")
+        axes.plot(dot_x, dot_y, marker="o", markersize=9, color=ADDED_COLOUR)
+        axes.text(dot_x - 0.8, dot_y + 0.25, name, fontsize=13, weight="bold",
+                  color=ADDED_COLOUR)
+
+    axes.set_xlim(-half_side_cm - 1.6, half_side_cm + 1.9)
+    axes.set_ylim(-half_side_cm - 1.0, half_side_cm + 1.6)
+    axes.set_aspect("equal")
+    axes.axis("off")
+
+
+def draw_dot_scoreboard(axes, name, dot_x, dot_y):
+    """Two bars for one dot -- how far sideways, how far up -- and which wall wins."""
+    sideways = abs(dot_x)
+    up_down = abs(dot_y)
+    if sideways >= up_down:
+        if dot_x > 0:
+            verdict = "right wall"
+        else:
+            verdict = "left wall"
+    else:
+        if dot_y > 0:
+            verdict = "top wall"
+        else:
+            verdict = "bottom wall"
+    lead = abs(sideways - up_down)
+
+    axes.barh([1], [sideways], color=SIDEWAYS_COLOUR, height=0.5)
+    axes.barh([0], [up_down], color=UP_DOWN_COLOUR, height=0.5)
+    axes.text(sideways + 0.15, 1, f"{sideways:.1f} cm sideways", va="center",
+              fontsize=10, color=INK)
+    axes.text(up_down + 0.15, 0, f"{up_down:.1f} cm up", va="center", fontsize=10,
+              color=INK)
+    if lead < 0.5:
+        remark = f"almost a tie — only {lead * 10:.0f} mm in it"
+        remark_colour = ADDED_COLOUR
+    else:
+        remark = f"clear: {lead * 10:.0f} mm ahead"
+        remark_colour = INK_MUTED
+    axes.text(0, 1.95, f"dot {name}  →  {verdict}", fontsize=12, weight="bold",
+              color=INK)
+    axes.text(0, -1.0, remark, fontsize=10, color=remark_colour)
+    axes.set_xlim(0, 9.2)
+    axes.set_ylim(-1.4, 2.4)
+    axes.axis("off")
+
+
+def slide_the_idea_in_two_dimensions(pdf):
+    """The same rule with one dimension removed, in words anyone can follow."""
+    figure = new_slide("The same idea, flattened: which wall is this dot on?",
+                       "A box seen from above is just a square. Every dot is asked two "
+                       "questions, and the bigger answer decides.")
+
+    draw_box_from_above(figure.add_axes([0.04, 0.30, 0.30, 0.46]), 5.0)
+
+    for index, (name, dot_x, dot_y) in enumerate(PLAIN_EXAMPLE_DOTS):
+        axes = figure.add_axes([0.40, 0.60 - index * 0.165, 0.30, 0.13])
+        draw_dot_scoreboard(axes, name, dot_x, dot_y)
+
+    figure.text(0.40, 0.78, "How far from the middle, in each direction?", fontsize=13,
+                weight="bold", color=INK, va="top")
+
+    figure.text(0.74, 0.78, "That is the whole rule", fontsize=13, weight="bold",
+                color=INK, va="top")
+    paragraph(figure, 0.74, 0.725,
+              "Stand in the middle of the box. Measure how far the dot is from you "
+              "sideways, and how far it is up. Whichever is bigger tells you which wall "
+              "the dot is nearly touching.\n\n"
+              "A real box has three directions instead of two: three numbers, six "
+              "walls. Nothing else changes.\n\n"
+              "No other dot is consulted, and no edge is traced. Each dot answers "
+              "on its own.",
+              width_characters=36, font_size=11, colour=INK_SECONDARY)
+
+    paragraph(figure, 0.04, 0.22,
+              "Dot C is the awkward one. It sits in a corner, so it is almost the same "
+              "distance from two walls and the rule nearly ties. That is fine: a dot in "
+              "a corner is touching both walls anyway, so either answer puts it in "
+              "almost the same place. On the real cube 8% of the dots are like C, and "
+              "the rest win by a wide margin — the next slide measures it.",
+              width_characters=150, font_size=11.5)
+    footer(figure, "the rule in pipeline/core/box_mending.py, nearest_face()")
+    pdf.savefig(figure)
+    save_slide_png(figure, "08_the_idea_in_2d")
+    plt.close(figure)
+
+
 def draw_yaw_sweep(axes, assignment):
     """Panel 1: what every trial yaw costs, and where the fit settled."""
     axes.plot(assignment["yaw_degrees"], assignment["costs"], color=AFTER_COLOUR, lw=2)
@@ -855,7 +963,7 @@ def slide_which_face(pdf, capture, assignment):
               width_characters=150, font_size=11, colour=INK_SECONDARY)
     footer(figure, "cube_fit.fit_cube and box_mending.nearest_face on output_test2_champ")
     pdf.savefig(figure)
-    save_slide_png(figure, "08_which_face")
+    save_slide_png(figure, "09_which_face")
     plt.close(figure)
 
 
@@ -995,7 +1103,7 @@ def slide_how_the_cube_is_sliced(pdf, bad_capture):
               width_characters=152, font_size=11)
     footer(figure, "pipeline/core/box_mending.py run live on output_test2_champ")
     pdf.savefig(figure)
-    save_slide_png(figure, "09_how_the_cube_is_sliced")
+    save_slide_png(figure, "10_how_the_cube_is_sliced")
     plt.close(figure)
 
 
@@ -1063,7 +1171,7 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
     footer(figure, "box_mending.py on output_test2_champ and output_test6; "
                    "EXPERIMENT_LOG §20")
     pdf.savefig(figure)
-    save_slide_png(figure, "10_mending_effect")
+    save_slide_png(figure, "11_mending_effect")
     plt.close(figure)
 
 
@@ -1124,7 +1232,7 @@ def slide_results(pdf):
               width_characters=38, font_size=11, colour=INK_SECONDARY)
     footer(figure, "EXPERIMENT_LOG §20; run logs of 2026-10-09")
     pdf.savefig(figure)
-    save_slide_png(figure, "11_results")
+    save_slide_png(figure, "12_results")
     plt.close(figure)
 
 
@@ -1192,7 +1300,7 @@ def slide_hair(pdf):
               width_characters=130, font_size=11.5)
     footer(figure, "EXPERIMENT_LOG §20; the test2_*_hairless tape profiles")
     pdf.savefig(figure)
-    save_slide_png(figure, "12_hair")
+    save_slide_png(figure, "13_hair")
     plt.close(figure)
 
 
@@ -1232,7 +1340,7 @@ def slide_where_we_stand(pdf):
     ], line_gap=0.055, font_size=12, width_characters=104)
     footer(figure, "EXPERIMENT_LOG §21")
     pdf.savefig(figure)
-    save_slide_png(figure, "13_where_we_stand")
+    save_slide_png(figure, "14_where_we_stand")
     plt.close(figure)
 
 
@@ -1281,6 +1389,7 @@ def main():
         slide_why_the_cube_matters(pdf)
         slide_two_defects(pdf, bad_capture)
         slide_the_four_steps(pdf, bad_capture)
+        slide_the_idea_in_two_dimensions(pdf)
         slide_which_face(pdf, bad_capture, assignment)
         slide_how_the_cube_is_sliced(pdf, bad_capture)
         slide_mending_effect(pdf, bad_capture, sound_capture)
