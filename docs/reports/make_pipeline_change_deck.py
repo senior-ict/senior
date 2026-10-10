@@ -42,6 +42,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline.core import band_edges, box_mending  # noqa: E402
 from pipeline.core.cube_fit import fit_cube  # noqa: E402
+from pipeline.core.limb_skeleton import SLICES_BETWEEN_BANDS, slice_skeleton  # noqa: E402
 
 OUTPUT_PDF = HERE / "2026-10-10_pipeline_change_deck.pdf"
 SLIDE_PNG_DIRECTORY = HERE / "figures/2026-10-10_deck_slides"
@@ -62,6 +63,7 @@ AFTER_COLOUR = "#2a78d6"
 ADDED_COLOUR = "#c2410c"
 BAND_COLOUR = "#2f7d32"
 TRUTH_COLOUR = INK
+EXAMPLE_CHUNK_FRACTION = 0.85    # which chunk of the limb the middle panel shows
 
 SLIDE_COUNTER = {"number": 0}
 
@@ -263,6 +265,58 @@ def mend_one_box(run_directory):
     return {"raw": raw_local_cm, "snapped": snapped_local_cm, "added": added_local_cm,
             "half_side_cm": half_side_cm, "cell_cm": cell_cm, "report": report,
             "raw_count": len(raw_points)}
+
+
+def load_limb_chunks(run_directory):
+    """Cut a run's limb into the skeleton step's chunks and return them in centimetres.
+
+    Heights are measured from the lower band, so 0% is the lower band and 100%
+    the upper one. The example chunk is the one holding EXAMPLE_CHUNK_FRACTION
+    of the way up.
+    """
+    leg_points, _ = load_leg_points(run_directory)
+    box_points, _ = load_box_points(run_directory)
+    scale, _ = centimetres_per_unit(box_points)
+
+    cutting_line = json.loads(
+        (run_directory / "for_debug/03_clean/debug/cutting_line_levelled.json").read_text())
+    band_heights = []
+    for plane in cutting_line["markers"]:
+        band_heights.append(plane["centroid"][2])
+    band_heights.sort()
+    lower_band, upper_band = band_heights[0], band_heights[-1]
+    chunks = slice_skeleton(leg_points, lower_band, upper_band)
+
+    skeleton_centre = np.nanmean(chunks["skeleton"], axis=0)
+    example_height = lower_band + EXAMPLE_CHUNK_FRACTION * (upper_band - lower_band)
+    example_index = int(np.digitize([example_height], chunks["slice_edges"])[0] - 1)
+    in_example = chunks["inside_range"] & (chunks["slice_of_point"] == example_index)
+
+    return {"side_x_cm": (leg_points[:, 0] - skeleton_centre[0]) * scale,
+            "side_y_cm": (leg_points[:, 1] - skeleton_centre[1]) * scale,
+            "height_cm": (leg_points[:, 2] - lower_band) * scale,
+            "edges_cm": (chunks["slice_edges"] - lower_band) * scale,
+            "span_cm": (upper_band - lower_band) * scale,
+            "example_mask": in_example,
+            "example_centre_cm": (chunks["skeleton"][example_index] - skeleton_centre) * scale,
+            "example_height_cm": (example_height - lower_band) * scale}
+
+
+def face_cell_occupancy(capture):
+    """Which cells of the cube's bottom face held a point before the filler ran."""
+    half_side_cm = capture["half_side_cm"]
+    cell_cm = capture["cell_cm"]
+    snapped = capture["snapped"]
+    axis, side = box_mending.nearest_face(snapped)
+    on_bottom = (axis == 2) & (side == -1)
+
+    steps = max(2, int(np.ceil(2 * half_side_cm / cell_cm)))
+    edges = np.linspace(-half_side_cm, half_side_cm, steps + 1)
+    occupied = np.zeros((steps, steps), dtype=bool)
+    first = np.clip(np.digitize(snapped[on_bottom, 0], edges) - 1, 0, steps - 1)
+    second = np.clip(np.digitize(snapped[on_bottom, 1], edges) - 1, 0, steps - 1)
+    occupied[first, second] = True
+    return edges, occupied
 
 
 def offsets_from_faces(local_points_cm, half_side_cm):
@@ -679,6 +733,141 @@ def slide_the_four_steps(pdf, bad_capture):
 
 # --------------------------------------------------------------------- slide 8
 
+def slide_two_kinds_of_cut(pdf, limb_chunks, bad_capture):
+    """The leg is cut into stacked chunks; the cube is gridded on its faces."""
+    figure = new_slide("Two different cuts: the leg is chunked, the cube is gridded",
+                       "The same word, 'slice', means two different things here, and "
+                       "neither cuts the object into blocks.")
+
+    axes_leg = figure.add_axes([0.055, 0.34, 0.25, 0.44])
+    side_x_cm = limb_chunks["side_x_cm"]
+    height_cm = limb_chunks["height_cm"]
+    half_width_cm = float(np.percentile(np.abs(side_x_cm), 97)) + 1.5
+    axes_leg.scatter(side_x_cm, height_cm, s=0.6, color="#c2bfb7", lw=0)
+
+    # Each chunk's line is drawn only as wide as the limb is at that height, so the
+    # panel reads as slices of the leg rather than stripes across the page.
+    def limb_half_width_at(height):
+        """Half the limb's width at one height, in centimetres."""
+        nearby = np.abs(height_cm - height) < 0.8
+        if nearby.sum() < 20:
+            return half_width_cm * 0.5
+        return float(np.percentile(np.abs(side_x_cm[nearby]), 98))
+
+    for edge_cm in limb_chunks["edges_cm"]:
+        reach = limb_half_width_at(edge_cm)
+        axes_leg.plot([-reach, reach], [edge_cm, edge_cm], color=AFTER_COLOUR,
+                      lw=0.6, alpha=0.8)
+    for band_height_cm in (0.0, limb_chunks["span_cm"]):
+        reach = limb_half_width_at(band_height_cm)
+        axes_leg.plot([-reach, reach], [band_height_cm, band_height_cm],
+                      color=BAND_COLOUR, lw=2.4)
+    example_height_cm = limb_chunks["example_height_cm"]
+    example_reach = limb_half_width_at(example_height_cm)
+    axes_leg.plot([-example_reach, example_reach],
+                  [example_height_cm, example_height_cm], color=ADDED_COLOUR, lw=2.2)
+    axes_leg.text(0.03, 0.02, "lower band = 0%", transform=axes_leg.transAxes,
+                  fontsize=9, color=BAND_COLOUR, weight="bold")
+    axes_leg.text(0.03, 0.95, "upper band = 100%", transform=axes_leg.transAxes,
+                  fontsize=9, color=BAND_COLOUR, weight="bold", va="top")
+    axes_leg.set_ylim(-6, limb_chunks["span_cm"] + 6)
+    axes_leg.set_xlim(-half_width_cm, half_width_cm)
+    axes_leg.set_xticks([])
+    tidy_axes(axes_leg, "the leg: stacked chunks")
+    axes_leg.set_ylabel("height above the lower band (cm)", fontsize=10,
+                        color=INK_SECONDARY)
+
+    axes_ring = figure.add_axes([0.375, 0.40, 0.20, 0.36])
+    in_example = limb_chunks["example_mask"]
+    axes_ring.scatter(limb_chunks["side_x_cm"][in_example],
+                      limb_chunks["side_y_cm"][in_example], s=3.5,
+                      color=ADDED_COLOUR, lw=0)
+    axes_ring.plot(limb_chunks["example_centre_cm"][0],
+                   limb_chunks["example_centre_cm"][1], marker="+", markersize=12,
+                   color=INK, markeredgewidth=2)
+    axes_ring.set_aspect("equal")
+    axes_ring.set_xticks([])
+    axes_ring.set_yticks([])
+    for spine in axes_ring.spines.values():
+        spine.set_color(RULE)
+    axes_ring.set_title("one chunk from above: a ring", fontsize=12, color=INK,
+                        loc="left", pad=8)
+    paragraph(figure, 0.375, 0.335,
+              f"The chunk marked orange on the left, 85% of the way up: "
+              f"{int(in_example.sum()):,} points, about 0.5 cm tall. + is its "
+              f"fitted centre.",
+              width_characters=44, font_size=10, colour=INK_SECONDARY)
+
+    axes_face = figure.add_axes([0.655, 0.40, 0.20, 0.36])
+    edges, occupied = face_cell_occupancy(bad_capture)
+    steps = len(edges) - 1
+    for first_index in range(steps):
+        for second_index in range(steps):
+            if occupied[first_index, second_index]:
+                cell_colour = "#cfe1f7"
+            else:
+                cell_colour = "#f6ddd0"
+            axes_face.add_patch(Rectangle((edges[first_index], edges[second_index]),
+                                          edges[1] - edges[0], edges[1] - edges[0],
+                                          facecolor=cell_colour, edgecolor=RULE, lw=0.3))
+    axes_face.set_xlim(edges[0], edges[-1])
+    axes_face.set_ylim(edges[0], edges[-1])
+    axes_face.set_aspect("equal")
+    axes_face.set_xticks([])
+    axes_face.set_yticks([])
+    for spine in axes_face.spines.values():
+        spine.set_color(INK)
+    axes_face.set_title("one cube face: a 25 × 25 grid", fontsize=12, color=INK,
+                        loc="left", pad=8)
+    axes_face.scatter([], [], marker="s", s=60, color="#cfe1f7",
+                      label="cell that held a point")
+    axes_face.scatter([], [], marker="s", s=60, color="#f6ddd0",
+                      label="empty cell — the filler fills it")
+    axes_face.legend(fontsize=9, frameon=False, loc="lower center",
+                     bbox_to_anchor=(0.5, -0.17), handletextpad=0.2)
+    cell_count = steps * steps
+    filled_count = int(occupied.sum())
+    paragraph(figure, 0.655, 0.335,
+              f"Before filling, {filled_count} of these {cell_count} cells held a point; "
+              f"the other {cell_count - filled_count} each got one dropped in.",
+              width_characters=44, font_size=10, colour=INK_SECONDARY)
+
+    figure.text(0.878, 0.78, "the leg's chunks", fontsize=11, weight="bold",
+                color=INK, va="top")
+    draw_table(figure, (0.878, 0.62, 0.108, 0.13),
+               ["cut along", "the limb axis"],
+               [["how many", f"{SLICES_BETWEEN_BANDS}"],
+                ["each is", "≈0.5 cm tall"],
+                ["shape", "a flat disc"]],
+               [0.50, 0.50], font_size=8.5)
+
+    figure.text(0.878, 0.55, "the cube's cells", fontsize=11, weight="bold",
+                color=INK, va="top")
+    draw_table(figure, (0.878, 0.39, 0.108, 0.13),
+               ["cut along", "each face"],
+               [["how many", "625 × 6"],
+                ["each is", "4 × 4 mm"],
+                ["shape", "a flat square"]],
+               [0.50, 0.50], font_size=8.5)
+
+    paragraph(figure, 0.055, 0.245,
+              "The leg is cut because its shape is unknown: each chunk is squashed flat, "
+              "a smooth curve is fitted round its ring of points, and points far off that "
+              "curve are pulled back. Chunks stack along the limb, so a chunk is a disc, "
+              "never a block.\n\n"
+              "The cube is not cut at all. Its six faces are each divided into a flat grid "
+              "of 4 mm cells, and a point is dropped into any cell that is empty. The grid "
+              "lies ON the surface; it never goes inside the cube.",
+              width_characters=146, font_size=11)
+    footer(figure, "limb_skeleton.slice_skeleton on output_test2_champ_hairless; "
+                   "box_mending.py on output_test2_champ")
+    pdf.savefig(figure)
+    save_slide_png(figure, "08_two_kinds_of_cut")
+    plt.close(figure)
+
+
+# --------------------------------------------------------------------- slide 9
+
 def slide_mending_effect(pdf, bad_capture, sound_capture):
     """What mending is worth, and the honest answer: usually almost nothing."""
     figure = new_slide("What mending is worth — and when it does nothing",
@@ -741,11 +930,11 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
     footer(figure, "box_mending.py on output_test2_champ and output_test6; "
                    "EXPERIMENT_LOG §20")
     pdf.savefig(figure)
-    save_slide_png(figure, "08_mending_effect")
+    save_slide_png(figure, "09_mending_effect")
     plt.close(figure)
 
 
-# --------------------------------------------------------------------- slide 9
+# -------------------------------------------------------------------- slide 10
 
 def slide_results(pdf):
     """The before/after chart for every capture that has a usable truth."""
@@ -802,11 +991,11 @@ def slide_results(pdf):
               width_characters=38, font_size=11, colour=INK_SECONDARY)
     footer(figure, "EXPERIMENT_LOG §20; run logs of 2026-10-09")
     pdf.savefig(figure)
-    save_slide_png(figure, "09_results")
+    save_slide_png(figure, "10_results")
     plt.close(figure)
 
 
-# -------------------------------------------------------------------- slide 10
+# -------------------------------------------------------------------- slide 11
 
 def slide_hair(pdf):
     """The other finding of the day: hair, and why the fitted version was wrong."""
@@ -870,11 +1059,11 @@ def slide_hair(pdf):
               width_characters=130, font_size=11.5)
     footer(figure, "EXPERIMENT_LOG §20; the test2_*_hairless tape profiles")
     pdf.savefig(figure)
-    save_slide_png(figure, "10_hair")
+    save_slide_png(figure, "11_hair")
     plt.close(figure)
 
 
-# -------------------------------------------------------------------- slide 11
+# -------------------------------------------------------------------- slide 12
 
 def slide_where_we_stand(pdf):
     """Honest closing slide: what is settled, what is not."""
@@ -910,7 +1099,7 @@ def slide_where_we_stand(pdf):
     ], line_gap=0.055, font_size=12, width_characters=104)
     footer(figure, "EXPERIMENT_LOG §21")
     pdf.savefig(figure)
-    save_slide_png(figure, "11_where_we_stand")
+    save_slide_png(figure, "12_where_we_stand")
     plt.close(figure)
 
 
@@ -949,6 +1138,7 @@ def main():
     span_rows = build_span_rows()
     bad_capture = mend_one_box(BAD_CAPTURE_RUN)
     sound_capture = mend_one_box(SOUND_CAPTURE_RUN)
+    limb_chunks = load_limb_chunks(NEW_PIPELINE_RUN)
 
     with PdfPages(OUTPUT_PDF) as pdf:
         slide_title(pdf)
@@ -958,6 +1148,7 @@ def main():
         slide_why_the_cube_matters(pdf)
         slide_two_defects(pdf, bad_capture)
         slide_the_four_steps(pdf, bad_capture)
+        slide_two_kinds_of_cut(pdf, limb_chunks, bad_capture)
         slide_mending_effect(pdf, bad_capture, sound_capture)
         slide_results(pdf)
         slide_hair(pdf)
