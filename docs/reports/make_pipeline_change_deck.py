@@ -940,27 +940,36 @@ def draw_margin_histogram(axes, assignment):
 def slide_which_face(pdf, capture, assignment):
     """How a point is told which face it belongs to -- no neighbours consulted."""
     figure = new_slide("How each point is told which face it is on",
-                       "A fair question when the cube is seen corner-on. The faces are "
-                       "not worked out from edges or from neighbouring faces: the "
-                       "cube's pose is fitted first, then each point is judged alone.")
+                       "No edge is traced and no neighbour consulted: the cube's pose "
+                       "is fitted first, then each point is judged on its own.",
+                       subtitle_width=130)
 
-    draw_yaw_sweep(figure.add_axes([0.05, 0.36, 0.23, 0.38]), assignment)
-    draw_assigned_faces(figure.add_axes([0.345, 0.32, 0.22, 0.46]), capture, assignment)
-    draw_margin_histogram(figure.add_axes([0.655, 0.36, 0.29, 0.38]), assignment)
+    draw_yaw_sweep(figure.add_axes([0.05, 0.47, 0.23, 0.29]), assignment)
+    draw_assigned_faces(figure.add_axes([0.345, 0.43, 0.22, 0.37]), capture, assignment)
+    draw_margin_histogram(figure.add_axes([0.655, 0.47, 0.29, 0.29]), assignment)
 
-    figure.text(0.05, 0.27, "The rule, in full", fontsize=13, weight="bold", color=INK,
-                va="top")
-    figure.text(0.05, 0.215,
-                "rotate the point by minus the fitted yaw, move the cube's centre to the "
-                "origin, then take whichever of |x|, |y|, |z| is largest:\n"
-                "that axis is the face, and its sign is the side.",
-                fontsize=11.5, color=INK, va="top", linespacing=1.8)
-    paragraph(figure, 0.05, 0.125,
+    figure.text(0.05, 0.345, "The rule, in full", fontsize=12.5, weight="bold",
+                color=INK, va="top")
+    paragraph(figure, 0.05, 0.293,
+              "Rotate the point by minus the fitted yaw, move the cube's centre to the "
+              "origin, then take whichever of |x|, |y|, |z| is largest: that axis is "
+              "the face, and its sign is the side.\n\n"
               "The fit itself solves five unknowns — yaw, centre x and y, base height "
               "and side — by minimising every point's distance to the trial cube's "
-              "surface. The yaw is swept before any local fitting because a cube fitted "
-              "45° out would wrap its own diagonal and read about 40% large.",
-              width_characters=150, font_size=11, colour=INK_SECONDARY)
+              "surface.",
+              width_characters=62, font_size=10)
+
+    figure.text(0.48, 0.345, "Why an ideal cube, and not the cube mesh we build later?",
+                fontsize=12.5, weight="bold", color=INK, va="top")
+    bullet_list(figure, 0.48, 0.293, [
+        "There is no mesh yet. Mending runs in Stage 3; the mesh is built from these "
+        "same points in Stage 4.",
+        "The mesh is broken exactly where the help is needed. A face with a hole has "
+        "no surface there, and when Poisson fails the alpha wrap floats 2.9 mm proud "
+        "— snapping to that would bake its 9.1% in.",
+        "A reconstructed mesh is thousands of triangles fitted to the noise. The ideal "
+        "cube is five numbers, and is known in advance to be the right shape.",
+    ], line_gap=0.042, font_size=10, width_characters=74)
     footer(figure, "cube_fit.fit_cube and box_mending.nearest_face on output_test2_champ")
     pdf.savefig(figure)
     save_slide_png(figure, "09_which_face")
