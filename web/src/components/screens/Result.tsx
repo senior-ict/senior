@@ -18,6 +18,15 @@ const MeshView = dynamic(
 type View = "object" | "scene";
 
 // Final screen: the measured volume, the mesh, and the run's numbers.
+/** The pipeline's reading against a hand measurement, as a signed percentage.
+ *  Positive means the pipeline read more volume than the truth did. */
+function signedPercent(measuredCm3: number, truthCm3: number): string {
+  if (!(truthCm3 > 0)) return "—";
+  const difference = (100 * (measuredCm3 - truthCm3)) / truthCm3;
+  const sign = difference >= 0 ? "+" : "−";
+  return `${sign}${Math.abs(difference).toFixed(1)}%`;
+}
+
 export function Result({
   dataset,
   onBack,
@@ -267,6 +276,43 @@ export function Result({
               which is a larger quantity. The two are not directly comparable, so
               no error percentage is quoted.
             </Caveat>
+          )}
+
+          {dataset.truth && obj && (
+            <Panel>
+              <Label>Against a truth measured by hand</Label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 10,
+                  marginTop: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ font: "500 22px/1 var(--mono)" }}>
+                  {signedPercent(obj.real_vol_cm3, dataset.truth.volumeMl)}
+                </span>
+                <span
+                  style={{
+                    font: "400 13px/1.5 var(--sans)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  against {dataset.truth.volumeMl.toFixed(1)} cm³ by{" "}
+                  {dataset.truth.method}
+                </span>
+              </div>
+              <div
+                style={{
+                  font: "400 12.5px/1.6 var(--sans)",
+                  color: "var(--muted)",
+                  marginTop: 10,
+                }}
+              >
+                {dataset.truth.note}
+              </div>
+            </Panel>
           )}
         </div>
       </div>

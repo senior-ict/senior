@@ -251,7 +251,7 @@ def report_cut_circumference(clean_dir, linear_scale, slab_half_mm=SLAB_HALF_MM)
 
     Never raises: a failed fit must not cost a run its volumes. Every failure
     path prints its reason — a silent one here would be the exact defect class
-    `docs/repo_review.md` swept for.
+    `docs/reviews/repo_review.md` swept for.
     """
     try:
         pts, markers = load_cut_geometry(clean_dir)

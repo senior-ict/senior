@@ -330,8 +330,9 @@ def run_stage0(args, name):
                               centre_on_subject=args.prep_recentre,
                               output_size=args.prep_size,
                               strict=args.prep_strict,
-                              crop=args.prep_crop,
-                              min_frames=args.prep_min_frames)
+                              crop=args.prep_crop and args.frame_fit == "crop",
+                              min_frames=args.prep_min_frames,
+                              vggt_preprocess="pad" if args.frame_fit == "pad" else "crop")
     frames = manifest["frames"]
     lines = [f"STAGE 0 — prep   (from {args.image_folder})", ""]
     lines.append(f"  band              : {manifest['band_cube_heights']} cube heights")
@@ -557,6 +558,12 @@ def _projected_band_planes(args, name):
     return []
 
 
+def _cloud_method(args):
+    """Which Stage 2 built the cloud this run reads: the flag, else config."""
+    from pipeline.config import POINTCLOUD_METHOD
+    return getattr(args, "pointcloud_method", None) or POINTCLOUD_METHOD
+
+
 def _review_planes(args):
     """Cutting planes supplied by an interactive review, if any.
 
@@ -601,6 +608,7 @@ def run_stage3(args, name):
         cut_mode=getattr(args, "cut_mode", None),
         n_bands=_detected_band_count(args, name),
         band_planes=_projected_band_planes(args, name),
+        merge_ghost_sheets=_cloud_method(args) != "tsdf",
         # Stage 3 no longer cuts. It segments the limb, detects the marker
         # planes and publishes both; the cut itself is applied in Stage 5,
         # to the repaired watertight solid. Cutting the mesh is what lets a
@@ -833,13 +841,21 @@ def main():
                    help="skip materialising raw stage 1 outputs (images/depth/PLY/cameras)")
     p.add_argument("--conf_thres", type=float, default=45.0)
     p.add_argument("--prediction_mode", default="pointmap", choices=["pointmap", "depth"])
+    p.add_argument("--pointcloud-method", dest="pointcloud_method", default=None,
+                   choices=["pointmap", "tsdf"],
+                   help="stage 2: stack the pointmaps (default) or fuse the depth "
+                        "maps into one TSDF surface. Default: config.POINTCLOUD_METHOD.")
     p.add_argument("--mask_black_bg", action="store_true")
     p.add_argument("--mask_white_bg", action="store_true")
     p.add_argument("--num_objects", type=int, default=2)
     p.add_argument("--max_frames", type=int, default=None)
-    p.add_argument("--preprocess-mode", dest="preprocess_mode", default="crop",
+    p.add_argument("--preprocess-mode", dest="preprocess_mode", default=None,
                    choices=["crop", "pad"],
-                   help="crop (default, centre-crops height) or pad (keeps whole frame)")
+                   help="how VGGT squares the frames: crop (centre-crops height) or pad "
+                        "(keeps whole frame). Default: follows --frame-fit.")
+    p.add_argument("--frame-fit", dest="frame_fit", default=None, choices=["pad", "crop"],
+                   help="pad: Stage 0 passes photos whole and VGGT pads them; crop: Stage 0's "
+                        "sliding square crop. Default: config.FRAME_FIT.")
     p.add_argument("--input-res", dest="input_res", type=int, default=518,
                    help="VGGT input resolution, must be divisible by 14 (518 native, 1022 hi-res)")
     p.add_argument("--no-fill", action="store_true")
@@ -870,6 +886,10 @@ def main():
     args = p.parse_args()
 
     name = args.name or os.path.basename(os.path.normpath(args.image_folder))
+    from pipeline.config import FRAME_FIT
+    args.frame_fit = args.frame_fit or FRAME_FIT
+    if args.preprocess_mode is None:
+        args.preprocess_mode = "pad" if args.frame_fit == "pad" else "crop"
 
     from pipeline.utils.seeding import seed_everything
     seed_everything(args.seed)

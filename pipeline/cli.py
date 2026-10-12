@@ -27,6 +27,9 @@ Examples:
                    help="stage 0: margin around the cube and the band")
     p.add_argument("--prep-min-frames", dest="prep_min_frames", type=int,
                    default=6, help="stage 0: frames required to proceed")
+    p.add_argument("--frame-fit", dest="frame_fit", default=None, choices=["pad", "crop"],
+                   help="pad: Stage 0 passes photos whole and VGGT pads them to a square; "
+                        "crop: Stage 0's sliding square crop. Default: config.FRAME_FIT.")
     p.add_argument("--no-prep-crop", dest="prep_crop",
                    action="store_false",
                    help="hand VGGT the original frames instead of stage 0's crop.\n"
@@ -48,6 +51,10 @@ Examples:
     p.add_argument("--prediction_mode", type=str, default="pointmap",
                    choices=["pointmap", "depth"],
                    help="'pointmap' uses direct 3D point regression; 'depth' unprojects depth maps")
+    p.add_argument("--pointcloud-method", dest="pointcloud_method", default=None,
+                   choices=["pointmap", "tsdf"],
+                   help="stage 2: stack the pointmaps (default) or fuse the depth "
+                        "maps into one TSDF surface. Default: config.POINTCLOUD_METHOD.")
     p.add_argument("--mask_black_bg", action="store_true",
                    help="Mask out near-black background pixels")
     p.add_argument("--mask_white_bg", action="store_true",

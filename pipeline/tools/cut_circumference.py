@@ -32,7 +32,7 @@ def scale_from_volumes_csv(path):
 
     Read rather than recomputed, so this reports on exactly the scale in
     `volumes.csv` whichever Stage 6 derivation produced it. Two schemas are in
-    circulation (see docs/repo_review.md); both are handled.
+    circulation (see docs/reviews/repo_review.md); both are handled.
     """
     with open(path, newline="") as fh:
         rows = list(csv.DictReader(fh))

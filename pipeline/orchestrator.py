@@ -10,7 +10,8 @@ import numpy as np
 from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
-from pipeline.config import IMAGE_EXTENSIONS
+from pipeline.config import (BAND_CUT_EDGE, BOX_MENDING, CUT_STAGE, FRAME_FIT,
+                             IMAGE_EXTENSIONS, LIMB_SKELETON, POINTCLOUD_METHOD)
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
 
@@ -58,6 +59,12 @@ def _print_banner(args, device):
     print(f"║  Watertight    : {str(not args.no_watertight):<40}║")
     print(f"║  Seed          : {args.seed:<40}║")
     print(f"║  Leg segment   : {str(args.segment_leg):<40}║")
+    print(f"║  Frame fit     : {args.frame_fit:<40}║")
+    print(f"║  Cut at        : {'Stage 3, on the cloud' if CUT_STAGE == 'cloud' else 'Stage 5, on the mesh':<40}║")
+    print(f"║  Limb skeleton : {'on' if LIMB_SKELETON else 'off':<40}║")
+    band_edge_label = "the stripes' inner edges" if BAND_CUT_EDGE == "inner" else "the stripe centres"
+    print(f"║  Band cut at   : {band_edge_label:<40}║")
+    print(f"║  Box mending   : {'on' if BOX_MENDING else 'off':<40}║")
     from pipeline.stages.clean import resolve_cut_mode
     cut_label = {"upper": "upper (below top band)",
                  "span": "span (between bands)",
@@ -161,6 +168,7 @@ def _print_summary(total_time, inference_time, ply_path, scene_recon_path,
 def main():
     """Runs Stages 0-6 end to end, then publishes the final meshes and writes the run log."""
     args = parse_args()
+    args.frame_fit = getattr(args, "frame_fit", None) or FRAME_FIT
     device = get_device()
     total_t0 = time.time()
 
@@ -220,9 +228,10 @@ def main():
                            band_heights=args.prep_band, pad=args.prep_pad,
                            centre_on_subject=args.prep_recentre,
                            strict=args.prep_strict,
-                           crop=getattr(args, "prep_crop", True),
+                           crop=getattr(args, "prep_crop", True) and args.frame_fit == "crop",
                            output_size=getattr(args, "prep_size", 518),
-                           min_frames=args.prep_min_frames)
+                           min_frames=args.prep_min_frames,
+                           vggt_preprocess="pad" if args.frame_fit == "pad" else "crop")
             inference_input = prep_images
             # Stage 3 uses the colour Stage 0 measured, so a marker of any
             # colour works without editing the config's khaki defaults.
@@ -238,7 +247,9 @@ def main():
         _copy_images_to_target(inference_input, target_images_dir)
 
         # ── Stage 1: Inference ──
-        predictions, inference_time = run_inference(inference_input, device, args.max_frames)
+        predictions, inference_time = run_inference(
+            inference_input, device, args.max_frames,
+            preprocess_mode="pad" if args.frame_fit == "pad" else "crop")
         print(f"[DBG-stage] stage1 inference: {inference_time:.2f}s")
 
         # Save predictions (compatible with demo_gradio)
@@ -282,7 +293,14 @@ def main():
                 marker_colour=marker_colour,
                 cut_mode=getattr(args, "cut_mode", None),
                 n_bands=n_bands,
-                band_planes=band_planes)
+                band_planes=band_planes,
+                # CUT_STAGE = "cloud" cuts the point cloud here, as v2 did;
+                # Stage 5 then finds no uncut limb and leaves the solid as is.
+                apply_cut=(CUT_STAGE == "cloud"),
+                # A fused cloud has one sheet; the wide merge pass would only
+                # smooth it, and on its sparser spacing crushes the cube.
+                merge_ghost_sheets=(getattr(args, "pointcloud_method", None)
+                                    or POINTCLOUD_METHOD) != "tsdf")
             print(f"[DBG-stage] stage3 clean_and_extract: {time.time() - _dbg_t:.2f}s")
             if object_paths:
                 _dbg_t = time.time()

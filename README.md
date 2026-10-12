@@ -32,14 +32,14 @@ service together.
 | | |
 |---|---|
 | Full technical detail | [`pipeline.md`](pipeline.md) |
-| Running the web app | [`docs/running_the_web_app.md`](docs/running_the_web_app.md) |
-| **Full progress log — findings, derivations, maths** | [`docs/progress.md`](docs/progress.md) |
-| Experiment log and verdicts | [`docs/experiments.md`](docs/experiments.md) |
-| Stage 6 — **resolved: keep M1** | [`docs/stage06_experiments.md`](docs/stage06_experiments.md) |
-| Contract and silent-failure sweep | [`docs/repo_review.md`](docs/repo_review.md) |
-| **What changed against `main`, and why it is better** | [`docs/updates.md`](docs/updates.md) |
-| Every stage and sub-process in one chart | [`docs/full_flowchart.md`](docs/full_flowchart.md) |
-| Moving Least Squares, derived in full | [`docs/mls_explained.md`](docs/mls_explained.md) |
+| Running the web app | [`docs/web/running_the_web_app.md`](docs/web/running_the_web_app.md) |
+| **Full progress log — findings, derivations, maths** | [`docs/archive/2026-08/progress.md`](docs/archive/2026-08/progress.md) |
+| Experiment log and verdicts | [`docs/archive/2026-08/experiments.md`](docs/archive/2026-08/experiments.md) |
+| Stage 6 — **resolved: keep M1** | [`docs/archive/2026-08/stage06_experiments.md`](docs/archive/2026-08/stage06_experiments.md) |
+| Contract and silent-failure sweep | [`docs/reviews/repo_review.md`](docs/reviews/repo_review.md) |
+| **What changed against `main`, and why it is better** | [`docs/archive/2026-08/updates.md`](docs/archive/2026-08/updates.md) |
+| Every stage and sub-process in one chart | [`docs/pipeline/full_flowchart.md`](docs/pipeline/full_flowchart.md) |
+| Moving Least Squares, derived in full | [`docs/pipeline/mls_explained.md`](docs/pipeline/mls_explained.md) |
 
 ---
 
@@ -118,7 +118,7 @@ the number is not a measurement.
 > E-stage0-verdicts. Every `1081.94` in these documents is from the older tree.
 
 Two things in that table are artefacts of **Stage 6 currently being reverted to
-`main`'s version** (see [`docs/stage06_experiments.md`](docs/stage06_experiments.md)):
+`main`'s version** (see [`docs/archive/2026-08/stage06_experiments.md`](docs/archive/2026-08/stage06_experiments.md)):
 the reference prints exactly `2744.00` because that method derives scale from the
 cube's own volume, and the 14 cm cube reads 19.18 × 19.47 × 14.09 because the
 dimensions are an axis-aligned box around a tilted cube, which measures its
@@ -144,7 +144,7 @@ interpreter directly, so no `conda activate` is needed):
 
 Open `http://localhost:3111` for the site; it drives the compute service on
 port 8000. Ctrl-C stops both. See
-[`docs/running_the_web_app.md`](docs/running_the_web_app.md) for letting a phone
+[`docs/web/running_the_web_app.md`](docs/web/running_the_web_app.md) for letting a phone
 on the same wifi reach it.
 
 ---

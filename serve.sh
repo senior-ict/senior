@@ -4,7 +4,7 @@
 #
 #   ./serve.sh
 #
-# Ctrl-C stops both. See docs/running_the_web_app.md for the Windows-side step
+# Ctrl-C stops both. See docs/web/running_the_web_app.md for the Windows-side step
 # that WSL2 needs before the LAN can actually reach these ports.
 set -euo pipefail
 
@@ -47,7 +47,7 @@ cat <<EOF
     netsh interface portproxy add v4tov4 listenport=$API_PORT listenaddress=0.0.0.0 connectport=$API_PORT connectaddress=$WSL_IP
     New-NetFirewallRule -DisplayName "cubit" -Direction Inbound -Protocol TCP -LocalPort $WEB_PORT,$API_PORT -Action Allow
 
-  This WSL address ($WSL_IP) changes on reboot; docs/running_the_web_app.md has
+  This WSL address ($WSL_IP) changes on reboot; docs/web/running_the_web_app.md has
   the durable alternative.
 
 EOF

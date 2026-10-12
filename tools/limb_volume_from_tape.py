@@ -2,7 +2,7 @@
 
 Each measured interval is treated as a truncated cone between the two
 circumferences bounding it, and the segment is the sum of those slices. See
-docs/measuring_ground_truth.md for the procedure the input comes from and for
+docs/guides/measuring_ground_truth.md for the procedure the input comes from and for
 the bias this model carries.
 
 Input is a CSV of one row per measurement:

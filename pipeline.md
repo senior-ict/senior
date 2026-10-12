@@ -3,6 +3,15 @@
 Measures the real-world volume of an object from a handful of phone photos,
 using an ArUco-marked cube of known size as the scale reference.
 
+> **Read `docs/pipeline/current_pipeline.md` (or its PDF) first.** That
+> document describes the pipeline as it stands. This one is the longer
+> reference, and parts of it predate September 2026: the cube is 10 cm rather
+> than 14, Stage 0 pads the photos instead of cropping them, the cut is
+> applied to the mesh in Stage 5 rather than to the cloud in Stage 3, Stage 3
+> ends with the limb skeleton step, and Stage 6 checks the reference by
+> fitting a cube to its points. Where the two disagree, the current document
+> and the code are right.
+
 ```
 Input images
   → [0] Framing gate          frame_NN.png (518²), framing.json
@@ -278,6 +287,10 @@ combined transform `R_total` is applied to the marker planes too; applying only
    The cut itself is `core/segmentation.py:apply_marker_cut`: 0 planes no cut,
    1 keeps below, 2 keep between, each normal flipped along world up first so
    the detected sign cannot change the outcome
+   **Limb skeleton** (`core/limb_skeleton.py`, on by default, `LIMB_SKELETON=off`
+   to skip) — between the bands, each 0.5 cm horizontal chunk is fitted with one
+   smooth radius curve around a slice-centre skeleton; spurs are moved in, dents
+   out, and empty arcs filled on the curve. See `docs/pipeline/limb_skeleton.md`
 3. **Cut-plane cap** (`core/fill.py:cap_points_on_plane`) — fills the exposed
    cross-section with a grid built in the marker plane's own (u,v) basis, so it
    stays coplanar with the cut however the marker is tilted
@@ -379,7 +392,7 @@ open.
 > against 4.1% for the parked fitted-face method and 7.4% for its OBB form.**
 > The parked block was deleted from `volume.py` on 2026-08-31; `git log`
 > is now the record. It last appeared in commit 371d3da.
-> Full table in `docs/stage06_experiments.md`.
+> Full table in `docs/archive/2026-08/stage06_experiments.md`.
 >
 > The *epistemic* objection is untouched and still correct — calibrating on the
 > reference's own volume means it cannot report an error bar on itself. The

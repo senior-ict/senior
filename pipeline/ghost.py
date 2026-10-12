@@ -22,7 +22,7 @@ was measured, so it is worth stating plainly:
     projects every point onto it, so both sheets land on one and the shell goes
     from ~1.76 mm thick to ~0.79 mm.
 
-Measured step by step in docs/experiments/ghost_removal_chain.md.
+Measured step by step in docs/archive/2026-08/experiments/ghost_removal_chain.md.
 """
 import numpy as np
 
@@ -41,11 +41,19 @@ def compute_voxel_size(points, factor=None, sample_size=5000):
 
     from scipy.spatial import cKDTree
 
+    # The tree is built on EVERY point and only the queries are sampled. The
+    # sample used to be queried against itself, which measured the spacing of
+    # a 5,000-point subset -- a number that grows with the square root of the
+    # cloud's size and says nothing about the cloud. On inputs/test1_6 it gave
+    # 0.0071 for a cloud whose real mean spacing is 0.0016; the same capture
+    # from the full-resolution originals (twice the points) gave 0.0123 for a
+    # real spacing of 0.0019, so the denser cloud was cleaned more coarsely
+    # and its volume came out 8.5% higher. Measured at 2026-09-19.
     rng = np.random.default_rng(42)
-    pts = points
+    query_points = points
     if len(points) > sample_size:
-        pts = points[rng.choice(len(points), sample_size, replace=False)]
-    dists, _ = cKDTree(pts).query(pts, k=2)
+        query_points = points[rng.choice(len(points), sample_size, replace=False)]
+    dists, _ = cKDTree(points).query(query_points, k=2)
     return max(dists[:, 1].mean() * factor, 0.001)
 
 
@@ -58,7 +66,7 @@ def ghost_voxel_downsample(points, colors, voxel_size):
     1083.54 cm³ against 1081.94. The only mechanical difference is where the grid
     is anchored: the old code used `points.min(axis=0)`, Open3D uses its own
     origin, so a few points near a cell boundary land on the other side and the
-    centroids shift slightly. See docs/experiments/ghost_removal_chain.md.
+    centroids shift slightly. See docs/archive/2026-08/experiments/ghost_removal_chain.md.
 
     The name says downsample, not dedup, because that is what it does. It does
     **not** remove the ghost: the two sheets are about 2.7 mm apart and usually
@@ -150,7 +158,7 @@ def normal_aware_filter(points, colors, voxel_size, max_deviation=0.3, k=20):
 # chain above is measured, keeping the three steps in one file is what makes the
 # division of labour between them legible.
 #
-# Filtering alone cannot remove the ghost — see docs/experiments.md T10: it is
+# Filtering alone cannot remove the ghost — see docs/archive/2026-08/experiments.md T10: it is
 # the same model error repeated in every view, so multi-view corroboration
 # accepts it, and it is parallel to the true surface so the normal-aware filter
 # is blind to it. MLS takes the other route and moves the points instead.

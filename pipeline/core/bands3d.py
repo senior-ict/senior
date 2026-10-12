@@ -68,7 +68,7 @@ MIN_FRAME_FRAC = 0.5
 MAX_BANDS = 2
 
 
-def _frame_to_input_box(record, input_size=518, patch=14):
+def _frame_to_input_box(record, input_size=518, patch=14, preprocess="crop"):
     """Where this frame's pixels ended up in the array VGGT consumed.
 
     Returns (box, scale_x, scale_y, offset_y) such that an original-frame pixel
@@ -92,6 +92,22 @@ def _frame_to_input_box(record, input_size=518, patch=14):
         return ([left, top], input_size / (right - left),
                 input_size / (bottom - top), 0.0)
 
+    if preprocess == "pad":
+        # VGGT's pad preprocessing: the longer side to `input_size`, the other
+        # to the nearest multiple of `patch`, then padded equally on both
+        # sides to a square. Written in the same (origin, scale) form.
+        if width >= height:
+            scaled_width = float(input_size)
+            scaled_height = round(height * (input_size / width) / patch) * patch
+        else:
+            scaled_height = float(input_size)
+            scaled_width = round(width * (input_size / height) / patch) * patch
+        pad_x = (input_size - scaled_width) // 2
+        pad_y = (input_size - scaled_height) // 2
+        scale_x = scaled_width / width
+        scale_y = scaled_height / height
+        return ([-pad_x / scale_x, -pad_y / scale_y], scale_x, scale_y, 0.0)
+
     # VGGT's own preprocessing: width to `input_size`, height to the nearest
     # multiple of `patch`, then the centre `input_size` rows.
     scaled_height = round(height * (input_size / width) / patch) * patch
@@ -104,9 +120,9 @@ def _frame_to_input_box(record, input_size=518, patch=14):
     return ([0.0, 0.0], input_size / width, scaled_height / height, float(start))
 
 
-def _band_pixels(record, band_box, input_size=518):
+def _band_pixels(record, band_box, input_size=518, preprocess="crop"):
     """Pixel bounds of one band box inside the frame VGGT consumed."""
-    mapped = _frame_to_input_box(record, input_size)
+    mapped = _frame_to_input_box(record, input_size, preprocess=preprocess)
     if mapped is None:
         return None
     (origin, scale_x, scale_y, offset_y) = mapped
@@ -180,7 +196,8 @@ def band_planes_from_arrays(manifest, world_points, world_points_conf,
         frame_conf = conf[frame_index]
         floor = float(np.percentile(frame_conf, CONF_PCT))
         for box in boxes:
-            bounds = _band_pixels(record, box, input_size)
+            bounds = _band_pixels(record, box, input_size,
+                                  preprocess=manifest.get("vggt_preprocess", "crop"))
             if bounds is None:
                 continue
             u0, v0, u1, v1 = bounds

@@ -146,6 +146,7 @@ export function jobDataset(id: string, frames: number): SampleDataset {
     label: "Your upload",
     subject: `${frames} photos, measured on this machine`,
     nominalMl: null, // an uploaded object has no known truth — never invent one
+    truth: null, // likewise: nothing was measured by hand for an upload
     frames,
     meshes: {
       leg: f("leg_mesh.ply"),

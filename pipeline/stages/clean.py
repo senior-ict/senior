@@ -19,7 +19,8 @@ from pipeline.core.segmentation import (segment_point_cloud, apply_marker_cut,
                                         MAX_MARKERS, AXIS_MAP)
 from pipeline.config import (MARKER_MIN_HEIGHT_FRAC, MARKER_MIN_HEIGHT_CUBES,
                              MARKER_CUT_MODE,
-                             MARKER_MAX_AXIS_ANGLE_DEG)
+                             MARKER_MAX_AXIS_ANGLE_DEG,
+                             REFERENCE_REAL_SIZE_CM)
 from pipeline.core.fill import (
     cap_point_cloud_bottom,
     cap_points_on_plane,
@@ -170,7 +171,12 @@ def _merge_projected_planes(colour_planes, band_planes, height_axis):
     Where both sources found the same band, the colour plane wins. It is fitted
     to the cord's own points; the projected one is fitted to a slab of limb
     surface centred on the cord, which is the right plane but a blunter
-    instrument for locating it.
+    instrument for locating it. The projected twin is not thrown away, though:
+    it rides along as the colour plane's `projected_backup`, and the gates in
+    Phase C fall back to it if the colour fit fails them. Discarding it here
+    used to lose the whole band whenever the colour fit was later rejected --
+    on 0_left, 2_left and 5_right of the 2026-09-04 cohort that left one cut
+    plane and a sliver or a runaway volume.
     """
     if not band_planes:
         return colour_planes
@@ -183,9 +189,14 @@ def _merge_projected_planes(colour_planes, band_planes, height_axis):
                      if abs(float(m["centroid"][axis_idx]) - height)
                      < SAME_BAND_DISTANCE), None)
         if twin is not None:
+            twin["projected_backup"] = {
+                "centroid": np.asarray(candidate["centroid"], dtype=np.float64).tolist(),
+                "normal": np.asarray(candidate["normal"], dtype=np.float64).tolist(),
+                "npts": int(candidate["npts"]),
+                "source": "projected"}
             print(f"  Band projection: {candidate['npts']:,}-pt plane agrees "
                   f"with a {twin['npts']}-pt colour plane — keeping the colour "
-                  f"fit")
+                  f"fit, projected plane held as its backup")
             continue
         merged.append({"centroid": np.asarray(candidate["centroid"], dtype=np.float64),
                        "normal": np.asarray(candidate["normal"], dtype=np.float64),
@@ -271,6 +282,15 @@ def _limb_axis_near(leg_pts_rot, z, window_frac=0.25, n_slices=10, min_pts=8):
     return None
 
 
+def _rotate_plane(plane, rotation, source):
+    """A plane's centroid and unit normal carried into levelled space, as lists."""
+    centroid = (rotation @ np.asarray(plane["centroid"], dtype=np.float64)).astype(np.float64)
+    normal = (rotation @ np.asarray(plane["normal"], dtype=np.float64)).astype(np.float64)
+    normal /= np.linalg.norm(normal) + 1e-8
+    return {"centroid": centroid.tolist(), "normal": normal.tolist(),
+            "npts": plane.get("npts", 0), "source": source}
+
+
 def _plane_vs_limb_angle(leg_pts_rot, marker):
     """Angle in degrees between a marker plane's normal and the limb's axis.
 
@@ -343,12 +363,18 @@ def _ghost_filter_scales(dense_cloud):
     return voxel_size, voxel_size
 
 
-def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
+def _clean_cluster(cluster, label, voxel_size, normal_filter_scale,
+                   merge_ghost_sheets=True):
     """Deduplicate, drop misoriented points, and project onto a fitted surface.
 
     Runs per cluster so no MLS neighbourhood ever spans two objects.
+    `merge_ghost_sheets` False skips the second, wide MLS pass: a cloud that
+    came from TSDF fusion has one sheet already, and on its sparser spacing
+    the 16x radius becomes a 5 cm ball that crushed the reference cube
+    (measured 2026-09-19, cube fill -0.27).
     """
-    from pipeline.config import MLS_RADIUS_MULT, MLS_BOX_POLYNOMIAL
+    from pipeline.config import (MLS_RADIUS_MULT, MLS_BOX_POLYNOMIAL,
+                                 MLS_SECOND_RADIUS_MULT)
     from pipeline.ghost import ghost_voxel_downsample, normal_aware_filter
 
     if cluster is None or len(cluster.points) == 0:
@@ -370,6 +396,16 @@ def _clean_cluster(cluster, label, voxel_size, normal_filter_scale):
         points, colours, _ = mls_project(points, colours,
                                          radius_mult=MLS_RADIUS_MULT,
                                          polynomial=use_quadratic)
+        # A second, wider pass merges the ghost double sheet that the first
+        # pass can only denoise. Limb only: the reference cube is planar and
+        # its scale must not move between runs with and without this pass.
+        if (merge_ghost_sheets and MLS_SECOND_RADIUS_MULT
+                and MLS_SECOND_RADIUS_MULT > 0
+                and label != "box" and len(points) > 50):
+            print(f"  MLS second pass [{label}]:", end=" ")
+            points, colours, _ = mls_project(points, colours,
+                                             radius_mult=MLS_SECOND_RADIUS_MULT,
+                                             polynomial=True)
     return points, colours
 
 
@@ -467,7 +503,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                             segment_leg=False, segment_height_axis="z",
                             fill_enabled=True, apply_cut=True,
                             override_planes=None, cut_mode=None, n_bands=None,
-                            band_planes=None):
+                            band_planes=None, merge_ghost_sheets=True):
     """Cluster-first clean pipeline.
 
     Phase A: Segment the dense cloud once (floor removal + DBSCAN), detect
@@ -530,8 +566,10 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # decided once, on the denser and better-conditioned cloud.
     voxel_size, nn_scale = _ghost_filter_scales(pcd_dense)
 
-    box_pts_arr, box_cols_arr = _clean_cluster(box_dense, "box", voxel_size, nn_scale)
-    leg_pts_arr, leg_cols_arr = _clean_cluster(obj_dense, "obj", voxel_size, nn_scale)
+    box_pts_arr, box_cols_arr = _clean_cluster(box_dense, "box", voxel_size, nn_scale,
+                                               merge_ghost_sheets=merge_ghost_sheets)
+    leg_pts_arr, leg_cols_arr = _clean_cluster(obj_dense, "obj", voxel_size, nn_scale,
+                                               merge_ghost_sheets=merge_ghost_sheets)
 
     if obj_dense is None and len(box_pts_arr) > 0:
         print("  Only 1 cluster — treating it as the box (no obj)")
@@ -578,14 +616,11 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         # shorts alone. Nothing had looked at either survivor before the real
         # one was discarded.
         for m in markers:
-            cen = np.array(m["centroid"])
-            norm = np.array(m["normal"])
-            cen_r = (R_total @ cen).astype(np.float64)
-            norm_r = (R_total @ norm).astype(np.float64)
-            norm_r /= np.linalg.norm(norm_r) + 1e-8
-            markers_rotated.append({"centroid": cen_r.tolist(), "normal": norm_r.tolist(),
-                                    "npts": m.get("npts", 0),
-                                    "source": m.get("source", "colour")})
+            rotated = _rotate_plane(m, R_total, m.get("source", "colour"))
+            backup = m.get("projected_backup")
+            if backup is not None:
+                rotated["projected_backup"] = _rotate_plane(backup, R_total, "projected")
+            markers_rotated.append(rotated)
 
         # Drop planes sitting in the bottom fraction of the object. Feet, arch
         # shadows and the floor junction all live there, and a cut line that low
@@ -632,6 +667,19 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                               f"{rule} — projected from Stage 0's band boxes, "
                               f"which is the corroboration the gate wants")
                         low = False
+                    if low and mr.get("projected_backup") is not None:
+                        # The colour fit failed, but Stage 0 saw this band on
+                        # most photographs and projected a plane for it. That
+                        # plane is exempt from this gate, so the band survives
+                        # on it rather than vanishing with the colour fit.
+                        backup = mr.pop("projected_backup")
+                        h = (mr["centroid"][2] - lo) / span if span > 0 else 0.0
+                        print(f"  Marker colour fit rejected: {h*100:.0f}% of "
+                              f"height, {rule}, {mr['npts']} pts — replaced by "
+                              f"the plane projected from Stage 0's band boxes "
+                              f"({backup['npts']:,} pts)")
+                        keep_m.append(backup)
+                        continue
                     (drop_m if low else keep_m).append(mr)
                 for mr in drop_m:
                     h = (mr["centroid"][2] - lo) / span if span > 0 else 0.0
@@ -652,12 +700,32 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
             keep_m, drop_m = [], []
             for mr in markers_rotated:
                 ang = _plane_vs_limb_angle(leg_pts_rot, mr)
-                (drop_m if (ang is not None and ang > MARKER_MAX_AXIS_ANGLE_DEG)
-                 else keep_m).append((mr, ang))
+                rejected = ang is not None and ang > MARKER_MAX_AXIS_ANGLE_DEG
+                if rejected and mr.get("projected_backup") is not None:
+                    # The projected plane is fitted to the limb surface around
+                    # the band, so its normal follows the limb where a colour
+                    # fit to a blob of cord can point anywhere. Use it if it
+                    # passes the same test.
+                    backup = mr.pop("projected_backup")
+                    backup_ang = _plane_vs_limb_angle(leg_pts_rot, backup)
+                    if backup_ang is None or backup_ang <= MARKER_MAX_AXIS_ANGLE_DEG:
+                        print(f"  Marker colour fit rejected: {ang:.0f}° off the "
+                              f"limb's own axis (> {MARKER_MAX_AXIS_ANGLE_DEG:.0f}°), "
+                              f"{mr['npts']} pts — replaced by the plane projected "
+                              f"from Stage 0's band boxes at "
+                              f"{-1 if backup_ang is None else backup_ang:.0f}°")
+                        keep_m.append((backup, backup_ang))
+                        continue
+                (drop_m if rejected else keep_m).append((mr, ang))
             for mr, ang in drop_m:
                 print(f"  Marker rejected: {ang:.0f}° off the limb's own axis "
                       f"(> {MARKER_MAX_AXIS_ANGLE_DEG:.0f}°), {mr['npts']} pts")
             markers_rotated = [mr for mr, _ in keep_m]
+
+        # A colour plane that passed every gate no longer needs its backup, and
+        # the published planes should carry only what cuts.
+        for mr in markers_rotated:
+            mr.pop("projected_backup", None)
 
         # Select which validated planes actually cut. Done LAST, once every
         # survivor has passed the gates above, and here rather than inside the
@@ -708,6 +776,27 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                   "BETWEEN two planes, but only one survived the gates. "
                   "Cutting on it alone (keep below); this is NOT a span "
                   "measurement.")
+
+        # The bands are stripes ~2 cm wide, and a plane fitted to the whole
+        # stripe lands in its middle. The tape is read between the stripes'
+        # INNER edges, so the planes are slid there before anything cuts on
+        # them. Worth 15-35% of the limb volume; see pipeline/core/band_edges.py.
+        from pipeline.config import BAND_CUT_EDGE
+        if BAND_CUT_EDGE == "inner" and len(markers_rotated) == 2:
+            from pipeline.core.band_edges import describe as describe_band_move
+            from pipeline.core.band_edges import move_planes_to_inner_edges
+            cube_side_units = (float(box_pts_rot[:, 2].max() - box_pts_rot[:, 2].min())
+                               if len(box_pts_rot) > 10 else 0.0)
+            scale_cm_per_unit = (REFERENCE_REAL_SIZE_CM / cube_side_units
+                                 if cube_side_units > 0 else None)
+            markers_rotated, band_move = move_planes_to_inner_edges(
+                markers_rotated, leg_pts_rot, leg_cols_arr, scale_cm_per_unit)
+            moved_line = describe_band_move(band_move, scale_cm_per_unit)
+            if moved_line:
+                print(f"  {moved_line}")
+            else:
+                print("  Band planes left at the stripe centres — "
+                      "no band colour found around both planes")
 
         # Also publish the planes in LEVELLED space. cutting_line.json is written
         # pre-levelling, but leg_no_cut.ply is post-levelling, so the two do not
@@ -790,6 +879,22 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # leg_no_cut.ply is exempt: it is the review cloud and what gets measured
     # if the user declines to cut, so it is always floor-closed. It is built
     # from its own copy, and the cut runs on the unfilled cloud.
+    # Flatten the reference cube's fuzz onto the cube that fits it and fill the
+    # empty patches on its faces, so Poisson can close it without falling back
+    # to a loose alpha wrap that floats clear of the points and skews the scale.
+    from pipeline.config import BOX_MEND_CELL_MM, BOX_MEND_TOLERANCE_MM, BOX_MENDING
+    if BOX_MENDING and len(box_pts_rot) > 0:
+        from pipeline.core.box_mending import describe as describe_mending
+        from pipeline.core.box_mending import mend_reference_points
+        box_pts_rot, box_cols_arr, mending_report = mend_reference_points(
+            box_pts_rot, box_cols_arr,
+            tolerance_mm=BOX_MEND_TOLERANCE_MM, cell_mm=BOX_MEND_CELL_MM)
+        mending_line = describe_mending(mending_report)
+        if mending_line:
+            print(f"  {mending_line}")
+        else:
+            print("  Box mending skipped — too few reference points to fit a cube")
+
     o3d_box = _array_to_o3d(box_pts_rot, box_cols_arr)
     if fill_enabled and len(o3d_box.points) > 0:
         # The box is never cut, so its base is always the floor.
@@ -844,6 +949,19 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     # cut is applied to Stage 5's solid instead, so there is nothing left to
     # sequence around -- but the limb must now be closed at the top as well as
     # the bottom, because it is reconstructed uncut.
+    # Optional: hold each cross-section to its neighbours' radius around a
+    # skeleton, and fill arcs no frame reconstructed (pipeline/core/limb_skeleton.py).
+    from pipeline.config import LIMB_SKELETON
+    if LIMB_SKELETON and len(markers_rotated) >= 2 and len(leg_pts_rot) > 0:
+        from pipeline.core.limb_skeleton import regularize_limb_radii
+        band_heights = sorted(float(marker["centroid"][2]) for marker in markers_rotated)
+        leg_pts_rot, leg_cols_arr, skeleton_report = regularize_limb_radii(
+            leg_pts_rot, leg_cols_arr, band_heights[0], band_heights[-1], seed=seed)
+        print(f"Limb skeleton: {skeleton_report['outer_moved_in']:,} outer moved in, "
+              f"{skeleton_report['inner_moved_out']:,} inner moved out, "
+              f"added {skeleton_report['points_added']:,} in {skeleton_report['arcs_filled']} "
+              f"empty arcs, over {skeleton_report['slices_used']} slices")
+
     nc_pts, nc_cols = _close_to_floor(leg_pts_rot, leg_cols_arr)
     nc_pts, nc_cols = _close_top(nc_pts, nc_cols)
     _quick_save_ply(nc_pts, nc_cols, leg_path)
@@ -956,9 +1074,11 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
                       segment_leg=False, segment_height_axis="z",
                       fill_enabled=True, clean_ply_path=None, apply_cut=False,
                       marker_colour=None, override_planes=None, cut_mode=None,
-                      n_bands=None, band_planes=None):
+                      n_bands=None, band_planes=None, merge_ghost_sheets=True):
     """Pipeline wrapper. clean_ply_path is accepted for call-site compatibility
-    and ignored — Stage 3 derives its own ghost-filtered clouds from ply_path."""
+    and ignored — Stage 3 derives its own ghost-filtered clouds from ply_path.
+    `merge_ghost_sheets` False skips the wide second MLS pass, for clouds that
+    came from TSDF fusion and have no second sheet to merge."""
     print()
     print("=" * 60)
     print("STAGE 3: Cleaning point cloud and extracting objects")
@@ -980,6 +1100,7 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
             cut_mode=cut_mode,
             n_bands=n_bands,
             band_planes=band_planes,
+            merge_ghost_sheets=merge_ghost_sheets,
         )
         print(f"  Extracted {len(object_paths)} objects:")
         for p in object_paths:
