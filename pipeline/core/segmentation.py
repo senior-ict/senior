@@ -42,30 +42,59 @@ def rgb_to_hsv(r, g, b):
     return h, s, v
 
 
-def detect_markers(colors_uint8):
-    """Detect marker points using HSV + Excess Green Index.
+def detect_markers(colors_uint8, hue_min=None, hue_max=None, sat_min=None,
+                   val_min=None, exg_min=None):
+    """Detect green band points by hue window and Excess Green Index.
 
     Rules:
-        (Saturation > 15%) AND (Hue > 60)   -- HSV mask
-        (2*G - R - B) > 10                  -- ExG mask
+        val > VAL_MIN AND sat > SAT_MIN AND HUE_MIN < hue < HUE_MAX   -- HSV
+        val > VAL_MIN AND (2*G - R - B) > EXG_MIN                     -- ExG
+
+    Both rules carry the brightness floor. Hue is a ratio of channel
+    differences to the channel maximum, so as a pixel darkens its hue becomes
+    arbitrary and a near-black shadow reports a confident green that means
+    nothing.
+
+    The rule this replaces was `sat > 15 AND hue > 60`, an upper-open hue test
+    with no brightness floor, which admitted everything but red, orange and
+    yellow. On test2_keng it passed 5,427 points that DBSCAN merged into a
+    single cluster spanning 0.364 of a 0.597-tall limb; the plane fitted
+    through it stood 86.7 degrees from horizontal, so the run cut the leg
+    lengthwise. The bounded rule passes 4,452 points that cluster into the two
+    bands, at 20.0 and 12.9 degrees from horizontal.
 
     Args:
         colors_uint8: (N, 3) numpy array of RGB colors [0-255].
+        hue_min/hue_max/sat_min/val_min/exg_min: override the config defaults.
 
     Returns:
         marker_mask: boolean (N,) array, True where markers are detected.
         stats: dict with diagnostic counts and colour statistics.
     """
+    from pipeline import config
+
+    if hue_min is None:
+        hue_min = config.MARKER_HUE_MIN
+    if hue_max is None:
+        hue_max = config.MARKER_HUE_MAX
+    if sat_min is None:
+        sat_min = config.MARKER_SAT_MIN
+    if val_min is None:
+        val_min = config.MARKER_VAL_MIN
+    if exg_min is None:
+        exg_min = config.MARKER_EXG_MIN
+
     r = colors_uint8[:, 0].astype(np.int32)
     g = colors_uint8[:, 1].astype(np.int32)
     b = colors_uint8[:, 2].astype(np.int32)
 
     h, s, v = rgb_to_hsv(r, g, b)
 
-    hsv_mask = (s > 15) & (h > 60)
+    bright = v > val_min
+    hsv_mask = bright & (s > sat_min) & (h > hue_min) & (h < hue_max)
 
     exg = 2 * g - r - b
-    exg_mask = exg > 10
+    exg_mask = bright & (exg > exg_min)
 
     marker_mask = hsv_mask | exg_mask
 
