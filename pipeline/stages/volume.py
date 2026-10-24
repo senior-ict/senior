@@ -21,6 +21,7 @@ import trimesh
 from scipy import ndimage
 
 from pipeline.config import REFERENCE_REAL_SIZE_CM
+from pipeline.core.crosssection import report_cut_circumference
 
 DEFAULT_VOXEL_RES = 150
 
@@ -233,8 +234,14 @@ def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict |
 
 def compute_volumes(object_mesh_paths: list[str],
                     voxel_res: int = DEFAULT_VOXEL_RES,
-                    auto_res: bool = True):
-    """Compute real-world volume of each object using ArUco box for scale."""
+                    auto_res: bool = True,
+                    output_dir: str = None):
+    """Compute real-world volume of each object using ArUco box for scale.
+
+    When output_dir is given, the circumference at each cutting plane is
+    measured on the uncut leg cloud and printed after the volumes, on the same
+    linear scale the volumes were derived with.
+    """
     res_label = "auto" if auto_res else str(voxel_res)
     print()
     print("=" * 60)
@@ -284,5 +291,8 @@ def compute_volumes(object_mesh_paths: list[str],
                    "real_vol_cm3", "real_vol_L", "method"]
     print("\n  Real-world dimensions and volumes:")
     print(df[result_cols].to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+
+    if output_dir is not None:
+        report_cut_circumference(output_dir, linear_scale)
 
     return df

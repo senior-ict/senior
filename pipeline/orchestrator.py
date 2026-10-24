@@ -185,7 +185,8 @@ def main():
             _dbg_t = time.time()
             vol_df = compute_volumes(vol_objects,
                                      voxel_res=args.voxel_res,
-                                     auto_res=args.auto_res)
+                                     auto_res=args.auto_res,
+                                     output_dir=args.output_dir)
             print(f"[DBG-stage] stage6 volumes: {time.time() - _dbg_t:.2f}s")
             if vol_df is not None:
                 box_rows = vol_df[vol_df["is_ref"]]

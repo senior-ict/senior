@@ -8,6 +8,7 @@ Steps:
     5. DBSCAN clustering + box detection (cubeness) → box.ply + obj.ply.
     6. (Optional) Marker-based leg surface segmentation on obj.ply.
 """
+import json
 import os
 
 import numpy as np
@@ -25,6 +26,51 @@ from pipeline.core.segmentation import (
     cluster_markers,
 )
 from pipeline.core.fill import cap_point_cloud_bottom
+
+
+def _cut_planes_from_info(cut_info):
+    """The cutting planes a segmentation summary describes, lowest one first.
+
+    Case 1 cuts on a single plane and keeps everything below it. Cases 2 and 3
+    keep the band between a lower and an upper plane. Case 0 applied no cut at
+    all and therefore has no planes.
+    """
+    case = cut_info.get("case", 0)
+    planes = []
+
+    if case == 1:
+        planes.append({"label": "cut",
+                       "centroid": cut_info["centroid"],
+                       "normal": cut_info["normal"]})
+    elif case in (2, 3):
+        planes.append({"label": "lower band",
+                       "centroid": cut_info["centroid_low"],
+                       "normal": cut_info["normal_low"]})
+        planes.append({"label": "upper band",
+                       "centroid": cut_info["centroid_high"],
+                       "normal": cut_info["normal_high"]})
+
+    return planes
+
+
+def _write_cut_planes(seg_dir, cut_info):
+    """Record the planes the cut was made on, for Stage 7's circumference.
+
+    They are written in levelled space, the frame Stage 3 put the scene into
+    before clustering, which is the frame clean_objects/obj.ply is saved in.
+    Stage 7 measures its slab on that uncut cloud, so the two have to agree.
+    """
+    planes = _cut_planes_from_info(cut_info)
+    if not planes:
+        return
+
+    path = os.path.join(seg_dir, "cut_planes.json")
+    payload = {"space": "levelled",
+               "case": cut_info.get("case"),
+               "planes": planes}
+    with open(path, "w") as handle:
+        json.dump(payload, handle, indent=2)
+    print(f"  Saved: {path} ({len(planes)} cutting plane(s))")
 
 
 def _segment_leg(object_paths, output_dir, height_axis="z", seed=42):
@@ -90,6 +136,9 @@ def _segment_leg(object_paths, output_dir, height_axis="z", seed=42):
 
     seg_path = os.path.join(seg_dir, "segmented_obj.ply")
     o3d.io.write_point_cloud(seg_path, segmented_pcd, write_ascii=False)
+    # Only recorded once the cut is kept, so a circumference always describes
+    # the planes the measured mesh was actually cut at.
+    _write_cut_planes(seg_dir, cut_info)
 
     seg_pts = np.asarray(segmented_pcd.points)
     print(f"  Saved: {seg_path} ({n_kept:,} pts) "
