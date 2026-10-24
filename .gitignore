@@ -129,3 +129,6 @@ test/
 # Obsidian vault — per-machine UI state (notes + plugin config stay tracked)
 obsidian/
 CLAUDE.md
+
+# ...except the web app's shipped samples, which are the demo.
+!web/public/samples/**
