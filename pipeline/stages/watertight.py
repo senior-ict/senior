@@ -11,18 +11,7 @@ from pipeline.core.mesh import merge_meshes, verify_watertight, clean_merged_sce
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", ".."))
-_MESHFIX_WORKER = os.path.join(_PROJECT_ROOT, "pipeline", "workers",
-                               "meshfix_worker.py")
-
-# The two limb solids Stage 5 publishes. leg_no_cut is the surface a person
-# places the cut on; leg_cut is the result, and the only one Stage 6 measures.
-UNCUT_LIMB_NAME = "leg_no_cut.ply"
-CUT_LIMB_NAME = "leg_cut.ply"
-
-# What Stage 3's limb is called by the time Stage 5 has repaired it. Stage 3
-# publishes one limb, leg.ply; Stage 5 renames it to leg_no_cut.ply so the two
-# solids it publishes read as a pair against leg_cut.ply.
-REPAIRED_LIMB_NAME = "leg.ply"
+_MESHFIX_WORKER = os.path.join(_PROJECT_ROOT, "workers", "meshfix_worker.py")
 
 
 def _wt_name(recon_path):
@@ -56,21 +45,6 @@ def make_watertight_meshes(recon_paths, output_folder="output_mesh", base_name="
         for p in (wt_ply, wt_stl):
             if os.path.exists(p):
                 os.remove(p)
-
-        # Already closed — alpha_shape picks the smallest alpha that yields a
-        # watertight mesh, so the default path arrives here with nothing to do.
-        # Skipping avoids a pointless subprocess and makes the log show when
-        # repair genuinely fires, which is a useful signal that Stage 4 struggled.
-        if verify_watertight(recon_path):
-            shutil.copy2(recon_path, wt_ply)
-            mesh = o3d.io.read_triangle_mesh(wt_ply)
-            mesh.compute_vertex_normals()
-            o3d.io.write_triangle_mesh(wt_stl, mesh)
-            print(f"  {name}: already watertight — repair skipped "
-                  f"({len(mesh.vertices):,} verts, {len(mesh.triangles):,} faces)")
-            watertight_paths.append(wt_ply)
-            meshes.append(mesh)
-            continue
 
         # meshfix_worker.py takes (input, output, color_source).
         # Retry up to 3 times for transient subprocess failures (PyMeshFix
@@ -108,36 +82,8 @@ def make_watertight_meshes(recon_paths, output_folder="output_mesh", base_name="
         is_wt = verify_watertight(wt_ply)
         size_mb = os.path.getsize(wt_ply) / (1024 * 1024)
         wt_status = "watertight" if is_wt else "NOT watertight (recon fallback)"
-
-        # Watertight is NOT sufficient, and this is the one place it can be
-        # caught. A closed surface with handles or tunnels has chi != 2, and its
-        # signed volume is not the volume of a solid — but `is_watertight`
-        # returns True for it and Stage 6 will happily integrate it and report a
-        # number with no sign that anything is wrong. Alpha shape cannot reach
-        # here in that state, because Stage 4's ladder selects on chi = 2.
-        # Poisson can: measured chi = -18 on inputs/short_leg, whose volume came
-        # out 22% below the alpha-shape answer for the same cloud.
-        euler = None
-        try:
-            import trimesh as _tm
-            euler = int(_tm.load(wt_ply, process=False).euler_number)
-        except Exception as exc:
-            print(f"  {name}: could not compute Euler characteristic ({exc})")
-        chi_note = ""
-        if euler is not None and euler != 2:
-            chi_note = f", chi={euler} ** NOT A SIMPLE SOLID **"
-        elif euler is not None:
-            chi_note = ", chi=2"
-
         print(f"  {name}: {len(mesh.vertices):,} verts, "
-              f"{len(mesh.triangles):,} faces, {wt_status}{chi_note} ({size_mb:.1f} MB)")
-        if euler is not None and euler != 2:
-            genus = (2 - euler) / 2
-            print(f"    WARNING: {name} is closed but has chi={euler} "
-                  f"(~{genus:.0f} handles or extra pieces). Its signed volume is "
-                  f"NOT the volume of a solid, and Stage 6 will report it anyway. "
-                  f"Re-run this object with --obj-recon-method alpha_shape, whose "
-                  f"selection guarantees chi=2.")
+              f"{len(mesh.triangles):,} faces, {wt_status} ({size_mb:.1f} MB)")
 
         watertight_paths.append(wt_ply)
         meshes.append(mesh)
@@ -170,118 +116,11 @@ def make_watertight_meshes(recon_paths, output_folder="output_mesh", base_name="
           f"{len(scene_colour.faces):,} faces ({cs_size_mb:.1f} MB) "
           f"→ {scene_colour_ply} + {scene_colour_stl}")
 
-    # scene_colour carries vertex colours; it is what gets published.
-    return scene_colour_ply, scene_stl, watertight_paths
+    return scene_ply, scene_stl, watertight_paths
 
 
-def _rename_repaired_limb(watertight_paths):
-    """Renames the repaired limb from Stage 3's leg.ply to leg_no_cut.ply.
-
-    Stage 5 publishes the limb twice -- uncut and cut -- so the uncut one is
-    named for what it is rather than carrying Stage 3's name forward.
-    """
-    renamed = []
-    for candidate in watertight_paths:
-        if os.path.basename(candidate) != REPAIRED_LIMB_NAME:
-            renamed.append(candidate)
-            continue
-        uncut_path = os.path.join(os.path.dirname(candidate), UNCUT_LIMB_NAME)
-        os.replace(candidate, uncut_path)
-        stl_source = os.path.splitext(candidate)[0] + ".stl"
-        if os.path.exists(stl_source):
-            os.replace(stl_source, os.path.splitext(uncut_path)[0] + ".stl")
-        renamed.append(uncut_path)
-    return renamed
-
-
-def _rebuild_scene_from_cut(mesh_output_dir, watertight_paths, cut_path):
-    """Re-merges the published scene so it shows the CUT limb, not the uncut one.
-
-    make_watertight_meshes merges its objects before this stage cuts anything,
-    so the scene it wrote pairs the reference cube with the whole limb. That is
-    the wrong picture the moment a cut exists: the scene is what the result
-    screen shows beside the measured volume, and the two have to be of the same
-    object.
-
-    Returns the rewritten colour scene path.
-    """
-    import trimesh
-
-    keep_paths = [cut_path]
-    for candidate in watertight_paths:
-        if os.path.basename(candidate) not in (UNCUT_LIMB_NAME, CUT_LIMB_NAME):
-            keep_paths.append(candidate)
-
-    parts = [trimesh.load(p, process=False) for p in keep_paths]
-    scene = trimesh.util.concatenate(parts)
-
-    scene_colour_ply = os.path.join(mesh_output_dir, "scene_colour.ply")
-    scene_colour_stl = os.path.join(mesh_output_dir, "scene_colour.stl")
-    scene_ply = os.path.join(mesh_output_dir, "scene.ply")
-    scene_stl = os.path.join(mesh_output_dir, "scene.stl")
-    for target in (scene_colour_ply, scene_colour_stl, scene_ply, scene_stl):
-        scene.export(target)
-
-    names = ", ".join(os.path.basename(p) for p in keep_paths)
-    print(f"  Scene rebuilt from the cut: {names} "
-          f"({len(scene.vertices):,} verts)")
-    return scene_colour_ply
-
-
-def _cut_limb_mesh(watertight_paths, mesh_output_dir, cut_planes, height_axis):
-    """Cuts the repaired limb against the confirmed planes and writes leg_cut.ply.
-
-    The uncut solid stays on disk as leg_no_cut.ply, so Stage 5 publishes both:
-    the surface a person places the cut on, and the result of placing it.
-    Returns the path to the cut mesh, or None when there was nothing to cut.
-    """
-    import trimesh
-
-    from pipeline.core.meshcut import apply_marker_cut_to_mesh
-
-    uncut_path = None
-    for candidate in watertight_paths:
-        if os.path.basename(candidate) == UNCUT_LIMB_NAME:
-            uncut_path = candidate
-            break
-    if uncut_path is None:
-        print(f"  No {UNCUT_LIMB_NAME} to cut — skipping the marker cut")
-        return None
-
-    mesh = trimesh.load(uncut_path, force="mesh", process=False)
-    mesh.merge_vertices()
-
-    axis_index = {"x": 0, "y": 1, "z": 2}[height_axis]
-    up_axis = [0.0, 0.0, 0.0]
-    up_axis[axis_index] = 1.0
-
-    cut_mesh, case = apply_marker_cut_to_mesh(mesh, cut_planes, up_axis=up_axis)
-    if case in ("no_markers", "no_usable_markers", "too_few_after_cut"):
-        # No cut was applicable, which is not the same as no answer. The cloud
-        # path treated every one of these as "keep everything" and measured the
-        # whole object -- that is how a rigid object with no marker band, run
-        # with --no-segment-leg, gets a volume at all. Publishing the uncut solid
-        # under the measured name keeps that working; returning nothing here left
-        # Stage 6 with only the reference cube to report.
-        print(f"  Marker cut on mesh ({case}): measuring the whole object")
-
-    cut_path = os.path.join(mesh_output_dir, CUT_LIMB_NAME)
-    cut_mesh.export(cut_path)
-    print(f"  Marker cut on mesh ({case}): {len(cut_mesh.faces):,} faces, "
-          f"watertight={cut_mesh.is_watertight}, euler={cut_mesh.euler_number}")
-    print(f"  Cut mesh: {cut_path}")
-    return cut_path
-
-
-def watertight_stage(recon_paths, output_dir, cut_planes=None, height_axis="z"):
-    """Pipeline wrapper. Returns (scene_watertight_path, watertight_mesh_paths).
-
-    `cut_planes` are the confirmed marker planes in levelled space. Given them,
-    the repaired limb is also cut here and published as leg_cut.ply beside the
-    uncut leg_no_cut.ply. Cutting the closed solid rather than the point cloud
-    is what lets a clinician place the cut on a surface, and it leaves no
-    reconstruction step between the cut and the measurement.
-    """
+def watertight_stage(recon_paths, output_dir):
+    """Pipeline wrapper. Returns (scene_watertight_path, watertight_mesh_paths)."""
     print()
     print("=" * 60)
     print("STAGE 5: Making meshes watertight (PyMeshFix)")
@@ -298,19 +137,6 @@ def watertight_stage(recon_paths, output_dir, cut_planes=None, height_axis="z"):
         print(f"  Scene watertight mesh: {scene_wt}")
         for p in wt_paths:
             print(f"  Object watertight mesh: {p}")
-        wt_paths = _rename_repaired_limb(wt_paths)
-
-        # None means the cut is deferred and nothing may be measured yet.
-        # An empty list is different: it is a confirmed decision to cut
-        # nowhere, and the whole object is then the measurement.
-        if cut_planes is not None:
-            cut_path = _cut_limb_mesh(wt_paths, mesh_output_dir, cut_planes,
-                                      height_axis)
-            if cut_path is not None:
-                scene_wt = _rebuild_scene_from_cut(mesh_output_dir, wt_paths,
-                                                   cut_path)
-                wt_paths = list(wt_paths) + [cut_path]
-
         return scene_wt, wt_paths
     except Exception as e:
         print(f"  ERROR during watertight repair: {e}")

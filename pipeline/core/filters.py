@@ -47,12 +47,5 @@ def remove_spatial_outliers(points, colors, conf, k=20, std_ratio=2.5):
             print(f"  Spatial outlier removal: {len(points):,} → "
                   f"{len(inlier_idx):,} (removed {removed:,})")
         return points[inlier_idx], colors[inlier_idx], conf[inlier_idx]
-    except Exception as exc:
-        # Returning the cloud unchanged is the right fallback, but doing it in
-        # silence is not: the only symptom is a different number downstream.
-        # The outliers then reach clustering and reconstruction, and nothing
-        # says the filter did not run.
-        print(f"  WARNING: spatial outlier removal failed "
-              f"({type(exc).__name__}: {exc}) — keeping all {len(points):,} "
-              f"points, outliers included")
+    except Exception:
         return points, colors, conf

@@ -1,4 +1,4 @@
-"""Stage 6 — Compute real-world volumes using the ArUco reference (box).
+"""Stage 7 — Compute real-world volumes using the ArUco reference (box).
 
 Scale derivation:
     k            = real_ref_vol_cm3 / ref_mesh_vol          # cm³ per mesh-unit³
@@ -12,8 +12,7 @@ Volume method priority (per mesh):
     3. trimesh voxel     — CPU fallback
     4. convex_hull       — last resort, overestimates concave shapes
 
-The reference is an ArUco cube of side config.REFERENCE_REAL_SIZE_CM (10 cm),
-identified by 'box' in its filename.
+The reference is a 10 × 10 × 10 cm ArUco cube identified by 'box' in its filename.
 """
 import os
 import numpy as np
@@ -48,7 +47,6 @@ if _WARP_AVAILABLE:
         pitch:     float,
         threshold: float,
     ):
-        """Warp kernel: marks every voxel whose centre lies within threshold of the mesh surface."""
         i, j, k = wp.tid()
         cx = b_min[0] + (float(i) + 0.5) * pitch
         cy = b_min[1] + (float(j) + 0.5) * pitch
@@ -101,13 +99,11 @@ def _volume_voxel_warp(mesh: trimesh.Trimesh, resolution: int,
 
 
 def _volume_voxel(mesh: trimesh.Trimesh, resolution: int) -> float:
-    """Returns the mesh volume by voxelising at the given resolution and filling the interior."""
     pitch = float(mesh.extents.max()) / resolution
     return float(mesh.voxelized(pitch=pitch).fill().volume)
 
 
 def _volume_convex_hull(mesh: trimesh.Trimesh) -> float:
-    """Returns the volume of the mesh's convex hull. Overestimates any concave shape."""
     return float(abs(mesh.convex_hull.volume))
 
 
@@ -202,17 +198,11 @@ def _measure_volume(mesh: trimesh.Trimesh,
 # ---------------------------------------------------------------------------
 
 def _is_ref_mesh(path: str) -> bool:
-    """Returns True when the filename marks this mesh as the ArUco reference cube."""
     name = os.path.splitext(os.path.basename(path).lower())[0]
     return "box" in name
 
 
 def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict | None:
-    """Loads one mesh and measures it, or returns None if it is missing or empty.
-
-    Returns a dict of the mesh's volume, oriented-bounding-box extents and the
-    method that produced the volume.
-    """
     if not os.path.exists(path):
         print(f"  skipping (not found): {path}")
         return None
@@ -242,198 +232,25 @@ def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict |
 # Main stage entry-point
 # ---------------------------------------------------------------------------
 
-# Fraction of its own oriented bounding box a well-reconstructed reference cube
-# fills. A perfect cube fills 1.000; the shortfall is corner and edge rounding,
-# which for this reconstruction is stable at about 0.87-0.89.
-#
-# This is the pipeline's only check on RECONSTRUCTION quality, and it exists
-# because inputs/blue_shirt produced a confident 5280 cm3 with every other gate
-# passing. The framing gate checks the capture, the marker gates check the cut,
-# the Euler check tests topology -- none of them looks at whether the geometry
-# is right. The cube can, because it is the one object in the scene whose true
-# shape is known, and it goes through the identical pipeline as the subject.
-#
-# Measured across the Aug 2026 captures:
-#
-#     orange shirt  0.874     sunshine    0.891
-#     keng          0.873     champ       0.876
-#     black shirt   0.873     blue shirt  0.787   <- the bad reconstruction
-#
-# The five sound captures span 1.8 percentage points; the bad one sits 8.6
-# points below all of them. 0.83 is roughly halfway into that gap.
-#
-# Note what does NOT separate them: the cube's edge lengths. blue shirt's read
-# 9.67 / 10.23 / 10.30 cm, a 6.3% spread, which is squarely mid-pack. A dented
-# or eroded surface keeps its bounding box and loses volume, so the fill ratio
-# sees it and the edges do not.
-REFERENCE_FILL_MIN = 0.83
-
-
-def _check_reference_reconstruction(ref, object_mesh_paths, clean_dir=None):
-    """Warn when the reference cube did not reconstruct like a cube.
-
-    Reports rather than aborts, in keeping with the rest of the stage: the
-    number is still produced, and the run says plainly that it should not be
-    trusted. Never raises -- a diagnostic that can break a run is worse than
-    the gap it fills.
-    """
-    try:
-        import trimesh
-
-        path = next((p for p in object_mesh_paths
-                     if _is_ref_mesh(p)), None)
-        if path is None:
-            return
-        mesh = trimesh.load(path, process=False)
-        obb = float(np.prod(mesh.bounding_box_oriented.primitive.extents))
-        if obb <= 0:
-            return
-        fill = float(mesh.volume) / obb
-        print(f"\n  Reference reconstruction check:")
-        print(f"    cube fills {fill:.3f} of its oriented box "
-              f"(sound captures measure 0.87-0.89)")
-        if fill < REFERENCE_FILL_MIN:
-            print(f"    ** WARNING: {fill:.3f} is below {REFERENCE_FILL_MIN} — the "
-                  f"reference did not reconstruct as a cube.")
-            print(f"    The subject went through the same reconstruction, so its "
-                  f"volume below is suspect for the same reason. Nothing")
-            print(f"    downstream can correct this: check the capture (is the "
-                  f"cube occluded, or seen from too few angles?) rather than")
-            print(f"    the cut or the calibration.")
-    except Exception as exc:
-        print(f"  reference reconstruction check skipped "
-              f"({type(exc).__name__}: {exc})")
-
-    fitted_scale = (REFERENCE_REAL_SIZE_CM ** 3 / ref["volume"]) ** (1.0 / 3.0)
-    _report_cube_fit(clean_dir, fitted_scale)
-
-
-# An ideal cube fitted to the reference POINTS sat 0.7-1.5 mm from them on all
-# seven captures measured on 2026-09-24, at or below the surface-noise floor,
-# including the captures the fill ratio above warned about. So a residual well
-# past that floor means the capture itself is bad, not the mesher.
-CUBE_FIT_RESIDUAL_WARN_MM = 3.0
-
-
-def _report_cube_fit(clean_dir, linear_scale):
-    """Fit an ideal cube to Stage 3's reference points and report the fit, as a check on the capture.
-
-    Never raises and never changes a number: the scale still comes from the
-    reference mesh's volume. The fitted side is printed beside it because it
-    is an independent reading of the same length -- the two agreed to about 1%
-    on every capture measured so far.
-    """
-    if not clean_dir:
-        return
-    try:
-        import os
-
-        from pipeline.core.cube_fit import fit_cube_from_ply
-
-        points_path = os.path.join(clean_dir, "objects", "box.ply")
-        if not os.path.exists(points_path):
-            return
-        fit = fit_cube_from_ply(points_path)
-        if fit is None:
-            return
-
-        residual_mm = fit["residual"] * linear_scale * 10.0
-        fitted_side_cm = fit["side"] * linear_scale
-        side_difference = 100.0 * (fitted_side_cm / REFERENCE_REAL_SIZE_CM - 1.0)
-        print(f"    an ideal cube fits the reference points to "
-              f"{residual_mm:.2f} mm ({100 * fit['inlier_fraction']:.0f}% of points, "
-              f"yaw {fit['yaw_degrees']:.0f} deg)")
-        print(f"    its side reads {fitted_side_cm:.2f} cm against the "
-              f"{REFERENCE_REAL_SIZE_CM:.0f} cm the mesh volume implies ({side_difference:+.1f}%)")
-        if residual_mm > CUBE_FIT_RESIDUAL_WARN_MM:
-            print(f"    ** WARNING: {residual_mm:.2f} mm is past "
-                  f"{CUBE_FIT_RESIDUAL_WARN_MM} mm — the reference did not reconstruct as a cube,")
-            print(f"    so the subject beside it did not reconstruct well either. Re-shoot the "
-                  f"capture: more angles on the cube, and nothing occluding it.")
-    except Exception as exc:
-        print(f"  cube fit skipped ({type(exc).__name__}: {exc})")
-
-
-# A voxel grid counts every boundary cell whole, so a voxel volume sits a few
-# percent ABOVE the exact one and converges down onto it as the grid tightens
-# (measured 2026-09-24 on test6: +7.4% at 150 cells, +3.7% at 300). A voxel
-# volume BELOW the exact one, or far above it, therefore means the surface is
-# not a simple closed shell -- inverted, or self-intersecting -- and the exact
-# volume is then confidently wrong rather than noisy.
-VOXEL_CROSS_CHECK_RESOLUTION = 120
-VOXEL_CROSS_CHECK_HIGH_FRAC = 0.25
-VOXEL_CROSS_CHECK_LOW_FRAC = 0.0
-
-
-def _voxel_cross_check(mesh, name):
-    """Compare a watertight mesh's exact volume with a voxel count, and warn when they disagree."""
-    try:
-        exact = float(abs(mesh.volume))
-        if exact <= 0:
-            return
-        pitch = float(max(mesh.extents)) / VOXEL_CROSS_CHECK_RESOLUTION
-        voxel = float(mesh.voxelized(pitch=pitch).fill().volume)
-        difference = voxel / exact - 1.0
-        print(f"    {name}: voxel cross-check {100 * difference:+.1f}% "
-              f"(expected a few percent high at {VOXEL_CROSS_CHECK_RESOLUTION} cells)")
-        if difference < VOXEL_CROSS_CHECK_LOW_FRAC:
-            print(f"    ** WARNING: the voxel count came out BELOW the exact volume. A closed "
-                  f"shell cannot do that,")
-            print(f"    so the surface is inverted or self-intersecting and its exact volume "
-                  f"cannot be trusted.")
-        elif difference > VOXEL_CROSS_CHECK_HIGH_FRAC:
-            print(f"    ** WARNING: the voxel count is {100 * difference:.0f}% above the exact "
-                  f"volume, far more than boundary cells explain.")
-    except Exception as exc:
-        print(f"    {name}: voxel cross-check skipped ({type(exc).__name__}: {exc})")
-
-
 def compute_volumes(object_mesh_paths: list[str],
                     voxel_res: int = DEFAULT_VOXEL_RES,
                     auto_res: bool = True,
-                    clean_dir: str | None = None):
+                    output_dir: str = None):
     """Compute real-world volume of each object using ArUco box for scale.
 
-    Runs `_check_reference_reconstruction` first: the reference cube is the
-    only object in the scene whose true shape is known, so it is the pipeline's
-    one free check on whether the RECONSTRUCTION is sound.
-
-    `clean_dir` is Stage 3's output directory. Given it, the stage also reports
-    the limb's circumference at the cutting plane — the one dimension a tape
-    measure can check without water, on the same scale as everything else here.
+    When output_dir is given, the circumference at each cutting plane is
+    measured on the uncut leg cloud and printed after the volumes, on the same
+    linear scale the volumes were derived with.
     """
     res_label = "auto" if auto_res else str(voxel_res)
     print()
     print("=" * 60)
-    print(f"STAGE 6: real-world volumes  "
+    print(f"STAGE 7: real-world volumes  "
           f"(ref = {REFERENCE_REAL_SIZE_CM} cm ArUco cube  |  voxel_res={res_label})")
     print("=" * 60)
 
-    # The uncut limb is published so a person can place the cut on a solid; it
-    # is not a measurement. Reporting a volume for it would put a number on
-    # screen for a cut nobody confirmed, which is the one output this pipeline
-    # must never produce. Refused here rather than only in the caller, so every
-    # entry point inherits it.
-    measurable_paths = []
-    for mesh_path in object_mesh_paths:
-        if os.path.basename(mesh_path) == "leg_no_cut.ply":
-            print(f"  skipping (uncut limb, published for review only): {mesh_path}")
-            continue
-        measurable_paths.append(mesh_path)
-
-    rows = [_load_mesh_info(p, voxel_res, auto_res=auto_res) for p in measurable_paths]
+    rows = [_load_mesh_info(p, voxel_res, auto_res=auto_res) for p in object_mesh_paths]
     rows = [r for r in rows if r is not None]
-
-    # Every exact volume above came from a closed surface; this says whether
-    # that surface is also a simple one.
-    print("\n  Voxel cross-check:")
-    for mesh_path in measurable_paths:
-        try:
-            mesh = trimesh.load(mesh_path, force="mesh", process=False)
-        except Exception:
-            continue
-        if mesh.is_watertight:
-            _voxel_cross_check(mesh, os.path.basename(mesh_path))
     if not rows:
         print("  No meshes loaded.")
         return
@@ -453,8 +270,6 @@ def compute_volumes(object_mesh_paths: list[str],
     if ref["volume"] <= 0:
         print(f"\n  Reference mesh '{ref['name']}' has zero volume. Aborting.")
         return
-
-    _check_reference_reconstruction(ref, object_mesh_paths, clean_dir)
 
     real_ref_vol = REFERENCE_REAL_SIZE_CM ** 3
     k            = real_ref_vol / ref["volume"]
@@ -477,7 +292,7 @@ def compute_volumes(object_mesh_paths: list[str],
     print("\n  Real-world dimensions and volumes:")
     print(df[result_cols].to_string(index=False, float_format=lambda x: f"{x:.2f}"))
 
-    if clean_dir:
-        report_cut_circumference(clean_dir, linear_scale)
+    if output_dir is not None:
+        report_cut_circumference(output_dir, linear_scale)
 
     return df

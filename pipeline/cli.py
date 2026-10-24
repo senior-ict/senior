@@ -3,7 +3,6 @@ import argparse
 
 
 def parse_args():
-    """Parses the full-pipeline command line and returns the populated namespace."""
     p = argparse.ArgumentParser(
         description="VGGT — run full pipeline: inference → PLY → clean → mesh",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -18,43 +17,11 @@ Examples:
                    help="Path to folder containing input images (default: ./baam/)")
     p.add_argument("--output_dir", type=str, default=None,
                    help="Directory for output files (default: ./output/)")
-    p.add_argument("--no-prep", dest="prep", action="store_false",
-                   help="skip stage 0 framing and feed the raw images to VGGT")
-    p.add_argument("--prep-band", dest="prep_band", type=float, default=1.6,
-                   help="stage 0: marker-band height above the floor, in cube "
-                        "heights, used only when the band cannot be detected")
-    p.add_argument("--prep-pad", dest="prep_pad", type=float, default=0.05,
-                   help="stage 0: margin around the cube and the band")
-    p.add_argument("--prep-min-frames", dest="prep_min_frames", type=int,
-                   default=6, help="stage 0: frames required to proceed")
-    p.add_argument("--frame-fit", dest="frame_fit", default=None, choices=["pad", "crop"],
-                   help="pad: Stage 0 passes photos whole and VGGT pads them to a square; "
-                        "crop: Stage 0's sliding square crop. Default: config.FRAME_FIT.")
-    p.add_argument("--no-prep-crop", dest="prep_crop",
-                   action="store_false",
-                   help="hand VGGT the original frames instead of stage 0's crop.\n"
-                        "VGGT then centre-crops them itself, which discards 44%% of\n"
-                        "a 9:16 photo without regard for where the reference is.")
-    p.add_argument("--continue-on-rejected", dest="prep_strict",
-                   action="store_false",
-                   help="run the pipeline even though stage 0 rejected "
-                        "frames. Off by default: a clipped reference "
-                        "corrupts the scale of every reported volume "
-                        "and leaves no visible sign that it did.")
-    p.add_argument("--prep-lenient", dest="prep_strict", action="store_false",
-                   help=argparse.SUPPRESS)  # old name for --continue-on-rejected
-    p.add_argument("--prep-frame-centred", dest="prep_recentre",
-                   action="store_false",
-                   help="stage 0: keep the window concentric with the frame")
     p.add_argument("--conf_thres", type=float, default=45.0,
                    help="Confidence threshold (percentile): filter bottom N%% of points (default: 45)")
     p.add_argument("--prediction_mode", type=str, default="pointmap",
                    choices=["pointmap", "depth"],
                    help="'pointmap' uses direct 3D point regression; 'depth' unprojects depth maps")
-    p.add_argument("--pointcloud-method", dest="pointcloud_method", default=None,
-                   choices=["pointmap", "tsdf"],
-                   help="stage 2: stack the pointmaps (default) or fuse the depth "
-                        "maps into one TSDF surface. Default: config.POINTCLOUD_METHOD.")
     p.add_argument("--mask_black_bg", action="store_true",
                    help="Mask out near-black background pixels")
     p.add_argument("--mask_white_bg", action="store_true",
@@ -73,29 +40,14 @@ Examples:
                    help="Disable marker-based leg surface segmentation (enabled by default)")
     p.add_argument("--segment-height-axis", type=str, default="z", choices=["x", "y", "z"],
                    help="Height axis for leg cut (default: z, vertical after leveling)")
-    p.add_argument("--cut-mode", dest="cut_mode", default=None,
-                   choices=["upper", "span", "auto"],
-                   help="stage 3: what the marker bands bound. 'upper' measures "
-                        "everything BELOW the highest valid band — the capture "
-                        "wears one band. 'span' measures the segment BETWEEN "
-                        "the outermost two — the capture wears an upper and a "
-                        "lower band. 'auto' (the default) follows the capture: "
-                        "it cuts a span only when Stage 0's band count and "
-                        "Stage 3's plane count BOTH say two. Set it explicitly "
-                        "when the run has to match a ground truth measured a "
-                        "particular way. Default: config.MARKER_CUT_MODE.")
-    recon_choices = ["alpha_shape", "poisson", "poisson_omp1", "box_primitive"]
     p.add_argument("--recon-method", type=str, default="poisson",
-                   choices=recon_choices,
-                   help="Reconstruction method for non-box objects (default: "
-                        "poisson). alpha_shape is the fallback whose ladder "
-                        "GUARANTEES a chi=2 solid; use it when Stage 5 warns "
-                        "that the mesh is closed but not a simple solid.")
+                   choices=["poisson", "ball_pivot", "alpha_shape", "poisson_omp1"],
+                   help="Reconstruction method for all objects (default: poisson)")
     p.add_argument("--box-recon-method", type=str, default=None,
-                   choices=recon_choices,
-                   help="Override recon method for box (ArUco); default box_primitive")
+                   choices=["poisson", "ball_pivot", "alpha_shape", "poisson_omp1"],
+                   help="Override recon method for box (ArUco) only")
     p.add_argument("--obj-recon-method", type=str, default=None,
-                   choices=recon_choices,
+                   choices=["poisson", "ball_pivot", "alpha_shape", "poisson_omp1"],
                    help="Override recon method for object (limb) only")
     p.add_argument("--voxel-res", type=int, default=150, dest="voxel_res",
                    help="Voxel grid resolution for volume (default: 150; ignored when --auto-res)")

@@ -1,22 +1,26 @@
-"""Cross-section circumference at the cutting plane, by least-squares ellipse fit.
+"""Circumference of the leg at a cutting plane, by least-squares ellipse fit.
 
-Stage 6 reports a volume, which says nothing about the shape that produced it.
-A circumference at the cut is the one limb dimension that can be checked against
-a tape measure without water, so it is measured here and printed alongside.
+Stage 7 reports a volume, which says nothing about the shape that produced it.
+A circumference at the cut is the one limb dimension that can be checked
+against a tape measure without water, so it is measured here and printed
+beside the volumes.
 
-The slice is taken from `leg.ply`, Stage 3's complete limb, never a cut one:
-the cut caps the
-exposed cross-section with a synthetic grid (`core/fill.py:cap_points_on_plane`)
-that lies on exactly the plane being measured, and fitting to those interior
-points pulls the ellipse inward. `leg.ply` is the same cloud levelled and
-floor-cut but before the cut and before any capping, so every point in the slab
-is reconstructed surface.
+Two things decide whether the number means anything:
 
-Both cloud and plane must be in LEVELLED space, which is why the plane is read
-from `cutting_line_review.json` or `cutting_line_levelled.json` and never
-`cutting_line.json` — the planes are detected before levelling and the clouds
-written after. The review copy wins when it exists: it holds the planes the
-measured mesh was actually cut at, which is what a circumference has to describe.
+  which cloud    The slice is taken from the UNCUT `clean_objects/obj.ply`,
+                 never `segmented/segmented_obj.ply`. The cut removes
+                 everything past the plane, so a slab centred on that plane
+                 would hold only the points on one side of it and the fitted
+                 ellipse would describe half a ring.
+  which space    The cloud and the planes must share a coordinate frame.
+                 Stage 3 levels the scene before clustering, and the marker
+                 planes are fitted on that same levelled cloud, so both are in
+                 levelled space and no extra transform is needed.
+
+The fit is an algebraic one and always returns an ellipse, including for a
+half-reconstructed limb where it quietly extrapolates across the missing side.
+Angular coverage is therefore measured and reported with every result, and a
+gap wider than MAX_ARC_GAP_DEGREES is called out as not a measurement.
 """
 import json
 import math
@@ -24,266 +28,343 @@ import os
 
 import numpy as np
 
-# Half-thickness of the slice, in real millimetres. 4 mm holds a fully closed
-# ring on the captures in hand while staying thin against a ~55 mm limb radius;
-# the fitted circumference moves 1.2% across a 1.5-10 mm sweep, so the choice is
-# not load-bearing.
-SLAB_HALF_MM = 4.0
+# Half-thickness of the slice, in real millimetres. 4 mm holds a closed ring
+# while staying thin against a limb radius of roughly 55 mm.
+SLAB_HALF_MILLIMETRES = 4.0
 
-# Below this angular coverage the fit is extrapolating across a gap rather than
-# interpolating a ring, and the reported number is not a measurement.
-MAX_ARC_GAP_DEG = 45.0
+# Below this angular coverage the fit is extrapolating across a gap rather
+# than interpolating a ring, and the reported number is not a measurement.
+MAX_ARC_GAP_DEGREES = 45.0
+
+# Fewest points that can support a six-coefficient conic fit with any margin.
+MINIMUM_SLAB_POINTS = 12
+
+# Wedges used by the polygon cross-check, and by the coverage figure.
+POLYGON_WEDGE_COUNT = 36
+COVERAGE_WEDGE_COUNT = 72
 
 
-def fit_ellipse_direct(x, y):
+def fit_ellipse_direct(x_values, y_values):
     """Halir-Flusser direct least-squares ellipse fit.
 
-    Returns conic coefficients (a, b, c, d, e, f) of
-    a x^2 + b xy + c y^2 + d x + e y + f = 0, constrained to an ellipse by
+    Returns the conic coefficients (a, b, c, d, e, f) of
+    a*x^2 + b*x*y + c*y^2 + d*x + e*y + f = 0, constrained to an ellipse by
     4ac - b^2 = 1.
 
-    This is the numerically stable decomposition of Fitzgibbon's method: the
-    design matrix is split into its quadratic and linear halves so the
-    generalised eigenproblem is solved on a well-conditioned 3x3 rather than a
-    near-singular 6x6. The unsplit form loses the fit outright on data that is
+    This is the numerically stable form of Fitzgibbon's method: the design
+    matrix is split into its quadratic and linear halves so the generalised
+    eigenproblem is solved on a well-conditioned 3x3 instead of a nearly
+    singular 6x6. The unsplit form loses the fit outright on data that is
     off-origin and elongated, which a limb cross-section in mesh units is.
     """
-    x = np.asarray(x, dtype=np.float64).ravel()
-    y = np.asarray(y, dtype=np.float64).ravel()
+    x_values = np.asarray(x_values, dtype=np.float64).ravel()
+    y_values = np.asarray(y_values, dtype=np.float64).ravel()
 
-    D1 = np.stack([x * x, x * y, y * y], axis=1)     # quadratic part
-    D2 = np.stack([x, y, np.ones_like(x)], axis=1)   # linear part
+    quadratic_design = np.stack(
+        [x_values * x_values, x_values * y_values, y_values * y_values], axis=1)
+    linear_design = np.stack(
+        [x_values, y_values, np.ones_like(x_values)], axis=1)
 
-    S1 = D1.T @ D1
-    S2 = D1.T @ D2
-    S3 = D2.T @ D2
+    scatter_quadratic = quadratic_design.T @ quadratic_design
+    scatter_cross = quadratic_design.T @ linear_design
+    scatter_linear = linear_design.T @ linear_design
 
-    if abs(np.linalg.det(S3)) < 1e-300:
+    if abs(np.linalg.det(scatter_linear)) < 1e-300:
         raise ValueError("slice is degenerate (collinear points) — no ellipse")
 
-    T = -np.linalg.solve(S3, S2.T)
-    M = S1 + S2 @ T
+    # Eliminate the linear coefficients, leaving a 3x3 problem in the
+    # quadratic ones alone.
+    linear_from_quadratic = -np.linalg.solve(scatter_linear, scatter_cross.T)
+    reduced = scatter_quadratic + scatter_cross @ linear_from_quadratic
 
-    # Pre-multiply by inv(C1) for the ellipse constraint 4ac - b^2 = 1.
-    M = np.array([M[2] / 2.0, -M[1], M[0] / 2.0])
+    # Pre-multiply by the inverse of the constraint matrix for 4ac - b^2 = 1.
+    reduced = np.array([reduced[2] / 2.0, -reduced[1], reduced[0] / 2.0])
 
-    _, evec = np.linalg.eig(M)
-    cond = 4.0 * evec[0] * evec[2] - evec[1] ** 2
-    idx = np.nonzero(cond > 0)[0]
-    if idx.size == 0:
+    _, eigenvectors = np.linalg.eig(reduced)
+    ellipse_condition = (4.0 * eigenvectors[0] * eigenvectors[2]
+                         - eigenvectors[1] ** 2)
+    elliptical_columns = np.nonzero(ellipse_condition > 0)[0]
+    if elliptical_columns.size == 0:
         raise ValueError("no elliptical solution — the slice is not closed")
 
-    a1 = evec[:, idx[0]]
-    return np.concatenate([a1, T @ a1])
+    quadratic_coefficients = eigenvectors[:, elliptical_columns[0]]
+    linear_coefficients = linear_from_quadratic @ quadratic_coefficients
+    return np.concatenate([quadratic_coefficients, linear_coefficients])
 
 
-def ellipse_geometry(coef):
-    """Conic coefficients -> (centre, semi-major a, semi-minor b, angle rad).
+def ellipse_geometry(coefficients):
+    """Conic coefficients to (centre, semi-major, semi-minor, angle in radians).
 
-    Translate to the conic's centre, then diagonalise the quadratic form.
-    `a >= b` on return.
+    Translates the conic to its own centre, then diagonalises the quadratic
+    form. The semi-major axis is always the first of the two returned.
     """
-    a, b, c, d, e, f = coef
-    # The xy coefficient is 'b' in the polynomial but 2B in matrix form.
-    B, D, E = b / 2.0, d / 2.0, e / 2.0
+    (x_squared_coefficient, cross_term_coefficient, y_squared_coefficient,
+     x_coefficient, y_coefficient, constant_coefficient) = coefficients
+    # The cross term appears as b in the polynomial but as b/2 in matrix form,
+    # and the same halving applies to the two linear terms.
+    half_cross_term = cross_term_coefficient / 2.0
+    half_x_coefficient = x_coefficient / 2.0
+    half_y_coefficient = y_coefficient / 2.0
 
-    denom = a * c - B * B
-    if abs(denom) < 1e-300:
+    denominator = (x_squared_coefficient * y_squared_coefficient
+                   - half_cross_term * half_cross_term)
+    if abs(denominator) < 1e-300:
         raise ValueError("degenerate conic — not an ellipse")
 
-    cx = (B * E - c * D) / denom
-    cy = (B * D - a * E) / denom
-    fc = f + D * cx + E * cy          # constant term once centred
+    centre_x = (half_cross_term * half_y_coefficient
+                - y_squared_coefficient * half_x_coefficient) / denominator
+    centre_y = (half_cross_term * half_x_coefficient
+                - x_squared_coefficient * half_y_coefficient) / denominator
+    constant_at_centre = (constant_coefficient
+                          + half_x_coefficient * centre_x
+                          + half_y_coefficient * centre_y)
 
-    evals, evecs = np.linalg.eigh(np.array([[a, B], [B, c]], dtype=np.float64))
+    quadratic_form = np.array(
+        [[x_squared_coefficient, half_cross_term],
+         [half_cross_term, y_squared_coefficient]], dtype=np.float64)
+    eigenvalues, eigenvectors = np.linalg.eigh(quadratic_form)
     with np.errstate(divide="ignore", invalid="ignore"):
-        axes_sq = -fc / evals
-    if np.any(axes_sq <= 0) or not np.all(np.isfinite(axes_sq)):
+        axes_squared = -constant_at_centre / eigenvalues
+    if np.any(axes_squared <= 0) or not np.all(np.isfinite(axes_squared)):
         raise ValueError("conic solved to a hyperbola or an imaginary ellipse")
 
-    axes = np.sqrt(axes_sq)
-    order = np.argsort(axes)[::-1]     # major first
-    major = evecs[:, order[0]]
-    return (np.array([cx, cy]), float(axes[order[0]]), float(axes[order[1]]),
-            float(math.atan2(major[1], major[0])))
+    axes = np.sqrt(axes_squared)
+    order = np.argsort(axes)[::-1]
+    major_direction = eigenvectors[:, order[0]]
+    centre = np.array([centre_x, centre_y])
+    angle = float(math.atan2(major_direction[1], major_direction[0]))
+    return centre, float(axes[order[0]]), float(axes[order[1]]), angle
 
 
-def ramanujan2(a, b):
+def ellipse_perimeter(semi_major, semi_minor):
     """Ramanujan's second approximation to the perimeter of an ellipse.
 
-        P = pi (a + b) (1 + 3h / (10 + sqrt(4 - 3h))),  h = (a-b)^2 / (a+b)^2
+        P = pi * (a + b) * (1 + 3h / (10 + sqrt(4 - 3h))),
+        h = (a - b)^2 / (a + b)^2
 
-    Measured against the exact elliptic integral it is right to 1e-11 at the
-    a/b ~ 1.15 a limb cross-section reaches, so its error is many orders below
-    the pipeline's ~1-2% surface-noise floor.
+    Against the exact elliptic integral this is correct to about 1e-11 at the
+    axis ratio a limb cross-section reaches, far below the pipeline's own
+    surface-noise floor.
     """
-    if a + b <= 0:
+    if semi_major + semi_minor <= 0:
         raise ValueError("degenerate ellipse")
-    h = ((a - b) ** 2) / ((a + b) ** 2)
-    return math.pi * (a + b) * (1.0 + (3.0 * h) / (10.0 + math.sqrt(4.0 - 3.0 * h)))
+    axis_difference = (semi_major - semi_minor) ** 2
+    axis_sum = (semi_major + semi_minor) ** 2
+    shape_term = axis_difference / axis_sum
+    correction = (3.0 * shape_term) / (10.0 + math.sqrt(4.0 - 3.0 * shape_term))
+    return math.pi * (semi_major + semi_minor) * (1.0 + correction)
 
 
 def plane_basis(normal):
-    """Orthonormal (u, v, n) with u, v spanning the plane of the given normal."""
-    n = np.asarray(normal, dtype=np.float64)
-    n = n / np.linalg.norm(n)
+    """Orthonormal (first_axis, second_axis, normal) spanning the given plane."""
+    unit_normal = np.asarray(normal, dtype=np.float64)
+    unit_normal = unit_normal / np.linalg.norm(unit_normal)
     # Seed against the axis the normal is least aligned with, so the cross
-    # product is never taken between near-parallel vectors.
+    # product is never taken between two nearly parallel vectors.
     seed = np.zeros(3)
-    seed[int(np.argmin(np.abs(n)))] = 1.0
-    u = np.cross(n, seed)
-    u /= np.linalg.norm(u)
-    return u, np.cross(n, u), n
+    seed[int(np.argmin(np.abs(unit_normal)))] = 1.0
+    first_axis = np.cross(unit_normal, seed)
+    first_axis = first_axis / np.linalg.norm(first_axis)
+    second_axis = np.cross(unit_normal, first_axis)
+    return first_axis, second_axis, unit_normal
 
 
-def fit_slice(points, centroid, normal, linear_scale, slab_half_mm=SLAB_HALF_MM):
-    """Fit one cross-section. Returns a dict of centimetre measurements.
+def polygon_perimeter_centimetres(angles, radii, centimetres_per_unit):
+    """Perimeter of a closed polygon built from the median radius per wedge.
 
-    `linear_scale` is cm per mesh unit, taken from whatever derivation Stage 6
-    used, so this reports on exactly the same scale as `volumes.csv`.
+    This assumes no shape model at all, so a large disagreement with the
+    fitted ellipse means the cross-section is not elliptical — it does not
+    mean the fit failed.
     """
-    c = np.asarray(centroid, dtype=np.float64)
-    u, v, n = plane_basis(normal)
+    wedge_of_point = (angles / (2.0 * math.pi) * POLYGON_WEDGE_COUNT)
+    wedge_of_point = wedge_of_point.astype(int) % POLYGON_WEDGE_COUNT
 
-    slab = points[np.abs((points - c) @ n) <= (slab_half_mm / 10.0) / linear_scale]
-    if len(slab) < 12:
-        raise ValueError(f"only {len(slab)} points in the slab — need 12")
+    corner_positions = []
+    for wedge in range(POLYGON_WEDGE_COUNT):
+        in_this_wedge = wedge_of_point == wedge
+        if not np.any(in_this_wedge):
+            continue
+        wedge_centre_angle = ((wedge + 0.5) / POLYGON_WEDGE_COUNT
+                              * 2.0 * math.pi)
+        median_radius = float(np.median(radii[in_this_wedge]))
+        radius_centimetres = median_radius * centimetres_per_unit
+        corner_positions.append([radius_centimetres * math.cos(wedge_centre_angle),
+                                 radius_centimetres * math.sin(wedge_centre_angle)])
 
-    local = slab - c
-    xy = np.stack([local @ u, local @ v], axis=1)
+    if len(corner_positions) < 3:
+        return float("nan")
 
-    centre, a_u, b_u, angle = ellipse_geometry(fit_ellipse_direct(xy[:, 0], xy[:, 1]))
-    a_cm, b_cm = a_u * linear_scale, b_u * linear_scale
+    corners = np.array(corner_positions)
+    closed = np.vstack([corners, corners[:1]])
+    edge_lengths = np.linalg.norm(np.diff(closed, axis=0), axis=1)
+    return float(np.sum(edge_lengths))
 
-    d = xy - centre
-    phi = np.mod(np.arctan2(d[:, 1], d[:, 0]), 2.0 * math.pi)
-    r_pt = np.linalg.norm(d, axis=1)
 
-    # Radial residual: how far the points sit from the fitted ellipse along the
-    # ray from its centre. Reported because an algebraic fit always returns
-    # something, and this is what says whether "ellipse" described the slice.
-    th = np.arctan2(d[:, 1], d[:, 0]) - angle
-    r_ell = 1.0 / np.sqrt((np.cos(th) / a_u) ** 2 + (np.sin(th) / b_u) ** 2)
-    resid_mm = (r_pt - r_ell) * linear_scale * 10.0
+def fit_slice(points, centroid, normal, centimetres_per_unit,
+              slab_half_millimetres=SLAB_HALF_MILLIMETRES):
+    """Fit one cross-section. Returns a dictionary of centimetre measurements.
 
-    # Angular coverage. A conic fit to a partial arc still returns an ellipse —
-    # it extrapolates the missing side, with a *better* residual than the truth.
-    # This is the only diagnostic that catches a limb whose back VGGT never
-    # reconstructed, so it is checked rather than assumed.
-    srt = np.sort(phi)
-    gaps = np.diff(np.concatenate([srt, [srt[0] + 2.0 * math.pi]]))
-    max_gap_deg = math.degrees(float(gaps.max()))
-    coverage = len(np.unique((srt / (2.0 * math.pi) * 72).astype(int) % 72)) / 72.0
+    `centimetres_per_unit` is the linear scale Stage 7 derived from the
+    reference cube, so the circumference is reported on exactly the same scale
+    as the volumes beside it.
+    """
+    plane_centroid = np.asarray(centroid, dtype=np.float64)
+    first_axis, second_axis, unit_normal = plane_basis(normal)
 
-    # Independent cross-check: median radius per wedge, joined into a closed
-    # polygon. It assumes no shape model, so a large disagreement means the
-    # cross-section is not elliptical — not that the fit failed.
-    nb = 36
-    wedge = (phi / (2.0 * math.pi) * nb).astype(int) % nb
-    cen = (np.arange(nb) + 0.5) / nb * 2.0 * math.pi
-    keep = [k for k in range(nb) if np.any(wedge == k)]
-    rad = np.array([np.median(r_pt[wedge == k]) for k in keep]) * linear_scale
-    ring = np.stack([rad * np.cos(cen[keep]), rad * np.sin(cen[keep])], axis=1)
-    poly_cm = float(np.sum(np.linalg.norm(
-        np.diff(np.vstack([ring, ring[:1]]), axis=0), axis=1)))
+    slab_half_units = (slab_half_millimetres / 10.0) / centimetres_per_unit
+    distance_to_plane = (points - plane_centroid) @ unit_normal
+    slab = points[np.abs(distance_to_plane) <= slab_half_units]
+    if len(slab) < MINIMUM_SLAB_POINTS:
+        raise ValueError(f"only {len(slab)} points in the slab — "
+                         f"need {MINIMUM_SLAB_POINTS}")
+
+    local = slab - plane_centroid
+    in_plane = np.stack([local @ first_axis, local @ second_axis], axis=1)
+
+    coefficients = fit_ellipse_direct(in_plane[:, 0], in_plane[:, 1])
+    centre, semi_major_units, semi_minor_units, angle = ellipse_geometry(coefficients)
+    semi_major_centimetres = semi_major_units * centimetres_per_unit
+    semi_minor_centimetres = semi_minor_units * centimetres_per_unit
+
+    from_centre = in_plane - centre
+    angles = np.mod(np.arctan2(from_centre[:, 1], from_centre[:, 0]),
+                    2.0 * math.pi)
+    point_radii = np.linalg.norm(from_centre, axis=1)
+
+    # Radial residual: how far each point sits from the fitted ellipse along
+    # the ray out of its centre. Reported because an algebraic fit always
+    # returns something, and this is what says whether "ellipse" described
+    # the slice at all.
+    angle_from_major = np.arctan2(from_centre[:, 1], from_centre[:, 0]) - angle
+    ellipse_radii = 1.0 / np.sqrt(
+        (np.cos(angle_from_major) / semi_major_units) ** 2
+        + (np.sin(angle_from_major) / semi_minor_units) ** 2)
+    residual_millimetres = ((point_radii - ellipse_radii)
+                            * centimetres_per_unit * 10.0)
+
+    # Angular coverage. A conic fit to a partial arc still returns an ellipse,
+    # extrapolating the missing side with a BETTER residual than the truth, so
+    # this is the only diagnostic that catches a limb whose back was never
+    # reconstructed.
+    sorted_angles = np.sort(angles)
+    wrapped = np.concatenate([sorted_angles, [sorted_angles[0] + 2.0 * math.pi]])
+    largest_gap_degrees = math.degrees(float(np.diff(wrapped).max()))
+
+    occupied_wedges = (sorted_angles / (2.0 * math.pi) * COVERAGE_WEDGE_COUNT)
+    occupied_wedges = occupied_wedges.astype(int) % COVERAGE_WEDGE_COUNT
+    coverage = len(np.unique(occupied_wedges)) / COVERAGE_WEDGE_COUNT
+
+    polygon_centimetres = polygon_perimeter_centimetres(
+        angles, point_radii, centimetres_per_unit)
 
     return {
-        "a_cm": a_cm,
-        "b_cm": b_cm,
-        "circumference_cm": ramanujan2(a_cm, b_cm),
-        "polygon_circumference_cm": poly_cm,
+        "semi_major_cm": semi_major_centimetres,
+        "semi_minor_cm": semi_minor_centimetres,
+        "circumference_cm": ellipse_perimeter(semi_major_centimetres,
+                                              semi_minor_centimetres),
+        "polygon_circumference_cm": polygon_centimetres,
         "tilt_deg": math.degrees(angle) % 180.0,
         "n_slab": int(len(slab)),
         "coverage": float(coverage),
-        "max_gap_deg": max_gap_deg,
-        "resid_rms_mm": float(np.sqrt(np.mean(resid_mm ** 2))),
-        "partial_arc": bool(max_gap_deg > MAX_ARC_GAP_DEG),
+        "max_gap_deg": largest_gap_degrees,
+        "resid_rms_mm": float(np.sqrt(np.mean(residual_millimetres ** 2))),
+        "partial_arc": bool(largest_gap_degrees > MAX_ARC_GAP_DEGREES),
     }
 
 
-def load_cut_geometry(clean_dir):
-    """(points, markers) from a Stage 3 directory, both in levelled space.
+def load_cut_geometry(output_dir):
+    """(points, planes) for this run, both in levelled space.
 
-    Returns (None, None) with a printed reason when the stage did not leave the
-    two artefacts behind — a deferred cut has no planes yet, and that is a
-    normal state, not a failure.
+    Returns (None, None) with a printed reason when Stage 3 left no planes
+    behind. A run with no markers detected has nothing to measure at, and
+    that is a normal state rather than a failure.
     """
     import open3d as o3d
 
-    # The review's planes win when a review happened. Both files are levelled
-    # and carry the same shape, but they can disagree: a reviewer who moved,
-    # added or removed a plane produced the cut the volumes were computed from,
-    # while cutting_line_levelled.json still records what detection proposed.
-    # Reading the wrong one reports a circumference at a plane the measured
-    # mesh was never cut at — the same precedence the service already uses when
-    # it serves cutting_line.json to the review screen.
-    debug_dir = os.path.join(clean_dir, "debug")
-    review_json = os.path.join(debug_dir, "cutting_line_review.json")
-    plane_json = (review_json if os.path.exists(review_json)
-                  else os.path.join(debug_dir, "cutting_line_levelled.json"))
-    cloud_path = os.path.join(clean_dir, "objects", "leg.ply")
+    planes_path = os.path.join(output_dir, "segmented", "cut_planes.json")
+    cloud_path = os.path.join(output_dir, "clean_objects", "obj.ply")
 
-    for p in (plane_json, cloud_path):
-        if not os.path.exists(p):
-            print(f"  circumference: skipped — no {os.path.basename(p)}")
+    for required_path in (planes_path, cloud_path):
+        if not os.path.exists(required_path):
+            print(f"  circumference: skipped — "
+                  f"no {os.path.basename(required_path)}")
             return None, None
 
-    with open(plane_json) as fh:
-        data = json.load(fh)
+    with open(planes_path) as handle:
+        data = json.load(handle)
     if data.get("space") != "levelled":
-        print(f"  circumference: skipped — {plane_json} is not levelled space")
+        print(f"  circumference: skipped — {planes_path} is not levelled space")
         return None, None
 
-    markers = data.get("markers", [])
-    if not markers:
+    planes = data.get("planes", [])
+    if not planes:
         print("  circumference: skipped — no cutting plane detected")
         return None, None
 
-    pts = np.asarray(o3d.io.read_point_cloud(cloud_path).points, dtype=np.float64)
-    if len(pts) == 0:
+    cloud = o3d.io.read_point_cloud(cloud_path)
+    points = np.asarray(cloud.points, dtype=np.float64)
+    if len(points) == 0:
         print(f"  circumference: skipped — {cloud_path} is empty")
         return None, None
-    return pts, markers
+    return points, planes
 
 
-def report_cut_circumference(clean_dir, linear_scale, slab_half_mm=SLAB_HALF_MM):
+def report_cut_circumference(output_dir, centimetres_per_unit,
+                             slab_half_millimetres=SLAB_HALF_MILLIMETRES):
     """Print the circumference at each cutting plane. Returns a list of results.
 
     Never raises: a failed fit must not cost a run its volumes. Every failure
-    path prints its reason — a silent one here would be the exact defect class
-    `docs/reviews/repo_review.md` swept for.
+    path prints the reason it took, because a silent skip here would look
+    exactly like a run that had no bands.
     """
     try:
-        pts, markers = load_cut_geometry(clean_dir)
-    except Exception as exc:
-        print(f"  circumference: skipped — {type(exc).__name__}: {exc}")
+        points, planes = load_cut_geometry(output_dir)
+    except Exception as error:
+        print(f"  circumference: skipped — {type(error).__name__}: {error}")
         return []
-    if pts is None:
+    if points is None:
         return []
 
     print(f"\n  Circumference at the cutting plane "
-          f"(least-squares ellipse, Ramanujan II, slab ±{slab_half_mm:.0f} mm):")
+          f"(least-squares ellipse, Ramanujan II, "
+          f"slab +/-{slab_half_millimetres:.0f} mm):")
 
-    out = []
-    for i, mk in enumerate(markers):
+    results = []
+    for plane_index in range(len(planes)):
+        plane = planes[plane_index]
+        label = plane.get("label", f"plane {plane_index}")
         try:
-            r = fit_slice(pts, mk["centroid"], mk["normal"], linear_scale,
-                          slab_half_mm)
-        except Exception as exc:
-            print(f"    plane {i}: FAILED — {type(exc).__name__}: {exc}")
+            measurement = fit_slice(points, plane["centroid"], plane["normal"],
+                                    centimetres_per_unit, slab_half_millimetres)
+        except Exception as error:
+            print(f"    {label}: FAILED — {type(error).__name__}: {error}")
             continue
 
-        label = f"plane {i}" if len(markers) > 1 else "cut"
-        print(f"    {label}: CIRCUMFERENCE = {r['circumference_cm']:.2f} cm"
-              f"   (a = {r['a_cm']:.2f} cm, b = {r['b_cm']:.2f} cm,"
-              f" a/b = {r['a_cm'] / r['b_cm']:.2f})")
-        print(f"      {r['n_slab']} slab pts, {r['coverage'] * 100:.0f}% ring coverage, "
-              f"residual RMS {r['resid_rms_mm']:.2f} mm, "
-              f"polygon cross-check {r['polygon_circumference_cm']:.2f} cm "
-              f"({(r['circumference_cm'] - r['polygon_circumference_cm']) / r['polygon_circumference_cm'] * 100:+.1f}%)")
-        if r["partial_arc"]:
-            print(f"      ** WARNING: largest gap {r['max_gap_deg']:.0f}° — the ring is "
-                  f"open and the fit is extrapolating across it. Not a measurement. **")
-        r["plane"] = i
-        out.append(r)
-    return out
+        axis_ratio = measurement["semi_major_cm"] / measurement["semi_minor_cm"]
+        print(f"    {label}: CIRCUMFERENCE = "
+              f"{measurement['circumference_cm']:.2f} cm"
+              f"   (a = {measurement['semi_major_cm']:.2f} cm,"
+              f" b = {measurement['semi_minor_cm']:.2f} cm,"
+              f" a/b = {axis_ratio:.2f})")
+
+        polygon = measurement["polygon_circumference_cm"]
+        if polygon > 0:
+            polygon_difference = (100.0 * (measurement["circumference_cm"] - polygon)
+                                  / polygon)
+            polygon_text = f"{polygon:.2f} cm ({polygon_difference:+.1f}%)"
+        else:
+            polygon_text = "unavailable"
+        print(f"      {measurement['n_slab']} slab pts, "
+              f"{measurement['coverage'] * 100:.0f}% ring coverage, "
+              f"residual RMS {measurement['resid_rms_mm']:.2f} mm, "
+              f"polygon cross-check {polygon_text}")
+
+        if measurement["partial_arc"]:
+            print(f"      ** WARNING: largest gap "
+                  f"{measurement['max_gap_deg']:.0f} deg — the ring is open "
+                  f"and the fit is extrapolating across it. "
+                  f"Not a measurement. **")
+
+        measurement["label"] = label
+        results.append(measurement)
+    return results

@@ -1,110 +1,52 @@
-"""Stage 2 — confidence-filter the VGGT pointmap and export it as PLY.
-
-One output: points.ply. Ghost reduction happens in Stage 3, applied per
-identified cluster, so no pre-filtered cloud is produced here.
-"""
+"""Stage 2 — Filter predictions and export point cloud as PLY."""
 import os
-
 import numpy as np
 import trimesh
 
-from pipeline.core.filters import adaptive_confidence_filter
-
-
-def _extract_base_cloud(predictions, args):
-    """Confidence-filtered points + colours. No SOR (Stage 3 applies it)."""
-    if args.prediction_mode == "pointmap":
-        world_points = predictions["world_points"]
-        conf_raw = predictions["world_points_conf"]
-    else:
-        world_points = predictions["world_points_from_depth"]
-        conf_raw = predictions["depth_conf"]
-
-    imgs_np = predictions["images"]
-    if imgs_np.ndim == 4 and imgs_np.shape[1] == 3:
-        colors_4d = imgs_np.transpose(0, 2, 3, 1)
-    elif imgs_np.ndim == 4 and imgs_np.shape[3] == 3:
-        colors_4d = imgs_np
-    else:
-        raise ValueError(f"Unexpected images shape: {imgs_np.shape}")
-
-    S, H, W_shape = world_points.shape[:3]
-
-    conf_flat = conf_raw.reshape(-1)
-    conf_thresh = adaptive_confidence_filter(conf_flat, args.conf_thres)
-    conf_mask = (conf_raw >= conf_thresh) & (conf_raw > 1e-5)
-
-
-    # VGGT still predicts a 3D point for every pixel of the white padding it
-    # adds in pad mode; those pixels are exactly 1.0 in all three channels.
-    if getattr(args, "frame_fit", None) == "pad":
-        padding = (colors_4d >= 1.0).all(axis=-1)
-        conf_mask &= ~padding
-
-    if getattr(args, "mask_black_bg", False):
-        brightness = colors_4d.reshape(-1, 3).astype(np.float32).mean(axis=1)
-        bg_mask = (brightness > 15.0).reshape(S, H, W_shape)
-        conf_mask &= bg_mask
-    if getattr(args, "mask_white_bg", False):
-        brightness = colors_4d.reshape(-1, 3).astype(np.float32).mean(axis=1)
-        bg_mask = (brightness < 240.0).reshape(S, H, W_shape)
-        conf_mask &= bg_mask
-
-    points_flat = world_points[conf_mask].reshape(-1, 3).astype(np.float32)
-    colors_flat = (colors_4d[conf_mask].reshape(-1, 3) * 255.0).clip(0, 255).astype(np.uint8)
-
-    print(f"  Base cloud: {conf_mask.sum():,} points "
-          f"(kept {100 * conf_mask.mean():.1f}% after confidence)")
-
-    return points_flat, colors_flat, world_points, conf_raw, conf_mask, imgs_np
-
-
-def _fused_cloud(predictions, args):
-    """Points and colours from a TSDF fusion of the depth maps (config POINTCLOUD_METHOD=tsdf).
-
-    The default path's cloud is built first and used as the fusion's support:
-    a fused point survives only near a point that path kept. That is what
-    stops the fusion handing Stage 3 the far walls the outlier removal would
-    have deleted.
-    """
-    from pipeline.core.filters import remove_spatial_outliers
-    from pipeline.core.tsdf import fuse_depth_maps, voxel_size_in_units
-
-    support_points, support_colours, _wp, conf_raw, conf_mask, _imgs = \
-        _extract_base_cloud(predictions, args)
-    support_conf = conf_raw[conf_mask].reshape(-1).astype(np.float32)
-    support_points, _colours, _conf = remove_spatial_outliers(
-        support_points, support_colours, support_conf)
-    voxel_units = voxel_size_in_units(predictions)
-    return fuse_depth_maps(predictions, voxel_units, support_points=support_points)
+from pipeline.core.filters import adaptive_confidence_filter, remove_spatial_outliers
 
 
 def export_ply(predictions, output_dir, args):
-    """Build the scene cloud and write points.ply.
-
-    Two ways, chosen by config.POINTCLOUD_METHOD or --pointcloud-method:
-    stack the confidence-filtered pointmaps and remove spatial outliers (the
-    default), or fuse the depth maps into one TSDF surface, which has no
-    outliers to remove and no ghost sheet for Stage 3 to collapse.
-    """
-    from pipeline.config import POINTCLOUD_METHOD
-    from pipeline.core.filters import remove_spatial_outliers
-
-    method = getattr(args, "pointcloud_method", None) or POINTCLOUD_METHOD
+    """Filter and export point cloud as PLY with adaptive confidence and outlier removal."""
     print()
     print("=" * 60)
     print("STAGE 2: Exporting PLY point cloud")
     print("=" * 60)
-    if method == "tsdf":
-        print("  Mode: TSDF fusion of the depth maps")
-        points_out, colors_out = _fused_cloud(predictions, args)
+
+    if args.prediction_mode == "pointmap":
+        world_points = predictions["world_points"]         # (S, H, W, 3)
+        conf = predictions["world_points_conf"]            # (S, H, W)
+        print("  Mode: pointmap regression")
     else:
-        print(f"  Mode: {'pointmap regression' if args.prediction_mode == 'pointmap' else 'depth-based unprojection'}")
-        points_out, colors_out, _wp, conf_raw, conf_mask, _imgs = \
-            _extract_base_cloud(predictions, args)
-        conf_out = conf_raw[conf_mask].reshape(-1).astype(np.float32)
-        points_out, colors_out, _conf_out = remove_spatial_outliers(
-            points_out, colors_out, conf_out)
+        world_points = predictions["world_points_from_depth"]
+        conf = predictions["depth_conf"]
+        print("  Mode: depth-based unprojection")
+
+    # Images: (S, 3, H, W) → (S, H, W, 3)
+    imgs_np = predictions["images"]
+    colors = imgs_np.transpose(0, 2, 3, 1)
+
+    points_flat = world_points.reshape(-1, 3)
+    colors_flat = (colors.reshape(-1, 3) * 255).clip(0, 255).astype(np.uint8)
+    conf_flat = conf.reshape(-1)
+
+    threshold_val = adaptive_confidence_filter(conf_flat, args.conf_thres)
+    mask = (conf_flat >= threshold_val) & (conf_flat > 1e-5)
+
+    if args.mask_black_bg:
+        brightness = colors_flat.astype(np.float32).mean(axis=1)
+        mask &= brightness > 15.0
+    if args.mask_white_bg:
+        brightness = colors_flat.astype(np.float32).mean(axis=1)
+        mask &= brightness < 240.0
+
+    points_out = points_flat[mask]
+    colors_out = colors_flat[mask]
+    conf_out = conf_flat[mask]
+
+    print(f"  After filtering: {points_flat.shape[0]:,} → {points_out.shape[0]:,}")
+
+    points_out, colors_out, _conf_out = remove_spatial_outliers(points_out, colors_out, conf_out)
 
     print(f"  Final point count: {points_out.shape[0]:,}")
 
