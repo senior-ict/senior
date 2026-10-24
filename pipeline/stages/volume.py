@@ -12,7 +12,7 @@ Volume method priority (per mesh):
     3. trimesh voxel     — CPU fallback
     4. convex_hull       — last resort, overestimates concave shapes
 
-The reference is a 14 × 14 × 14 cm ArUco cube identified by 'box' in its filename.
+The reference is a 10 × 10 × 10 cm ArUco cube identified by 'box' in its filename.
 """
 import os
 import numpy as np

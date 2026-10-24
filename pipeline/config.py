@@ -3,7 +3,7 @@
 # Stage 7 volume calibration
 # The ArUco marker is identified as the "obj" cluster (non-box).
 # REFERENCE_REAL_SIZE_CM is the real-world linear size of the ArUco marker cube.
-REFERENCE_REAL_SIZE_CM = 14.0     # real linear size of reference in cm
+REFERENCE_REAL_SIZE_CM = 10.0     # real linear size of reference in cm
 
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6
