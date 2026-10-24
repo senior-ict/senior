@@ -62,7 +62,13 @@ def run_inference(image_folder, device, max_frames=None):
     else:
         print(f"  Found {len(image_names)} images")
 
-    images = load_and_preprocess_images(image_names).to(device)
+    # Default "crop" is VGGT's own: width becomes 518 px and the height is
+    # centre-cropped, which on a 1108x1477 portrait photo discards 25% of it.
+    # "pad" keeps the whole frame. The default is unchanged so this branch
+    # still behaves as it did; the option exists so the two can be compared.
+    frame_fit = os.environ.get("FRAME_FIT", "crop")
+    images = load_and_preprocess_images(image_names, mode=frame_fit).to(device)
+    print(f"  Frame fit: {frame_fit}")
     print(f"  Preprocessed shape: {images.shape}")
 
     t1 = time.time()
