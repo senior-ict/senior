@@ -270,12 +270,22 @@ def main():
         # pointmap. A second source for the cut, independent of colour, merged
         # with the colour planes inside Stage 3 — see core/bands3d.py.
         band_planes = []
+        reference_points = None
         if getattr(args, "prep", True) and manifest is not None:
             from pipeline.core.bands3d import band_planes_from_arrays
             band_planes = band_planes_from_arrays(
                 manifest, predictions["world_points"],
                 predictions["world_points_conf"],
                 height_axis=args.segment_height_axis)
+
+            # The reference cube's own points, from the same manifest and the
+            # same pointmap. Stage 3 identifies the reference by which cluster
+            # holds these rather than by how cube-like a cluster looks — see
+            # core/cube3d.py.
+            from pipeline.core.cube3d import reference_points_from_arrays
+            reference_points = reference_points_from_arrays(
+                manifest, predictions["world_points"],
+                predictions["world_points_conf"])
 
         # ── Stages 3-5: Clean + Reconstruct + Watertight ──
         scene_recon_path = None
@@ -294,6 +304,7 @@ def main():
                 cut_mode=getattr(args, "cut_mode", None),
                 n_bands=n_bands,
                 band_planes=band_planes,
+                reference_points=reference_points,
                 # CUT_STAGE = "cloud" cuts the point cloud here, as v2 did;
                 # Stage 5 then finds no uncut limb and leaves the solid as is.
                 apply_cut=(CUT_STAGE == "cloud"),

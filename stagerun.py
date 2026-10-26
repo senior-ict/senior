@@ -558,6 +558,24 @@ def _projected_band_planes(args, name):
     return []
 
 
+def _projected_reference_points(args, name):
+    """The reference cube's own 3D points, if Stage 0 and Stage 1 both ran.
+
+    None when either stage is missing from this run, which leaves Stage 3's
+    identification on the shape heuristic — exactly what it did before, and it
+    says so when it falls back.
+    """
+    from pipeline.core.cube3d import reference_points_from_dirs
+    for candidate in (name, args.src):
+        if not candidate:
+            continue
+        prep = stage_dir(candidate, 0, create=False)
+        npz = os.path.join(stage_dir(candidate, 1, create=False), "predictions.npz")
+        if os.path.exists(os.path.join(prep, "manifest.json")) and os.path.exists(npz):
+            return reference_points_from_dirs(prep, npz)
+    return None
+
+
 def _cloud_method(args):
     """Which Stage 2 built the cloud this run reads: the flag, else config."""
     from pipeline.config import POINTCLOUD_METHOD
@@ -608,6 +626,7 @@ def run_stage3(args, name):
         cut_mode=getattr(args, "cut_mode", None),
         n_bands=_detected_band_count(args, name),
         band_planes=_projected_band_planes(args, name),
+        reference_points=_projected_reference_points(args, name),
         merge_ghost_sheets=_cloud_method(args) != "tsdf",
         # Stage 3 no longer cuts. It segments the limb, detects the marker
         # planes and publishes both; the cut itself is applied in Stage 5,
