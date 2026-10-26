@@ -132,7 +132,7 @@ TSDF fusion of the depth maps is available as an alternative
    point onto a smooth patch fitted to its neighbours inside a ball: first a
    ball of 4 point spacings (1.1 cm on `test6`), then, for the limb only, 16
    spacings (2.6 cm), wide enough to reach both sheets and merge them into
-   one. See `docs/pipeline/mls_explained.md`.
+   one. See `docs/pipeline_methodology/stage3_meth/mls_explained.md`.
 
 **Level and finish**
 
@@ -146,7 +146,7 @@ TSDF fusion of the depth maps is available as an alternative
    seen from above as a ring, and one smooth curve is fitted around the
    chunk's centre. Points far outside it (spurs) are moved in, points far
    inside (dents) moved out, and empty arcs are filled on the curve. Section
-   below; full account in `docs/pipeline/limb_skeleton.md`.
+   below; full account in `docs/pipeline_methodology/stage3_meth/limb_skeleton.md`.
 10. Close the limb: sweep its bottom down to the floor, cap the bottom, cap
     the open top. The limb is **not cut here**.
 

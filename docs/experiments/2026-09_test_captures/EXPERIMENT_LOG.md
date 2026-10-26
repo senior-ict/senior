@@ -407,7 +407,7 @@ Measured by rerunning Stages 3-6 on the six padded captures, step off and on:
 mean absolute error 5.8% -> 5.7%, bias +2.3% -> +2.1%, and no capture got
 worse. The shape is what changed: `test6`'s mesh outline against the tape went
 from +3-5% to +1-2% at 70-90% of the way up, and the flat bridge and spur near
-the upper band are gone. Full account in `docs/pipeline/limb_skeleton.md`.
+the upper band are gone. Full account in `docs/pipeline_methodology/stage3_meth/limb_skeleton.md`.
 
 ## 15. The cut at Stage 3 is not better than at Stage 5 — 2026-09-21
 

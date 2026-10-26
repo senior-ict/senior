@@ -39,7 +39,7 @@ service together.
 | Contract and silent-failure sweep | [`docs/reviews/repo_review.md`](docs/reviews/repo_review.md) |
 | **What changed against `main`, and why it is better** | [`docs/archive/2026-08/updates.md`](docs/archive/2026-08/updates.md) |
 | Every stage and sub-process in one chart | [`docs/pipeline/full_flowchart.md`](docs/pipeline/full_flowchart.md) |
-| Moving Least Squares, derived in full | [`docs/pipeline/mls_explained.md`](docs/pipeline/mls_explained.md) |
+| Moving Least Squares, derived in full | [`docs/pipeline_methodology/stage3_meth/mls_explained.md`](docs/pipeline_methodology/stage3_meth/mls_explained.md) |
 
 ---
 

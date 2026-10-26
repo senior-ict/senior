@@ -105,7 +105,7 @@ checks the resolved path stays inside the job directory.
 ## Documentation
 
 Spot-checked only. Stale: `docs/pipeline/full_flowchart.md`, `docs/archive/2026-08/progress.md`,
-`docs/pipeline/mls_explained.md` and `docs/archive/2026-08/experiments/ghost_removal_chain.md` still
+`docs/pipeline_methodology/stage3_meth/mls_explained.md` and `docs/archive/2026-08/experiments/ghost_removal_chain.md` still
 carry `GHOST_VOXEL_FACTOR = 0.65`; `README.md` and `docs/pipeline/full_flowchart.md`
 describe the 14 cm cube's axis-aligned extents; `docs/pipeline/pipeline_flowchart.md`
 still shows the cut inside Stage 3. `docs/archive/2026-08/experiments/scripts_*.py` are
