@@ -28,15 +28,22 @@ _RECONS_WORKER = os.path.join(_PROJECT_ROOT, "pipeline", "workers",
 # within 1% of alpha. Across depth 8-11 and trim 0.01-0.10 its answer spans
 # 0.32%, so it is not sensitive to its own parameters.
 #
-# WHAT THIS COSTS, stated because it is real: alpha shape's ladder GUARANTEES
-# chi = 2 by selecting on it, and Poisson has no such guarantee. On
-# inputs/short_leg -- an uncut whole leg including the foot, which is genuinely
-# awkward topology -- Poisson closes at chi = -18 and reports 22% below the
-# alpha answer. Stage 5 now prints a loud warning whenever the final mesh is not
-# chi = 2, because a closed-but-holed mesh is still `is_watertight` and Stage 6
-# would otherwise integrate it in silence.
+# WHAT THIS COSTS, stated because it is real: alpha shape SELECTS on chi = 2 --
+# its ladder takes the smallest rung that is both watertight and chi = 2 --
+# while Poisson has no such criterion at all. On inputs/short_leg, an uncut
+# whole leg including the foot and genuinely awkward topology, Poisson closes at
+# chi = -18 and reports 22% below the alpha answer. Stage 5 prints a loud
+# warning whenever the final mesh is not chi = 2, because a closed-but-holed
+# mesh is still `is_watertight` and Stage 6 would otherwise integrate it in
+# silence.
 #
-# `--recon-method alpha_shape` restores the guaranteed path for any capture the
+# Selecting on it is not the same as guaranteeing it, and this comment used to
+# claim the stronger thing. When no rung of the ladder reaches watertight and
+# chi = 2, method_alpha_shape warns and returns its best-ranked candidate
+# anyway -- see recons_methods_worker.py. What is guaranteed is that an unsound
+# mesh is never returned silently.
+#
+# `--recon-method alpha_shape` restores the selecting path for any capture the
 # warning fires on.
 _DEFAULT_METHOD = "poisson"
 _DEFAULT_BOX_METHOD = "poisson"

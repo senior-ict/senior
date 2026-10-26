@@ -88,11 +88,15 @@ def markdown_to_html(markdown_text):
                 index += 1
             parts.append("<pre>" + "\n".join(code_lines) + "</pre>")
             index += 1
-        elif line.startswith("# "):
-            parts.append(f"<h1>{inline_markup(line[2:])}</h1>")
-            index += 1
-        elif line.startswith("## "):
-            parts.append(f"<h2>{inline_markup(line[3:])}</h2>")
+        elif re.match(r"^#{1,6} ", line):
+            # Any heading level, not just the two this document happened to
+            # use. A `### ` line used to match neither "# " nor "## " and fell
+            # through to the paragraph branch below, whose loop refuses lines
+            # starting with "#" -- so it collected nothing, never advanced
+            # `index`, and appended empty paragraphs until the process died.
+            # Every document in docs/pipeline_methodology/ uses h3.
+            hashes = len(line) - len(line.lstrip("#"))
+            parts.append(f"<h{hashes}>{inline_markup(line[hashes + 1:])}</h{hashes}>")
             index += 1
         elif line.startswith("!["):
             image = re.match(r"!\[(.*?)\]\((.*?)\)", line)
@@ -133,7 +137,15 @@ def markdown_to_html(markdown_text):
                     ("#", "|", "```", "![", "- ")) and not re.match(r"^\d+\. ", lines[index]):
                 paragraph_lines.append(lines[index].strip())
                 index += 1
-            parts.append(f"<p>{inline_markup(' '.join(paragraph_lines))}</p>")
+            if not paragraph_lines:
+                # Nothing was collected, so this line is one no branch above
+                # claimed. Emitting it verbatim keeps the content and, more
+                # importantly, advances `index` -- the loop above has no other
+                # guarantee of termination.
+                parts.append(f"<p>{inline_markup(line.strip())}</p>")
+                index += 1
+            else:
+                parts.append(f"<p>{inline_markup(' '.join(paragraph_lines))}</p>")
     return "\n".join(parts)
 
 
