@@ -813,6 +813,31 @@ def _subject_bounds(cube_box, band_boxes, limb_mask, band_heights, pad):
     return bounds
 
 
+def _remove_stale_frames(out_dir):
+    """Delete frames a previous run left in this folder.
+
+    Stage 1 reads whatever is in this directory, not the list Stage 0 returned.
+    So a second run that accepts fewer frames than the first leaves the extras
+    behind and VGGT is handed them anyway. It happened: on
+    `output_test2_champ_hairless` a 7-frame run inherited an eighth frame from
+    an earlier 8-frame run, so the reconstruction used a duplicate viewpoint,
+    and the manifest then described 7 frames while the pointmap held 8 --
+    which silently disabled every projection keyed to the manifest, because
+    pairing them is impossible once the counts disagree.
+
+    Only the `frame_NN.png` names this stage writes itself are removed.
+    """
+    removed = 0
+    for name in sorted(os.listdir(out_dir)):
+        is_stage_frame = (name.startswith("frame_") and name.endswith(".png"))
+        if not is_stage_frame:
+            continue
+        os.remove(os.path.join(out_dir, name))
+        removed += 1
+    if removed:
+        print(f"  Cleared {removed} frame(s) left by a previous run")
+
+
 def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
                    pad=PAD_FRAC, centre_on_subject=CENTRE_ON_SUBJECT,
                    output_size=OUTPUT_SIZE, strict=True,
@@ -835,6 +860,7 @@ def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
         raise SystemExit(f"ERROR: no images in {image_folder}")
 
     os.makedirs(out_dir, exist_ok=True)
+    _remove_stale_frames(out_dir)
     debug_dir = os.path.join(out_dir, "..", "for_debug")
     os.makedirs(debug_dir, exist_ok=True)
     records = []
