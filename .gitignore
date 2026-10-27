@@ -94,6 +94,12 @@ hf_cache/
 # Data / outputs
 output/
 outputs/
+# Per-capture evaluation runs, written with --output_dir eval_<name>. Each
+# holds ~350 MB, including two ~90 MB predictions.npz, and every file in them
+# is reproducible from the capture it was run on.
+eval_*/
+# One-off verification runs, written with --output_dir verify_<name>.
+verify_*/
 results/
 data/
 datasets/
@@ -129,3 +135,6 @@ test/
 # Obsidian vault — per-machine UI state (notes + plugin config stay tracked)
 obsidian/
 CLAUDE.md
+
+# ...except the web app's shipped samples, which are the demo.
+!web/public/samples/**

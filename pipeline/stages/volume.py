@@ -293,6 +293,12 @@ def compute_volumes(object_mesh_paths: list[str],
     print(df[result_cols].to_string(index=False, float_format=lambda x: f"{x:.2f}"))
 
     if output_dir is not None:
+        # The table was only ever printed, so nothing downstream could read it
+        # back. Writing it keeps the measurement with the run that made it.
+        volumes_path = os.path.join(output_dir, "volumes.csv")
+        df.to_csv(volumes_path, index=False)
+        print(f"\n  Wrote {volumes_path}")
+
         report_cut_circumference(output_dir, linear_scale)
 
     return df
