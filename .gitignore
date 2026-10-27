@@ -152,3 +152,9 @@ test/
 # Obsidian vault — per-machine UI state (notes + plugin config stay tracked)
 obsidian/
 CLAUDE.md
+
+# Windows "downloaded from the internet" metadata, created on copy into WSL
+*:Zone.Identifier
+
+# ...but the faculty templates are reference material, not run output
+!docs/senior_docs/*.zip
