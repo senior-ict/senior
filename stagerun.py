@@ -5,10 +5,10 @@ Each stage reads the previous stage's artifacts from work/<input_name>/ and
 writes its own, so a stage can be re-run and inspected without repeating the
 expensive ones (inference in particular).
 
-    python3 stagerun.py 1 -i inputs/small_leg          # inference only
-    python3 stagerun.py 2 -i inputs/small_leg          # pointcloud, reuses stage 1
-    python3 stagerun.py 1-3 -i inputs/small_leg        # range
-    python3 stagerun.py 1 -i inputs/small_leg --force  # ignore cache
+    python3 stagerun.py 1 -i inputs/0_first_sample_3          # inference only
+    python3 stagerun.py 2 -i inputs/0_first_sample_3          # pointcloud, reuses stage 1
+    python3 stagerun.py 1-3 -i inputs/0_first_sample_3        # range
+    python3 stagerun.py 1 -i inputs/0_first_sample_3 --force  # ignore cache
 
 Layout:
     work/<name>/01_inference/   predictions.npz, input_frames.png, summary.txt
@@ -558,6 +558,24 @@ def _projected_band_planes(args, name):
     return []
 
 
+def _projected_reference_points(args, name):
+    """The reference cube's own 3D points, if Stage 0 and Stage 1 both ran.
+
+    None when either stage is missing from this run, which leaves Stage 3's
+    identification on the shape heuristic — exactly what it did before, and it
+    says so when it falls back.
+    """
+    from pipeline.core.cube3d import reference_points_from_dirs
+    for candidate in (name, args.src):
+        if not candidate:
+            continue
+        prep = stage_dir(candidate, 0, create=False)
+        npz = os.path.join(stage_dir(candidate, 1, create=False), "predictions.npz")
+        if os.path.exists(os.path.join(prep, "manifest.json")) and os.path.exists(npz):
+            return reference_points_from_dirs(prep, npz)
+    return None
+
+
 def _cloud_method(args):
     """Which Stage 2 built the cloud this run reads: the flag, else config."""
     from pipeline.config import POINTCLOUD_METHOD
@@ -608,6 +626,7 @@ def run_stage3(args, name):
         cut_mode=getattr(args, "cut_mode", None),
         n_bands=_detected_band_count(args, name),
         band_planes=_projected_band_planes(args, name),
+        reference_points=_projected_reference_points(args, name),
         merge_ghost_sheets=_cloud_method(args) != "tsdf",
         # Stage 3 no longer cuts. It segments the limb, detects the marker
         # planes and publishes both; the cut itself is applied in Stage 5,
@@ -795,7 +814,7 @@ def main():
     """Parses the stage spec and runs each requested stage in order."""
     p = argparse.ArgumentParser(description="Run pipeline stages individually")
     p.add_argument("stages", help="stage number or range, e.g. 1 or 1-3")
-    p.add_argument("-i", "--image_folder", default="./inputs/small_leg/")
+    p.add_argument("-i", "--image_folder", default="./inputs/0_first_sample_3/")
     p.add_argument("--name", default=None, help="work dir name (default: input folder name)")
     p.add_argument("--force", action="store_true", help="ignore cached stage 1")
     p.add_argument("--prep-band", dest="prep_band", type=float, default=1.6,

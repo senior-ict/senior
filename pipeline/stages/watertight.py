@@ -115,7 +115,7 @@ def make_watertight_meshes(recon_paths, output_folder="output_mesh", base_name="
         # returns True for it and Stage 6 will happily integrate it and report a
         # number with no sign that anything is wrong. Alpha shape cannot reach
         # here in that state, because Stage 4's ladder selects on chi = 2.
-        # Poisson can: measured chi = -18 on inputs/short_leg, whose volume came
+        # Poisson can: measured chi = -18 on inputs/0_first_sample_2, whose volume came
         # out 22% below the alpha-shape answer for the same cloud.
         euler = None
         try:

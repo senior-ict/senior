@@ -12,12 +12,12 @@ import os
 #     10.0 cm   3D-printed cube      captures from Aug 2026 onward
 #                                    (champ, sunshine, keng, *_shirt)
 #     14.0 cm   handmade cardboard   the original fixtures
-#                                    (small_leg, short_leg, est_325)
+#                                    (0_first_sample_3, 0_first_sample_2, est_325)
 #
 # The default follows the current hardware. Override per run for the older
 # captures rather than editing this line:
 #
-#     REFERENCE_REAL_SIZE_CM=14 python stagerun.py 6 --name small_leg
+#     REFERENCE_REAL_SIZE_CM=14 python stagerun.py 6 --name 0_first_sample_3
 #
 # Neither value has been verified with calipers. A 2 mm build error is 2.0%
 # linear on the 10 cm cube = 6.1% of volume on every result, which is larger
@@ -50,7 +50,7 @@ PLANE_REMOVAL_BAND_MULT = 2.0
 #
 # The old rule was `saturation > 15 AND hue > 60`, which accepts hue 60-360 —
 # everything except red, orange and yellow — with no brightness floor at all.
-# On inputs/small_leg that classified two things as markers:
+# On inputs/0_first_sample_3 that classified two things as markers:
 #
 #   shadow  RGB(8,6,8)      V=3.1%    hue is arbitrary at that brightness
 #   skin    RGB(139,87,89)  hue=358degrees, which `hue > 60` happily admits
@@ -66,7 +66,7 @@ MARKER_HUE_MAX = 180.0    # degrees; above this is cyan/blue/magenta
 MARKER_SAT_MIN = 25.0     # percent; washed-out pixels have no reliable hue
 MARKER_VAL_MIN = 15.0     # percent; below this hue is noise
 # 2G-R-B. This is the rule that actually finds the band, not the hue window.
-# The small_leg marker is khaki, RGB(60,52,30) — hue 44 degrees, so it fails
+# The 0_first_sample_3 marker is khaki, RGB(60,52,30) — hue 44 degrees, so it fails
 # every green hue test — but ExG +14 against skin at -54 separates it cleanly.
 # Raising this to 15 silently lost the only real marker in the dataset.
 MARKER_EXG_MIN = 10
@@ -77,7 +77,7 @@ MARKER_EXG_MIN = 10
 #
 # The floor is expressed in REFERENCE CUBE HEIGHTS above the ground, not as a
 # fraction of the limb's own span, because the span is not a property of the
-# subject -- it is however much leg happened to be in shot. On inputs/small_leg
+# subject -- it is however much leg happened to be in shot. On inputs/0_first_sample_3
 # the cluster is a calf and a foot; on the Aug 2026 captures it runs from the
 # floor to mid-thigh, so the same physical ankle band sits at 44% of the span
 # in one and 18% in the other. A fraction rule cannot hold both. The cube is a
@@ -85,7 +85,7 @@ MARKER_EXG_MIN = 10
 # length that transfers between captures.
 #
 # Measured on the Aug 2026 captures: the cube is 15-17% of the limb span, and
-# the genuine ankle bands sit at 18.2% (champ) and 18.3% (black shirt) -- above
+# the genuine ankle bands sit at 18.2% (champ) and 18.3% (1_water_displacement_4) -- above
 # one cube height, below the old 20% fraction, and rejected by it. The false
 # planes it exists to catch are the floor junction at 6.8% and the arch at 7%,
 # well under one cube height.
@@ -124,7 +124,7 @@ MARKER_MIN_HEIGHT_FRAC = 0.20
 # marker sits near 1. Anything well above 1 is FURTHER from the limb than the
 # band is, along the band's own axis -- which no marker on that limb can be.
 # The rule had a floor and no ceiling, and that is what let it select clothing
-# and floor tile. Measured on inputs/champ, using its own learned colours:
+# and floor tile. Measured on inputs/1_water_displacement_2c, using its own learned colours:
 #
 #     skin           -0.06     correctly rejected
 #     floor tile     +0.94     selected
@@ -133,7 +133,7 @@ MARKER_MIN_HEIGHT_FRAC = 0.20
 #     grey shorts    +1.54     selected -- 5,265 points, and it won the cut
 #
 # 1.5 keeps a full half-width of slack above the band for shading and view
-# angle while excluding the shorts. On inputs/small_leg nothing between 0.5
+# angle while excluding the shorts. On inputs/0_first_sample_3 nothing between 0.5
 # and 1.5 changes, because its axis is long enough that neutral surfaces score
 # -0.30 and never approached the window.
 MARKER_SCORE_MAX = 1.5
@@ -144,15 +144,15 @@ MARKER_SCORE_MAX = 1.5
 # window above stops separating anything. Measured |axis|, with what a neutral
 # grey then scores:
 #
-#     small_leg     0.0941   -0.30   works
-#     black shirt   0.0433   +1.12   grey selected
+#     0_first_sample_3     0.0941   -0.30   works
+#     1_water_displacement_4   0.0433   +1.12   grey selected
 #     champ         0.0323   +1.14   grey selected
 #     sunshine      0.0308   +2.62   the whole limb selected
 #     keng          0.0213   +0.04   marginal
 #
 # Below this the learned colour is refused and detection falls back to the
-# hand-tuned config window, which is what inputs/orange_shirt already does --
-# and orange_shirt is the most accurate capture in the set. Refusing loudly
+# hand-tuned config window, which is what inputs/1_water_displacement_6 already does --
+# and 1_water_displacement_6 is the most accurate capture in the set. Refusing loudly
 # beats measuring through a discriminant that cannot discriminate.
 MARKER_MIN_AXIS = 0.05
 
@@ -165,7 +165,7 @@ MARKER_MIN_AXIS = 0.05
 # such a plane takes the blob's own principal direction, which has nothing to
 # do with the limb. Measured, against each capture's own limb axis:
 #
-#     black shirt band   17.3 deg from vertical   -> valid, and +4.4% vs truth
+#     1_water_displacement_4 band   17.3 deg from vertical   -> valid, and +4.4% vs truth
 #     keng band          15.7 deg                 -> valid, and +1.9% vs truth
 #     keng false plane   83.1 deg                 -> rejected
 #     sunshine, only     87.4 deg, 43,468 pts     -> rejected
@@ -178,7 +178,7 @@ MARKER_MAX_AXIS_ANGLE_DEG = 35.0
 # Minimum points in a marker cluster before a plane is fitted to it.
 #
 # Was hardcoded at 150 in compute_cluster_planes. A real marker band is small:
-# on small_leg the band is 99 points out of 182k, because only the part facing
+# on 0_first_sample_3 the band is 99 points out of 182k, because only the part facing
 # a camera reconstructs. 150 rejected it. The old loose colour rule cleared the
 # bar only by padding clusters with shadow, which is what produced the
 # 3349-point "marker" on the ankle.
@@ -191,7 +191,7 @@ MARKER_MIN_CLUSTER_PTS = 40
 # through it. The smallest alpha multiplier is 8x spacing (see
 # workers/recons_methods_worker.py), so 3x leaves a wide margin.
 #
-# At 1.0 the cap was 100,559 points on small_leg — 77% of the whole cut cloud
+# At 1.0 the cap was 100,559 points on 0_first_sample_3 — 77% of the whole cut cloud
 # was fabricated floor, and it fed Stage 4 a dense coplanar slab, which is the
 # degenerate input for Delaunay tetrahedralization. This constant was implicitly
 # 1.0 before Stage 3 stopped downsampling, when scan spacing was ~4x coarser.
@@ -222,7 +222,7 @@ CAP_MAX_PTS = 20000
 # or both sheets never share a neighbourhood: at 2.0 nothing moved at all.
 #
 # It moves points rather than removing them, so it costs some volume — measured
-# on small_leg (shell std / convex hull):
+# on 0_first_sample_3 (shell std / convex hull):
 #     off    0.93 mm   1922 cm3
 #     3.0x   0.60 mm   1887 cm3   -1.8%
 #     4.0x   0.41 mm   1833 cm3   -4.6%
@@ -235,7 +235,7 @@ MLS_RADIUS_MULT = 4.0
 # A second, wider MLS pass on the limb only, run after the pass above.
 #
 # The 4x pass above denoises each ghost sheet but cannot merge them: on
-# inputs/test1_6 the two sheets sit ~1 cm apart and 4x spacing is ~1 cm, so each
+# inputs/4_circumference_calculation_1k the two sheets sit ~1 cm apart and 4x spacing is ~1 cm, so each
 # sheet only ever sees itself. Poisson then finds two nearby surfaces, bridges
 # them, and produces a tunnelled solid (chi from -2 to -22 on 5 of 8 runs),
 # which forces the alpha-shape fallback -- and the alpha wrap loose enough to
@@ -266,10 +266,10 @@ MLS_RADIUS_MULT = 4.0
 # cloud it is a larger physical distance. Validated on two objects only. 0
 # disables; overridable per run without editing this file:
 #
-#     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test1_6
+#     MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/4_circumference_calculation_1k
 # Default 16 since 2026-09-19, after the validation batch: test5 (water 2070)
-# went from alpha at chi=-4 / +24.9% to Poisson chi=2 / +17.8%; 0_right, 1_left
-# and 6_left, where Poisson already closed, moved under 1% with girth within
+# went from alpha at chi=-4 / +24.9% to Poisson chi=2 / +17.8%; 2_water_displacement_1_right, 2_water_displacement_2_left
+# and 2_water_displacement_7_left, where Poisson already closed, moved under 1% with girth within
 # 0.3 cm; the can control held. Set 0 to switch the pass off.
 MLS_SECOND_RADIUS_MULT = float(os.environ.get("MLS_SECOND_RADIUS_MULT", 16.0))
 
@@ -305,7 +305,7 @@ MLS_BOX_POLYNOMIAL = True
 #   0    -> dedup disabled entirely; every point kept, ghost layers survive
 # The table above was measured with the old spacing estimate, which reported
 # a 5,000-point sample's own spacing (4.3x the real one on the LINE copies of
-# inputs/test1_6, more on denser clouds). Fixed 2026-09-19 in ghost.py. 2.8 x
+# inputs/4_circumference_calculation_1k, more on denser clouds). Fixed 2026-09-19 in ghost.py. 2.8 x
 # the real spacing gives the same voxel the validated runs had (0.0046 on
 # test6), and a cloud with more points now gets that voxel instead of a
 # coarser one. Equivalent to the old 0.65 on a ~350k-point cloud.
@@ -318,13 +318,13 @@ GHOST_VOXEL_FACTOR = 2.8
 #                 volume and take its surface (pipeline/core/tsdf.py)
 #
 # Fusion removes the ghost double sheet by construction. Measured on
-# inputs/test1_6 on 2026-09-19: cube fill 0.73 -> 0.87, Poisson closes with no
+# inputs/4_circumference_calculation_1k on 2026-09-19: cube fill 0.73 -> 0.87, Poisson closes with no
 # MLS merge, girth profile +7.3% -> +5.8%, volume 1704 -> 1686 (tape 1398.6).
 # It is a cleaner surface, not a correction of the over-read. Off by default
 # until it has been run on the cohort against water; the can control has not
 # passed yet (its fused floor remnant merged with the can in DBSCAN).
 #
-#     POINTCLOUD_METHOD=tsdf python run.py -i inputs/test1_6
+#     POINTCLOUD_METHOD=tsdf python run.py -i inputs/4_circumference_calculation_1k
 POINTCLOUD_METHOD = os.environ.get("POINTCLOUD_METHOD", "pointmap")
 
 # TSDF voxel edge, in centimetres, converted to scene units through the ArUco
@@ -350,7 +350,7 @@ TSDF_FALLBACK_VOXEL_UNITS = 0.004
 # VGGT assumes every frame's optical centre is the middle of the image. The
 # sliding crop moves the photo's real centre 19-74 px (of 518) off the middle,
 # differently on every frame, and VGGT stretches the whole scene to reconcile
-# it. Measured on inputs/test1_6 against the tape, same measurement for both:
+# it. Measured on inputs/4_circumference_calculation_1k against the tape, same measurement for both:
 #
 #                 length (ruler 27.5)   girth    volume (tape 1398.6)
 #     crop          30.25  +10.0%       +7.2%    1764  +26.1%
@@ -370,7 +370,7 @@ FRAME_FIT = os.environ.get("FRAME_FIT", "pad")
 #              reconstructs the already-cut limb (the v2 behaviour)
 #
 # Compared on the six padded captures (2026-09-21): five agree within 8 cm3,
-# and on 1_left the cloud cut lands 58 cm3 further from water, so "mesh" stays.
+# and on 2_water_displacement_2_left the cloud cut lands 58 cm3 further from water, so "mesh" stays.
 CUT_STAGE = os.environ.get("CUT_STAGE", "mesh")
 
 # Fit each limb cross-section with one smooth curve around a slice-centre
@@ -388,8 +388,8 @@ LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "on") == "on"
 #             whole stripe lands (the behaviour before 2026-10-09)
 #
 # Measured against the three tape captures on 2026-10-09:
-#   centre -> test2_keng +6.9%, test6 +6.9%, test5 +4.8%
-#   inner  -> test2_keng -0.2%, test6 -1.9%, test5 -1.6%
+#   centre -> 5_circumference_calculation_1k +6.9%, test6 +6.9%, test5 +4.8%
+#   inner  -> 5_circumference_calculation_1k -0.2%, test6 -1.9%, test5 -1.6%
 # The water captures move further negative under "inner", which is unresolved:
 # a limb dunked to a band includes the band, so their truth may belong to a
 # different plane. See docs/experiments/2026-09_test_captures/EXPERIMENT_LOG.md.
@@ -399,9 +399,9 @@ BAND_CUT_EDGE = os.environ.get("BAND_CUT_EDGE", "inner")
 # the empty patches on its faces (pipeline/core/box_mending.py). The gaps are
 # what make Poisson tunnel on the cube, which forces Stage 4's loosest alpha
 # rung, which floats millimetres clear of the points and corrupts the scale:
-# on test2_champ (2026-10-09) that wrap was 9.1% larger than the cube its own
+# on 5_circumference_calculation_2c (2026-10-09) that wrap was 9.1% larger than the cube its own
 # points describe. Mending closes Poisson instead, and is a no-op on a sound
-# capture (test2_sunshine: 1000.0 -> 1004.4 cm3, limb +22.6% -> +22.1%).
+# capture (5_circumference_calculation_3s: 1000.0 -> 1004.4 cm3, limb +22.6% -> +22.1%).
 BOX_MENDING = os.environ.get("BOX_MENDING", "on") == "on"
 BOX_MEND_TOLERANCE_MM = float(os.environ.get("BOX_MEND_TOLERANCE_MM", 1.0))
 BOX_MEND_CELL_MM = float(os.environ.get("BOX_MEND_CELL_MM", 4.0))

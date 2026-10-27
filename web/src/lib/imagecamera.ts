@@ -22,7 +22,7 @@
  * three.js looks down -Z with +Y up. The basis built below flips the two axes
  * that disagree, which keeps the result right-handed.
  *
- * Measured on inputs/champ: fx/fy is 1.0000–1.0006 and the principal point sits
+ * Measured on inputs/1_water_displacement_2c: fx/fy is 1.0000–1.0006 and the principal point sits
  * at exactly (259, 259) on a 518px frame, so square pixels and a centred
  * principal point are safe assumptions and a plain PerspectiveCamera is enough.
  * The focal length is NOT constant across frames — 55.00°, 54.40° and 53.32° on

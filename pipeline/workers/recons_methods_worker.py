@@ -128,11 +128,11 @@ def _post_process(mesh, densities=None, n_input=None):
     # remove_non_manifold_edges deletes every triangle touching a non-manifold
     # edge, which can tear a closed surface open. The alpha search selects its
     # alpha *because* the mesh is watertight with euler 2, so letting cleanup
-    # undo that discards the whole point of the search — on small_leg it turned
+    # undo that discards the whole point of the search — on 0_first_sample_3 it turned
     # the selected alpha=25x mesh from watertight into an open shell with a hole
     # in the back of the calf, and Stage 6 then fell back to a leaking flood
     # fill. Snapshot first and revert if these steps open it.
-    # Use trimesh's definition, not Open3D's. They disagree — on small_leg the
+    # Use trimesh's definition, not Open3D's. They disagree — on 0_first_sample_3 the
     # selected alpha=25x mesh is watertight to trimesh (euler 2) and not to
     # Open3D, which is stricter about vertex-manifoldness. The alpha search,
     # Stage 5 and Stage 6 all use trimesh, so guarding on Open3D would protect

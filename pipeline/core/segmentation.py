@@ -86,7 +86,7 @@ def marker_mask_by_contrast(colors_uint8, band_rgb, limb_rgb,
 
     # Refuse an axis too short to discriminate, rather than measuring through
     # it. The score divides by |axis|^2, so on a short axis every ordinary
-    # surface in the scene lands inside the window -- on inputs/sunshine
+    # surface in the scene lands inside the window -- on inputs/1_water_displacement_3s
     # (|axis| 0.031) a neutral grey scores +2.62 and the "marker" came out at
     # 43,468 points. Returning None here hands detection back to the hand-tuned
     # config window, which is a worse detector in principle and a better one on

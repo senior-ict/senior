@@ -30,10 +30,10 @@ def _pymeshfix_repair(vertices, faces):
     Measured on Poisson output, which is the only thing that reaches Stage 5 open:
 
         object            fill_holes()   repair()
-        small_leg box      chi = 30      chi = 2
-        small_leg limb     chi = 22      chi = 2
-        short_leg box      chi = 10      chi = 2
-        short_leg limb     chi = 14      chi = -16
+        0_first_sample_3 box      chi = 30      chi = 2
+        0_first_sample_3 limb     chi = 22      chi = 2
+        0_first_sample_2 box      chi = 10      chi = 2
+        0_first_sample_2 limb     chi = 14      chi = -16
 
     Three of four go from topologically invalid to a single closed solid, and the
     reported volume moves by **0.005%** (1069.56 -> 1069.61 cm3) — the shape is

@@ -30,7 +30,7 @@ Input images
 Seven stages, two of which take a human decision. Stages 0 and 1 run neural
 networks; everything else is geometry.
 
-Cold run on `inputs/small_leg`: **80 s** end to end (Stage 1 inference 19 s; the
+Cold run on `inputs/0_first_sample_3`: **80 s** end to end (Stage 1 inference 19 s; the
 rest is Stage 0's detectors and Stage 4's alpha ladder).
 
 ---
@@ -40,7 +40,7 @@ rest is Stage 0's detectors and Stage 4's alpha ladder).
 **File**: `pipeline/stages/prep.py` → `prepare_frames()`
 
 VGGT is handed a 518×518 square, and its own centre crop discards 43.8% of a 9:16
-phone photo with no regard for where the reference is — on `inputs/small_leg` that
+phone photo with no regard for where the reference is — on `inputs/0_first_sample_3` that
 clipped the cube's base in two of six frames. This stage chooses the crop instead.
 
 | step | how |
@@ -59,14 +59,14 @@ least `BAND_MIN_FRAME_FRAC` of its frames saw two — the same corroboration rul
 the band colour uses, for the same reason. One frame's duplicate detection must
 not be able to turn a below-the-band measurement into a between-the-bands one.
 
-Measured: `inputs/champ` reads 2 bands on 8 of 8 frames, `inputs/small_leg` 1 on
+Measured: `inputs/1_water_displacement_2c` reads 2 bands on 8 of 8 frames, `inputs/0_first_sample_3` 1 on
 6 of 6, `inputs/est_325` (no cord) 0. **It under-counts on a hard capture** —
-`inputs/sunshine2` wears an ankle cord and a below-knee cord, and GroundingDINO
+a second Sunshine capture, since removed wears an ankle cord and a below-knee cord, and GroundingDINO
 returns the upper one on 1 frame of 8, below the bar. Two ways of forcing it out
 were tried and rejected on measurement: re-running the detector on the limb
 above the first band, and matching the primary band's own traced colour. Both
 produce candidates on one-band captures at the same rate as on two-band ones
-(`inputs/small_leg` scores a "second band" at 0.36–0.45 with contrasts of
+(`inputs/0_first_sample_3` scores a "second band" at 0.36–0.45 with contrasts of
 95–214), so neither separates the cases.
 
 That is why `--cut-mode auto` reads Stage 3's gated plane count rather than this
@@ -154,7 +154,7 @@ relevant to limb measurement — and requires acknowledgement in publications.
 `--preprocess-mode crop` (default) resizes width to 518 and centre-crops the
 height, discarding ~44% of a 9:16 phone photo. `pad` keeps the whole frame at
 lower effective resolution. Neither wins outright: pad is better on est_325,
-crop on small_leg.
+crop on 0_first_sample_3.
 
 **Input resolution is fixed at 518.** 1022 was tested and is far worse — the
 DINOv2 backbone's positional embeddings are learned for a 37×37 patch grid, so
@@ -225,7 +225,7 @@ of 3D points, with no colour question asked:
 
 | step | how |
 |---|---|
-| pixel map | cropped frames map linearly from Stage 0's window; uncropped ones follow VGGT's own resize-and-centre-crop. Both branches verified: on `small_leg` the uncropped frame's points sit at −0.0045 from the fitted plane against −0.0060…+0.0054 for the cropped ones, with the same scatter |
+| pixel map | cropped frames map linearly from Stage 0's window; uncropped ones follow VGGT's own resize-and-centre-crop. Both branches verified: on `0_first_sample_3` the uncropped frame's points sit at −0.0045 from the fitted plane against −0.0060…+0.0054 for the cropped ones, with the same scatter |
 | sampling | the middle `BOX_CORE_FRAC` of each box, pixels above the frame's `CONF_PCT` confidence percentile |
 | grouping | DBSCAN in **3D**, not by box position per frame — a frame that saw only the lower cord makes that cord its first box, and pairing by list position would merge two bands into one plane |
 | corroboration | a cluster must appear in at least half the frames that saw a band, and never fewer than two |
@@ -243,9 +243,9 @@ geometry, not corroboration.
 
 Measured: on the two-cord web job, colour finds 1 plane and projection supplies
 the second (1,842 points from 6 frames), giving cuts at 18.7% and 72.4% of the
-limb's span. On `champ` both projected planes agree with colour planes and the
-cut is unchanged, point for point. On `small_leg` the single plane agrees and
-the cut is unchanged. It cannot rescue a band Stage 0 never saw: `sunshine2`
+limb's span. On `1_water_displacement_2c` both projected planes agree with colour planes and the
+cut is unchanged, point for point. On `0_first_sample_3` the single plane agrees and
+the cut is unchanged. It cannot rescue a band Stage 0 never saw: a second Sunshine capture, since removed
 still reports one.
 
 ---
@@ -290,7 +290,7 @@ combined transform `R_total` is applied to the marker planes too; applying only
    **Limb skeleton** (`core/limb_skeleton.py`, on by default, `LIMB_SKELETON=off`
    to skip) — between the bands, each 0.5 cm horizontal chunk is fitted with one
    smooth radius curve around a slice-centre skeleton; spurs are moved in, dents
-   out, and empty arcs filled on the curve. See `docs/pipeline/limb_skeleton.md`
+   out, and empty arcs filled on the curve. See `docs/pipeline_methodology/stage3_meth/limb_skeleton.md`
 3. **Cut-plane cap** (`core/fill.py:cap_points_on_plane`) — fills the exposed
    cross-section with a grid built in the marker plane's own (u,v) basis, so it
    stays coplanar with the cut however the marker is tilted
@@ -315,7 +315,7 @@ per-object fallback.** Changed 2026-08-23; see `experiments.md`, E-psr-adopted.
 
 **Why Poisson.** It approximates rather than interpolates, and it tracks the
 points about twice as closely: p95 point-to-surface 1.30 mm against alpha's
-2.39 mm on `inputs/small_leg`, and 2.19 mm against 21.80 mm on `inputs/short_leg`.
+2.39 mm on `inputs/0_first_sample_3`, and 2.19 mm against 21.80 mm on `inputs/0_first_sample_2`.
 Across depth 8-11 and trim 0.01-0.10 its answer spans **0.32%**, so it is not
 sensitive to its own parameters.
 
@@ -328,7 +328,7 @@ both objects in **38 of 46** sweep configurations rather than 0 of 48.
 **What Poisson does not give, and alpha does.** A *guarantee*. Alpha shape sweeps
 α over 8-200 × mean NN distance and selects the smallest value that is both
 watertight **and** χ = 2 — the tightest surface that is still a single closed
-solid. Poisson has no such selection, and on `inputs/short_leg` — an uncut whole
+solid. Poisson has no such selection, and on `inputs/0_first_sample_2` — an uncut whole
 leg including the foot — it closes at χ = −18, about ten handles, reading 22%
 below the alpha answer.
 
@@ -401,7 +401,7 @@ open.
 >
 > Stage 6 also runs a **reference reconstruction check** before scaling: the
 > cube fills 0.87–0.89 of its own oriented box on a sound capture, and a
-> warning fires below `REFERENCE_FILL_MIN = 0.83`. `inputs/blue shirt` measures
+> warning fires below `REFERENCE_FILL_MIN = 0.83`. `inputs/1_water_displacement_5` measures
 > 0.787. That is the pipeline's only check on whether the *geometry* is right,
 > as opposed to the capture, the cut or the topology.
 >
@@ -512,11 +512,11 @@ recon instead, so they always exist if a mesh was produced.
 
 ```bash
 python run.py -i inputs/est_325 --no-segment-leg    # rigid object, no marker
-python run.py -i inputs/small_leg                   # limb with one band: measure below it
-python run.py -i inputs/champ                       # two bands: auto measures between them
-python run.py -i inputs/champ --cut-mode upper     # ...unless the ruler measured foot-to-upper-band
+python run.py -i inputs/0_first_sample_3                   # limb with one band: measure below it
+python run.py -i inputs/1_water_displacement_2c                       # two bands: auto measures between them
+python run.py -i inputs/1_water_displacement_2c --cut-mode upper     # ...unless the ruler measured foot-to-upper-band
 python run.py -i inputs/est_325 --skip_mesh         # point cloud only
-python run.py -i inputs/small_leg --continue-on-rejected   # ignore the framing gate
+python run.py -i inputs/0_first_sample_3 --continue-on-rejected   # ignore the framing gate
 ./serve.sh                                          # web app + compute service
 ```
 
@@ -539,7 +539,7 @@ JSON.
 
 | flag | default | note |
 |---|---|---|
-| `-i`, `--image_folder` | `./inputs/baam/` | |
+| `-i`, `--image_folder` | `./inputs/0_first_sample_1/` | |
 | `--output_dir` | `./output/` | |
 | `--conf_thres` | 45.0 | see Stage 2 |
 | `--prediction_mode` | `pointmap` | `depth` measured worse on both datasets |

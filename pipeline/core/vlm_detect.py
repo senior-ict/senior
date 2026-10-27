@@ -14,14 +14,14 @@ houseplants, and silently stops working if the marker is red or blue.
 Describing them in words instead removes both limitations. GroundingDINO locates
 "a human leg" and "a rubber band on the leg" without knowing the classes in
 advance; SAM turns the limb's box into a mask of the limb itself rather than of
-the person it belongs to. Measured on inputs/small_leg the band is found on 6 of
+the person it belongs to. Measured on inputs/0_first_sample_3 the band is found on 6 of
 6 frames at 0.81-0.84 confidence, including the two frames where the colour rule
 failed outright.
 
 It also makes the colour rule unnecessary rather than merely better tuned. Once
 the band is located without reference to its colour, its colour can be read off
 and handed to Stage 3, which is where the cut actually happens. On
-inputs/small_leg that recovers an excess-green of +14 -- exactly the value
+inputs/0_first_sample_3 that recovers an excess-green of +14 -- exactly the value
 MARKER_EXG_MIN was hand-tuned to, but derived from the image.
 """
 import numpy as np
@@ -38,7 +38,7 @@ BAND_PROMPT = "a rubber band on the leg."
 BOX_PROMPT = "a box."
 
 # Detection confidence. 0.3 is comfortably below the 0.81-0.84 the band scores
-# on inputs/small_leg and above the noise floor.
+# on inputs/0_first_sample_3 and above the noise floor.
 DETECT_THRESHOLD = 0.3
 
 # Two boxes overlapping by more than this are the same object seen twice.
@@ -160,7 +160,7 @@ def trace_band_colour(bgr, box, keep_percentile=40, dilate=3):
     contains. The furthest-departing pixel is the cord's most extreme one --
     its darkest, most shadowed core -- whereas a 3D point takes the colour of
     whatever cord pixel its ray happened to land on, which is a typical one.
-    Measured on small_leg: the argmax trace reports RGB(37,30,9) while the
+    Measured on 0_first_sample_3: the argmax trace reports RGB(37,30,9) while the
     band's points in the cloud sit at RGB(70,62,36). Calibrating the detector's
     contrast axis on the extreme then put the real band at 0.30 along an axis
     thresholded at 0.50, so 85% of it was discarded and the surviving sliver
