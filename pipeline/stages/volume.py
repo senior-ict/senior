@@ -247,7 +247,7 @@ def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict |
 # which for this reconstruction is stable at about 0.87-0.89.
 #
 # This is the pipeline's only check on RECONSTRUCTION quality, and it exists
-# because inputs/1_water_displacement_6 produced a confident 5280 cm3 with every other gate
+# because inputs/1_water_displacement_5 produced a confident 5280 cm3 with every other gate
 # passing. The framing gate checks the capture, the marker gates check the cut,
 # the Euler check tests topology -- none of them looks at whether the geometry
 # is right. The cube can, because it is the one object in the scene whose true
@@ -255,14 +255,14 @@ def _load_mesh_info(path: str, voxel_res: int, auto_res: bool = False) -> dict |
 #
 # Measured across the Aug 2026 captures:
 #
-#     1_water_displacement_7  0.874     sunshine    0.891
+#     1_water_displacement_6  0.874     sunshine    0.891
 #     keng          0.873     champ       0.876
-#     1_water_displacement_5   0.873     1_water_displacement_6  0.787   <- the bad reconstruction
+#     1_water_displacement_4   0.873     1_water_displacement_5  0.787   <- the bad reconstruction
 #
 # The five sound captures span 1.8 percentage points; the bad one sits 8.6
 # points below all of them. 0.83 is roughly halfway into that gap.
 #
-# Note what does NOT separate them: the cube's edge lengths. 1_water_displacement_6's read
+# Note what does NOT separate them: the cube's edge lengths. 1_water_displacement_5's read
 # 9.67 / 10.23 / 10.30 cm, a 6.3% spread, which is squarely mid-pack. A dented
 # or eroded surface keeps its bounding box and loses volume, so the fill ratio
 # sees it and the edges do not.

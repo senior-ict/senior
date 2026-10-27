@@ -117,8 +117,8 @@ def resolve_cut_mode(cut_mode, n_bands=None, n_planes=None):
 
     `n_bands` is Stage 0's count from the photographs, and it is a cross-check
     rather than a vote. It is not used to veto a span, because it is measured to
-    UNDER-count: on inputs/1_water_displacement_4s, a capture wearing an ankle cord and a
-    below-knee cord, GroundingDINO returns the upper cord on 1 frame of 8 and
+    UNDER-count: on a second Sunshine capture, since removed, which wore an
+    ankle cord and a below-knee cord, GroundingDINO returns the upper cord on 1 frame of 8 and
     below the corroboration bar, so requiring both sources to agree would make a
     span unreachable on the one capture that needs it. When the two disagree the
     run says so and keeps going — the disagreement is worth a reviewer's eye,
@@ -253,7 +253,7 @@ def _limb_axis_near(leg_pts_rot, z, window_frac=0.25, n_slices=10, min_pts=8):
     limb's axis, and getting that wrong rejects real bands. A calf is roughly
     10 cm across; a slab thin enough to be local is thinner than that, so its
     direction of greatest extent is the limb's WIDTH and comes out horizontal.
-    Measured consequence: genuine bands on inputs/1_water_displacement_7 and 1_water_displacement_5
+    Measured consequence: genuine bands on inputs/1_water_displacement_6 and 1_water_displacement_4
     scored 53 and 65 degrees "off the limb axis" and were thrown out.
 
     Slice centroids do not have that failure. Each centroid sits on the limb's
@@ -617,7 +617,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         # The cap used to run first, keeping the two with the most points. That
         # ranking prefers exactly the wrong thing: a real band is small because
         # only its camera-facing arc reconstructs -- 964 points on inputs/1_water_displacement_2c,
-        # 299 on 1_water_displacement_5, 208 on keng -- while a false plane fitted to
+        # 299 on 1_water_displacement_4, 208 on keng -- while a false plane fitted to
         # clothing or floor is thousands. On champ the genuine band (964 pts)
         # was dropped in favour of the shorts (5,265) and a floor-junction blob
         # (2,597); the height gate then removed the blob and the cut ran on the

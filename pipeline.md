@@ -61,7 +61,7 @@ not be able to turn a below-the-band measurement into a between-the-bands one.
 
 Measured: `inputs/1_water_displacement_2c` reads 2 bands on 8 of 8 frames, `inputs/0_first_sample_3` 1 on
 6 of 6, `inputs/est_325` (no cord) 0. **It under-counts on a hard capture** —
-`inputs/1_water_displacement_4s` wears an ankle cord and a below-knee cord, and GroundingDINO
+a second Sunshine capture, since removed wears an ankle cord and a below-knee cord, and GroundingDINO
 returns the upper one on 1 frame of 8, below the bar. Two ways of forcing it out
 were tried and rejected on measurement: re-running the detector on the limb
 above the first band, and matching the primary band's own traced colour. Both
@@ -245,7 +245,7 @@ Measured: on the two-cord web job, colour finds 1 plane and projection supplies
 the second (1,842 points from 6 frames), giving cuts at 18.7% and 72.4% of the
 limb's span. On `1_water_displacement_2c` both projected planes agree with colour planes and the
 cut is unchanged, point for point. On `0_first_sample_3` the single plane agrees and
-the cut is unchanged. It cannot rescue a band Stage 0 never saw: `1_water_displacement_4s`
+the cut is unchanged. It cannot rescue a band Stage 0 never saw: a second Sunshine capture, since removed
 still reports one.
 
 ---
@@ -401,7 +401,7 @@ open.
 >
 > Stage 6 also runs a **reference reconstruction check** before scaling: the
 > cube fills 0.87–0.89 of its own oriented box on a sound capture, and a
-> warning fires below `REFERENCE_FILL_MIN = 0.83`. `inputs/1_water_displacement_6` measures
+> warning fires below `REFERENCE_FILL_MIN = 0.83`. `inputs/1_water_displacement_5` measures
 > 0.787. That is the pipeline's only check on whether the *geometry* is right,
 > as opposed to the capture, the cut or the topology.
 >

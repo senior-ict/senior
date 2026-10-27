@@ -457,7 +457,7 @@ Measured: `1_water_displacement_2c` 2 bands on 8 of 8 frames, `0_first_sample_3`
 on `1_water_displacement_2c` one frame's window moved 55 px to take in the lower band, and all
 eight verdicts are unchanged.
 
-**Where it does not work, stated plainly.** `inputs/1_water_displacement_4s` wears an ankle
+**Where it does not work, stated plainly.** a second Sunshine capture, since removed wears an ankle
 cord and a below-knee cord, and the detector returns the upper one on 1 frame of
 8 — below the bar, so Stage 0 reports one band. Stage 3 finds one plane there
 too, so auto measures below the ankle cord. Two ways of forcing the upper cord
@@ -482,7 +482,7 @@ found both bands) and `0_first_sample_3` (one band) produce point-for-point iden
 cuts. Projected planes are exempt from the height floor, which exists to reject
 uncorroborated blobs near the ground and would otherwise throw away a real ankle
 cord at 0.66 cube heights; the perpendicularity gate still applies to everything.
-It cannot rescue a band Stage 0 never saw — `1_water_displacement_4s` still reports one.
+It cannot rescue a band Stage 0 never saw — a second Sunshine capture, since removed still reports one.
 
 **Selecting no longer discards.** `cutting_line_levelled.json` carries
 `candidates` — every plane that passed the gates, lowest first — beside
@@ -530,7 +530,7 @@ Stated here so this file cannot be read as more than it is.
   limb's own axis and the most square cube in the set, and its 2.81 L matches
   neither segment its two bands bound. Not the cut, not the reference, not
   surface noise.
-- **One capture is unusable.** `inputs/1_water_displacement_6` — VGGT's reconstruction is
+- **One capture is unusable.** `inputs/1_water_displacement_5` — VGGT's reconstruction is
   wrong. It produced a confident number with every gate passing, which is what
   prompted the reference-fill check now in Stage 6.
 - ~~**Stage 6 is reverted to `main`'s version**, pending review.~~ **Resolved

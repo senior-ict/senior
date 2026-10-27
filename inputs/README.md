@@ -46,24 +46,24 @@ which is a relative comparison.
 ## Era 1 — water displacement, first procedure
 
 `1_water_displacement_1k`, `1_water_displacement_2c`,
-`1_water_displacement_3s`, `1_water_displacement_5`,
-`1_water_displacement_6`, `1_water_displacement_7`
+`1_water_displacement_3s`, `1_water_displacement_4`,
+`1_water_displacement_5`, `1_water_displacement_6`
 (serials up to S__119914xxx)
 
 The first attempt at a physical reference. The subject's leg was immersed and
 the displaced water weighed.
 
-Ids 1 to 3 are the named subjects. Ids 5 to 7 were recorded only by the shirt
+Ids 1 to 3 are the named subjects. Ids 4 to 6 were recorded only by the shirt
 the subject wore — black, blue and orange in that order — so no subject letter
 can be given for them.
 
-**Id 4 is retired.** `1_water_displacement_4s` was a second capture of
-Sunshine, and the capture itself failed, so it was removed rather than kept as
-an input nothing should be run on. The id is left vacant rather than closed up,
-because the measurements taken on that capture are still cited in
-`pipeline/stages/clean.py` and `pipeline/stages/prep.py`, where it is named as
-the under-count case, and renumbering the shirts would make those comments
-point at the wrong capture.
+A seventh era 1 capture existed: a second capture of Sunshine, which failed and
+was removed rather than kept as an input nothing should be run on. The shirt
+ids were closed up over the gap it left, so no id is vacant. Two code comments
+still cite what was measured on that capture — the band under-count case in
+`pipeline/stages/clean.py` and the second-box threshold in
+`pipeline/stages/prep.py` — and they now describe it rather than name a folder
+that is gone.
 
 ## Era 2 — water displacement, the fourteen-capture set
 

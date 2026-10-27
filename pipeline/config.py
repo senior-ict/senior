@@ -85,7 +85,7 @@ MARKER_EXG_MIN = 10
 # length that transfers between captures.
 #
 # Measured on the Aug 2026 captures: the cube is 15-17% of the limb span, and
-# the genuine ankle bands sit at 18.2% (champ) and 18.3% (1_water_displacement_5) -- above
+# the genuine ankle bands sit at 18.2% (champ) and 18.3% (1_water_displacement_4) -- above
 # one cube height, below the old 20% fraction, and rejected by it. The false
 # planes it exists to catch are the floor junction at 6.8% and the arch at 7%,
 # well under one cube height.
@@ -145,14 +145,14 @@ MARKER_SCORE_MAX = 1.5
 # grey then scores:
 #
 #     0_first_sample_3     0.0941   -0.30   works
-#     1_water_displacement_5   0.0433   +1.12   grey selected
+#     1_water_displacement_4   0.0433   +1.12   grey selected
 #     champ         0.0323   +1.14   grey selected
 #     sunshine      0.0308   +2.62   the whole limb selected
 #     keng          0.0213   +0.04   marginal
 #
 # Below this the learned colour is refused and detection falls back to the
-# hand-tuned config window, which is what inputs/1_water_displacement_7 already does --
-# and 1_water_displacement_7 is the most accurate capture in the set. Refusing loudly
+# hand-tuned config window, which is what inputs/1_water_displacement_6 already does --
+# and 1_water_displacement_6 is the most accurate capture in the set. Refusing loudly
 # beats measuring through a discriminant that cannot discriminate.
 MARKER_MIN_AXIS = 0.05
 
@@ -165,7 +165,7 @@ MARKER_MIN_AXIS = 0.05
 # such a plane takes the blob's own principal direction, which has nothing to
 # do with the limb. Measured, against each capture's own limb axis:
 #
-#     1_water_displacement_5 band   17.3 deg from vertical   -> valid, and +4.4% vs truth
+#     1_water_displacement_4 band   17.3 deg from vertical   -> valid, and +4.4% vs truth
 #     keng band          15.7 deg                 -> valid, and +1.9% vs truth
 #     keng false plane   83.1 deg                 -> rejected
 #     sunshine, only     87.4 deg, 43,468 pts     -> rejected

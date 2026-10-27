@@ -34,9 +34,9 @@ Two changes failed this rule already:
 >
 > | capture | measured | displacement | error |
 > |---|---|---|---|
-> | `1_water_displacement_7` | 4094 cm³ | 4090 | +0.1% |
+> | `1_water_displacement_6` | 4094 cm³ | 4090 | +0.1% |
 > | `1_water_displacement_1k` | 2249 cm³ | 2210 | +1.8% |
-> | `1_water_displacement_5` | 3648 cm³ | 3510 | +3.9% |
+> | `1_water_displacement_4` | 3648 cm³ | 3510 | +3.9% |
 > | `1_water_displacement_3s` | 3093 cm³ | 3130 | −1.2% |
 > | `1_water_displacement_2c` | 3354 cm³ | 2810 | +19.4% — unresolved |
 >
@@ -1397,7 +1397,7 @@ band 1.00, neutral grey +1.14, **grey shorts +1.54**.
 |---|---|---|
 | refuse a short axis | `MARKER_MIN_AXIS = 0.05` | **the load-bearing one** — fires on all five captures |
 | bound the score above | `MARKER_SCORE_MAX = 1.5` | never fires on this corpus |
-| gate before capping | — | recovers the real band on champ and 1_water_displacement_5 |
+| gate before capping | — | recovers the real band on champ and 1_water_displacement_4 |
 | height floor in cube heights | `MARKER_MIN_HEIGHT_CUBES = 1.0` | transfers between captures where a span fraction cannot |
 | perpendicular to the limb | `MARKER_MAX_AXIS_ANGLE_DEG = 35` | separates genuine bands (2.4–27°) from false planes (53–89°) |
 
@@ -1410,7 +1410,7 @@ clusters of 2,556 / 1,242 / 803, i.e. it would **not** have fixed the cut. Kept
 as a guard for a case no capture exercises; it should not be quoted as a fix.
 
 **Result:** mean absolute error 30.6% → **1.7%** on four captures. `1_water_displacement_3s`
-went +27.5% → −1.2%; `1_water_displacement_7` and `1_water_displacement_1k` did not move, which is the other
+went +27.5% → −1.2%; `1_water_displacement_6` and `1_water_displacement_1k` did not move, which is the other
 half of the result — their cuts were already right and none of the new gates
 disturbed them. `0_first_sample_3`'s marker plane is bit-identical with Stage 2 held
 fixed.
@@ -1420,7 +1420,7 @@ first fitted the limb's axis as the principal direction of a thin slab of points
 That returns the limb's *width*: a calf is ~10 cm across and a local slab is
 thinner, so the direction of greatest extent comes out horizontal. It passed a
 synthetic test on a narrow cylinder, then rejected the genuine bands on
-`1_water_displacement_7` (53° "off axis") and `1_water_displacement_5` (65°), sending both from +0.1%
+`1_water_displacement_6` (53° "off axis") and `1_water_displacement_4` (65°), sending both from +0.1%
 and +4.4% to **+45.9% and +30.9%**. The axis now comes from slice centroids. A
 regression that size is invisible without ground truth, which is the argument for
 having it.
@@ -1432,7 +1432,7 @@ capture reaches it. Whether 35° holds for a band on a strongly bent limb.
 
 ## E-reference-probe — the cube as a reconstruction check · 2026-08-27
 
-**Question.** `inputs/1_water_displacement_6` produced a confident 5280 cm³ against a
+**Question.** `inputs/1_water_displacement_5` produced a confident 5280 cm³ against a
 measured 3420 with **every gate passing**: Stage 0 rejected its cube-less frame,
 the corroboration rule discarded its marker colour, the deferred cut declined to
 cut. Each of those checks the capture or the cut. Nothing checks whether the
@@ -1445,15 +1445,15 @@ volume as a fraction of its own oriented bounding box.
 
 | capture | fitted-face edges (cm) | spread | fill |
 |---|---|---|---|
-| 1_water_displacement_7 | 9.57 / 10.27 / 10.34 | 7.6% | 0.874 |
+| 1_water_displacement_6 | 9.57 / 10.27 / 10.34 | 7.6% | 0.874 |
 | keng | 9.77 / 10.05 / 10.40 | 6.3% | 0.873 |
-| 1_water_displacement_5 | 9.88 / 9.90 / 10.31 | 4.3% | 0.873 |
+| 1_water_displacement_4 | 9.88 / 9.90 / 10.31 | 4.3% | 0.873 |
 | sunshine | 9.68 / 10.14 / 10.31 | 6.3% | 0.891 |
 | champ | 9.96 / 9.96 / 10.25 | 2.9% | 0.876 |
-| **1_water_displacement_6** | 9.67 / 10.23 / 10.30 | 6.3% | **0.787** |
+| **1_water_displacement_5** | 9.67 / 10.23 / 10.30 | 6.3% | **0.787** |
 
-**The edges do not separate it.** 1_water_displacement_6's spread is mid-pack and its worst
-edge deviates 3.3% from nominal, less than 1_water_displacement_7's 4.3%. **The fill ratio
+**The edges do not separate it.** 1_water_displacement_5's spread is mid-pack and its worst
+edge deviates 3.3% from nominal, less than 1_water_displacement_6's 4.3%. **The fill ratio
 does**: the five sound captures span 1.8 percentage points and the bad one sits
 8.6 below all of them. The mechanism is straightforward — a dented or eroded
 surface keeps its bounding box and loses volume.

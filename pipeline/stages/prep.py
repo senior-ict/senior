@@ -80,7 +80,8 @@ MAX_BANDS = 2
 # 0.12 is a geometric floor rather than a measured separation, and it is stated
 # that way because no capture in hand has yielded two detected bands to measure
 # one from. What it is derived from: a cord's own box is 47-104 px tall on the
-# 1477 px frames of inputs/1_water_displacement_4s, which is 0.03-0.08 of the limb box, so a
+# 1477 px frames of a second Sunshine capture, since removed. That is
+# 0.03-0.08 of the limb box, so a
 # second box within 0.12 of the first is inside a cord-width of it and cannot be
 # a separately tied cord. A person ties an upper and a lower band at the two
 # ends of the segment being measured, which is most of the limb apart.

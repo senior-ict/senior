@@ -237,9 +237,9 @@ python pipeline/tools/viewer.py output/scene_mesh.ply --info
   A saturated band roughly triples the separation.
 - **Keep the reference cube close and unobstructed.** It fills 15–18% of the
   frame width on the Aug 2026 captures against 42% on `0_first_sample_3`, which is
-  2 100–3 900 surviving points instead of 19 600. On `inputs/1_water_displacement_6` the
+  2 100–3 900 surviving points instead of 19 600. On `inputs/1_water_displacement_5` the
   cube sits behind the foot in most frames and the reconstruction failed
-  outright — see `inputs/1_water_displacement_6/UNUSABLE.md`.
+  outright — see `inputs/1_water_displacement_5/UNUSABLE.md`.
 - **Even lighting.** Avoid hard shadows under the object — dark pixels have
   numerically meaningless hue and used to be detected as markers.
 - **A matte floor if possible.** Gloss produces reflections that VGGT
@@ -260,12 +260,12 @@ photographs, with `--cut-mode upper` where that flag exists:
 
 | capture | displacement | old pipeline | error | Stage 3 cut | error | Stage 5 cut | error |
 |---|---|---|---|---|---|---|---|
-| `1_water_displacement_7` | 4090 cm³ | 5395 cm³ | +31.9% | 4094 cm³ | +0.1% | 4098 cm³ | **+0.2%** |
+| `1_water_displacement_6` | 4090 cm³ | 5395 cm³ | +31.9% | 4094 cm³ | +0.1% | 4098 cm³ | **+0.2%** |
 | `1_water_displacement_1k` | 2210 cm³ | 2490 cm³ | +12.7% | 2249 cm³ | +1.8% | 2287 cm³ | **+3.5%** |
-| `1_water_displacement_5` | 3510 cm³ | 3119 cm³ | −11.1% | 3648 cm³ | +3.9% | 3656 cm³ | **+4.2%** |
+| `1_water_displacement_4` | 3510 cm³ | 3119 cm³ | −11.1% | 3648 cm³ | +3.9% | 3656 cm³ | **+4.2%** |
 | `1_water_displacement_3s` | 3130 cm³ | 4161 cm³ | +32.9% | 3093 cm³ | −1.2% | 3298 cm³ | **+5.4%** |
 | `1_water_displacement_2c` | 2810 cm³ | 2432 cm³ | −13.5% | 3354 cm³ | +19.4% | 3371 cm³ | **+20.0%** — unresolved, below |
-| `1_water_displacement_6` | 3420 cm³ | — | — | — | — | — | capture unusable |
+| `1_water_displacement_5` | 3420 cm³ | — | — | — | — | — | capture unusable |
 | **mean abs. error** | | | **22.17%** | | **1.75%** | | **3.29%** |
 
 Mean excludes `1_water_displacement_2c`, unresolved under all three (n = 4).
@@ -275,7 +275,7 @@ Stage 0 framing gate, so VGGT centre-cropped the raw photographs itself; it
 predates the marker-detection rewrite, the ghost chain and the levelling gates.
 It also could not close most of its meshes: four of the five fell back to
 `warp+floodfill`, which leaks through an open surface, and its errors run in
-both directions — +32.9% on `1_water_displacement_3s`, −11.1% on `1_water_displacement_5` — which is what
+both directions — +32.9% on `1_water_displacement_3s`, −11.1% on `1_water_displacement_4` — which is what
 an unreliable volume *method* looks like rather than a geometric bias. Both
 current pipelines report `watertight` on every capture, so their errors are
 comparable to each other in a way the old column's are not.

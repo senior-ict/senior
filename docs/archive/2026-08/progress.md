@@ -2250,12 +2250,12 @@ at all.
 
 | capture | measured | displacement | error |
 |---|---|---|---|
-| `1_water_displacement_7` | 4094 cm³ | 4090 | **+0.1%** |
+| `1_water_displacement_6` | 4094 cm³ | 4090 | **+0.1%** |
 | `1_water_displacement_1k` | 2249 cm³ | 2210 | **+1.8%** |
-| `1_water_displacement_5` | 3648 cm³ | 3510 | **+3.9%** |
+| `1_water_displacement_4` | 3648 cm³ | 3510 | **+3.9%** |
 | `1_water_displacement_3s` | 3093 cm³ | 3130 | **−1.2%** |
 | `1_water_displacement_2c` | 3354 cm³ | 2810 | +19.4% — unresolved, §5 |
-| `1_water_displacement_6` | — | 3420 | capture unusable, §6 |
+| `1_water_displacement_5` | — | 3420 | capture unusable, §6 |
 
 **Mean absolute error 1.7% on four captures**, worst case 3.9%. Verified on a
 full cold run — Stage 0's detectors, a fresh VGGT pass, every stage after it —
@@ -2285,7 +2285,7 @@ inside the window:
 
 ```
 0_first_sample_3     0.0941   neutral grey scores −0.30   works
-1_water_displacement_5   0.0433                       +1.12   grey selected
+1_water_displacement_4   0.0433                       +1.12   grey selected
 champ         0.0323                       +1.14   grey selected
 sunshine      0.0308                       +2.62   the whole limb selected
 keng          0.0213                       +0.04   marginal
@@ -2339,7 +2339,7 @@ it.** Fitting the limb's axis as the principal direction of a thin slab of
 points returns the limb's *width*: a calf is ~10 cm across, and a slab thin
 enough to be local is thinner than that, so its greatest-extent direction comes
 out horizontal. It passed a synthetic test on a narrow cylinder and then
-rejected the genuine bands on `1_water_displacement_7` (53° "off axis") and `1_water_displacement_5`
+rejected the genuine bands on `1_water_displacement_6` (53° "off axis") and `1_water_displacement_4`
 (65°), sending both from +0.1% and +4.4% to +45.9% and +30.9%. A regression that
 size is invisible without a scoreboard. The axis now comes from **slice
 centroids** — divide a window of the limb into slices, take each centroid, fit a
@@ -2385,10 +2385,10 @@ A tape measure round the calf at a marked height separates "reconstructs wide"
 from "truth is wrong", costs a minute, and is independent of both the water and
 the cube.
 
-## 7. 1_water_displacement_6: the failure no gate catches
+## 7. 1_water_displacement_5: the failure no gate catches
 
 Excluded at its owner's instruction —
-[`inputs/1_water_displacement_6/UNUSABLE.md`](../../../inputs/1_water_displacement_6/UNUSABLE.md). VGGT's
+[`inputs/1_water_displacement_5/UNUSABLE.md`](../../../inputs/1_water_displacement_5/UNUSABLE.md). VGGT's
 reconstruction is wrong, so nothing downstream can correct it.
 
 What is worth keeping is that **the run still produced a confident 5280 cm³ with
@@ -2401,14 +2401,14 @@ So Stage 6 now runs one that does. The cube is the only object whose true shape
 is known and it goes through the identical pipeline as the subject:
 
 ```
-1_water_displacement_7  0.874     sunshine    0.891
+1_water_displacement_6  0.874     sunshine    0.891
 keng          0.873     champ       0.876
-1_water_displacement_5   0.873     1_water_displacement_6  0.787   <- flagged
+1_water_displacement_4   0.873     1_water_displacement_5  0.787   <- flagged
 ```
 
 `REFERENCE_FILL_MIN = 0.83` — mesh volume over its own oriented box. The five
 sound captures span 1.8 percentage points; the bad one sits 8.6 below all of
-them. Note what does *not* separate them: the cube's edge lengths. 1_water_displacement_6's
+them. Note what does *not* separate them: the cube's edge lengths. 1_water_displacement_5's
 read 9.67 / 10.23 / 10.30 cm, squarely mid-pack. A dented surface keeps its
 bounding box and loses volume.
 
