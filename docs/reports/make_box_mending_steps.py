@@ -2,7 +2,7 @@
 
 The companion page (make_box_mending_explainer.py) answers "is it worth
 adopting". This one answers "what does it actually do", one step per panel,
-on real `4_circumference_calculation_1k` points:
+on real `5_circumference_calculation_1k` points:
 
   1  the reference cube's points, seen edge-on
   2  the ideal cube fitted to them
@@ -33,8 +33,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pipeline.core.cube_fit import fit_cube  # noqa: E402
 
 OUTPUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "2026-10-09_box_mending_steps.png"
-RUN = PROJECT_ROOT / "output_4_circumference_calculation_1k"
-MENDED_MESH = PROJECT_ROOT / "work/4_circumference_calculation_1k_mended/05_watertight/mesh/box.ply"
+RUN = PROJECT_ROOT / "output_5_circumference_calculation_1k"
+MENDED_MESH = PROJECT_ROOT / "work/5_circumference_calculation_1k_mended/05_watertight/mesh/box.ply"
 SLAB_HALF_CM = 0.4
 TOLERANCE_MM = 1.0
 
@@ -129,7 +129,7 @@ def main():
     figure.suptitle("The box mending stage, step by step", fontsize=19, weight="bold", y=0.975)
     figure.text(0.5, 0.932,
                 "The 10 cm cube turns scene units into centimetres, so its shape is worth checking. "
-                "Every panel is the same slice through the real 4_circumference_calculation_1k cube, seen edge-on.",
+                "Every panel is the same slice through the real 5_circumference_calculation_1k cube, seen edge-on.",
                 fontsize=12, ha="center", color="#52514e")
 
     first = figure.add_axes([0.045, 0.50, 0.21, 0.36])

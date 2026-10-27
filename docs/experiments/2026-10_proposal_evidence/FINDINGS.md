@@ -8,8 +8,8 @@ evaluates (the old pipeline, as it stands on `main`).
 In a 2 mm horizontal slice the limb's cross-section is not a single closed
 ring. Over part of its circumference the points fall into two separate arcs
 several millimetres apart. `limb_cross_sections.png` shows three captures;
-the splitting is clearest on `4_circumference_calculation_2c` at the left of its section and on
-`4_circumference_calculation_1k` at the upper left and right.
+the splitting is clearest on `5_circumference_calculation_2c` at the left of its section and on
+`5_circumference_calculation_1k` at the upper left and right.
 
 Measured by dividing each slice into 5 degree wedges and asking whether that
 wedge's points fall into one radial group or several, with groups separated by
@@ -19,9 +19,9 @@ of its height.
 | object | wedges | split | % split | median gap |
 |---|---|---|---|---|
 | rigid can (`work/fanta_orange`) | 283 | 2 | **0.7%** | 3.8 mm |
-| limb (`4_circumference_calculation_3s`) | 68 | 10 | **14.7%** | 7.0 mm |
-| limb (`4_circumference_calculation_2c`) | 88 | 25 | **28.4%** | 6.8 mm |
-| limb (`4_circumference_calculation_1k`) | 113 | 53 | **46.9%** | 7.6 mm |
+| limb (`5_circumference_calculation_3s`) | 68 | 10 | **14.7%** | 7.0 mm |
+| limb (`5_circumference_calculation_2c`) | 88 | 25 | **28.4%** | 6.8 mm |
+| limb (`5_circumference_calculation_1k`) | 113 | 53 | **46.9%** | 7.6 mm |
 
 **The control.** The can is cylindrical, so the radial wedge measure applies to
 it as it does not to the square reference cube, whose corners register as false

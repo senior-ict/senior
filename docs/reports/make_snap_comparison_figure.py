@@ -7,12 +7,12 @@ larger one leaves it hanging off the other.
 
   left    the two moves drawn on a square, with one point off a face and one
           off a corner
-  right   measured on 4_circumference_calculation_2c's 5,418 reference points: how far each point
+  right   measured on 5_circumference_calculation_2c's 5,418 reference points: how far each point
           still sits from the cube's surface after each kind of move
 
     python docs/reports/make_snap_comparison_figure.py
 
-Needs `output_4_circumference_calculation_2c`, which is not committed.
+Needs `output_5_circumference_calculation_2c`, which is not committed.
 """
 import pathlib
 import sys
@@ -33,7 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pipeline.core import box_mending  # noqa: E402
 from pipeline.core.cube_fit import fit_cube  # noqa: E402
 
-RUN = PROJECT_ROOT / "output_4_circumference_calculation_2c"
+RUN = PROJECT_ROOT / "output_5_circumference_calculation_2c"
 OUTPUT = HERE / "figures/2026-10-10_snap_comparison.png"
 
 SURFACE = "#fcfcfb"
@@ -159,7 +159,7 @@ def draw_leftover_distances(axes, distances_by_method):
     axes.tick_params(colors=INK_SECONDARY, labelsize=10)
     axes.set_xlabel("mean distance from the cube's surface afterwards (mm)",
                     fontsize=10.5, color=INK_SECONDARY)
-    axes.set_title("measured on 4_circumference_calculation_2c's 5,418 reference points", fontsize=12.5,
+    axes.set_title("measured on 5_circumference_calculation_2c's 5,418 reference points", fontsize=12.5,
                    color=INK, loc="left", pad=8)
 
 

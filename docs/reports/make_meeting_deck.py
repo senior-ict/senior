@@ -17,7 +17,7 @@ from matplotlib.patches import FancyBboxPatch
 
 OUTPUT = pathlib.Path(__file__).resolve().parent / "2026-09-21_meeting_deck.pdf"
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-TAPE_PROFILE_PATH = PROJECT_ROOT / "docs/experiments/2026-09_test_captures/test6_tape_profile.csv"
+TAPE_PROFILE_PATH = PROJECT_ROOT / "docs/experiments/2026-09_test_captures/4_circumference_calculation_1k_tape_profile.csv"
 TEST6_TAPE_VOLUME_CM3 = 1398.6
 
 SLIDE = (13.33, 7.5)
@@ -583,7 +583,7 @@ def slide_profile(pdf):
     figure.text(0.73, 0.34, "Open question: was the ruler read", fontsize=12, color=INK_SECONDARY)
     figure.text(0.73, 0.305, "cord centre to centre, or between", fontsize=12, color=INK_SECONDARY)
     figure.text(0.73, 0.27, "inner edges? One cord ≈ 3.6%.", fontsize=12, color=INK_SECONDARY)
-    footer(figure, "docs/experiments/2026-09_test_captures/test6_tape_profile.csv; fork CROP_TEST.md")
+    footer(figure, "docs/experiments/2026-09_test_captures/4_circumference_calculation_1k_tape_profile.csv; fork CROP_TEST.md")
     pdf.savefig(figure)
     plt.close(figure)
 

@@ -1,6 +1,6 @@
 # The framing gate refuses a capture that meets its own minimum
 
-`4_circumference_calculation_2c_hairless` is eight photographs. Stage 0 refuses
+`5_circumference_calculation_2c_hairless` is eight photographs. Stage 0 refuses
 the whole capture because one of them does not show the reference cube.
 
 `stage0_gate_refusal.log` is the run, on all eight frames:

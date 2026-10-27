@@ -222,7 +222,7 @@ with a second known length up at band height (a ruler standing beside the
 leg, or the cube raised to the upper band) — a capture, not a code change.
 
 **Field of view, checked against the phone's own lens.** The originals
-(`inputs/3_circumference_calculation_6k/*.zip`, iPhone 17 main camera, 26 mm equivalent, 4284 × 5712)
+(`inputs/4_circumference_calculation_1k/*.zip`, iPhone 17 main camera, 26 mm equivalent, 4284 × 5712)
 give a true focal of 4290 px, which is 518.8 px on the full-width 518 crop
 VGGT was fed. VGGT's predicted focal, per frame, against that:
 
@@ -248,7 +248,7 @@ on `test6`, 1.01 on `test5`).
 
 `test6` was re-run from the phone's HEIC originals (4284 × 5712, iPhone 17)
 instead of the 1108 × 1477 LINE copies, converted to JPEG in
-`inputs/test6_orig/`. Same settings as the cold run (`MLS_SECOND_RADIUS_MULT=16`).
+`inputs/4_circumference_calculation_1k_orig/`. Same settings as the cold run (`MLS_SECOND_RADIUS_MULT=16`).
 
 ```
                               volume    err     recon (leg / cube)   voxel   leg pts
@@ -465,10 +465,10 @@ but never beats exact. Against the tape, exact is +6.2% where voxel at 300 is
 +10.1%. Stage 6 now runs the comparison at 120 cells and warns when a voxel
 volume comes out BELOW the exact one, which a closed shell cannot do.
 
-## 18. New captures and their truth: `4_circumference_calculation_1k` -- 2026-10-09
+## 18. New captures and their truth: `5_circumference_calculation_1k` -- 2026-10-09
 
-`inputs/4_circumference_calculation_1k` (8 photos) arrived with a 1 cm tape profile, and
-`inputs/test6_orig` (8 photos) arrived without one.
+`inputs/5_circumference_calculation_1k` (8 photos) arrived with a 1 cm tape profile, and
+`inputs/4_circumference_calculation_1k_orig` (8 photos) arrived without one.
 
 The profile is 27 slabs of 1 cm, each recorded as the circumference at its
 bottom and top, and the chain is consistent (every slab's top equals the next
@@ -480,7 +480,7 @@ slab's bottom), so it is 28 circumferences over 27.0 cm:
 | circumference | 18.5 cm | 30.0 cm | 28.2 cm |
 
 `tape_volume.py` sums truncated cones over the profile
-(`4_circumference_calculation_1k_tape_profile.csv`):
+(`5_circumference_calculation_1k_tape_profile.csv`):
 
 | rule | volume |
 |---|---|
@@ -496,8 +496,8 @@ The frustum sum is an upper bound, because a tape measures perimeter and a
 circle holds the most area for a given perimeter. An oval of axis ratio 1.1
 reads ~0.2% high, 1.2 ~0.8% high.
 
-**The run, same day.** `python run.py -i inputs/4_circumference_calculation_1k
---output_dir output_4_circumference_calculation_1k`, 103 s, inference 23.6 s. Poisson closed both
+**The run, same day.** `python run.py -i inputs/5_circumference_calculation_1k
+--output_dir output_5_circumference_calculation_1k`, 103 s, inference 23.6 s. Poisson closed both
 meshes at chi=2, so no alpha fallback.
 
 | | tape | pipeline | error |
@@ -509,7 +509,7 @@ meshes at chi=2, so no alpha fallback.
 
 `profile_vs_tape.py` slices the cleaned cloud at each of the 28 tape heights
 and fits the same ellipse Stage 6 uses
-(`2026-10-09_4_circumference_calculation_1k_profile_vs_tape.png`). That separates the error:
+(`2026-10-09_5_circumference_calculation_1k_profile_vs_tape.png`). That separates the error:
 
 | | volume | against the tape |
 |---|---|---|
@@ -548,7 +548,7 @@ means +4.2% to +9.6%.
 
 ## 19. Mending the reference cube does not help -- 2026-10-09
 
-The `4_circumference_calculation_1k` cube mesh looks bad by eye: Poisson left holes in two faces,
+The `5_circumference_calculation_1k` cube mesh looks bad by eye: Poisson left holes in two faces,
 Stage 3's floor extension leaves a skirt, and the bounding box reads
 10.58 x 11.29 x 10.95 cm for a 10 cm cube. The question was whether the limb's
 +6.9% is hiding in there.
@@ -575,13 +575,13 @@ side, 871 cm3 against the faces' 996, and would move every limb volume
 than a tolerance off its nearest ideal face onto that face, re-meshes with the
 pipeline's own Stage 4 and Stage 5, and re-measures the limb with the new
 scale. The limb mesh is untouched, so only the reference moves. On
-`4_circumference_calculation_1k` the tolerance makes almost no difference (0.5 mm: +6.1%, 1 mm:
+`5_circumference_calculation_1k` the tolerance makes almost no difference (0.5 mm: +6.1%, 1 mm:
 +6.1%, 2 mm: +6.4%, 3 mm: +6.3%), so 1 mm was used across the cohort:
 
 | capture | truth | as it stands | snapped at 1 mm | a perfect cube instead |
 |---|---|---|---|---|
 | test6 | 1398.6 tape | +6.9% | +5.3% | +6.9% |
-| 4_circumference_calculation_1k | 1420.2 tape +/-2.5% | +6.9% | +6.1% | +7.3% |
+| 5_circumference_calculation_1k | 1420.2 tape +/-2.5% | +6.9% | +6.1% | +7.3% |
 | test5 | 2070 water | +4.8% | +4.0% | +5.7% |
 | 2_water_displacement_1_right | 1830 water | -4.9% | -6.0% | -1.5% |
 | 2_water_displacement_2_left | 1600 water | -0.7% | -6.5% | +5.1% |
@@ -597,7 +597,7 @@ the spread grows and the mean error is worse. The explainer page is
 `docs/reports/2026-10-09_box_mending.png`
 (`docs/reports/make_box_mending_explainer.py`).
 
-**What the exercise did find.** Snap `4_circumference_calculation_1k`'s cube until its points lie
+**What the exercise did find.** Snap `5_circumference_calculation_1k`'s cube until its points lie
 on a cube to 0.35 mm, and the mesh still measures 1.1% more than that cube:
 **Poisson's surface sits about 0.4 mm outside the points.** The same skin is
 on the limb, where it is worth roughly +1.6% of volume against the reference's
@@ -607,7 +607,7 @@ than noise, and it is the same sign on every capture.
 **The reruns themselves** (9 October 2026, all seven captures, skeleton on,
 cut at Stage 5) reproduced September's numbers within 0.5% except `test6`
 (+6.2% then, +6.9% now) and `2_water_displacement_3_left` (+12.4% then, +11.3% now). Cube-fit
-residuals were 1.31-1.78 mm on the cohort and **2.19 mm on `4_circumference_calculation_1k`**, the
+residuals were 1.31-1.78 mm on the cohort and **2.19 mm on `5_circumference_calculation_1k`**, the
 noisiest capture in the set.
 
 **`test5` no longer passes Stage 0.** Frame `S__120897546_0.jpg` has no cube
@@ -631,18 +631,18 @@ moves.
 their nearest face are moved onto it, then each face is gridded at 4 mm and a
 point is dropped into every empty cell. The gaps are what make Poisson tunnel
 on the cube, forcing the alpha ladder's loosest rung, which floats clear of
-the points: on `4_circumference_calculation_2c` that wrap was 9.1% larger than the cube its own
+the points: on `5_circumference_calculation_2c` that wrap was 9.1% larger than the cube its own
 points describe. Mending lets Poisson close instead, and is nearly a no-op on
-a sound capture (`4_circumference_calculation_3s`: 1000.0 -> 1004 cm3).
+a sound capture (`5_circumference_calculation_3s`: 1000.0 -> 1004 cm3).
 
 | capture | truth | before | after both changes |
 |---|---|---|---|
-| 3_circumference_calculation_6k | 1398.6 tape | +6.9% | **+0.2%** |
-| 4_circumference_calculation_1k | 1420.2 tape | +6.9% | **+1.7%** |
-| 3_circumference_calculation_5c | 2070 water | +4.8% | **+0.1%** |
-| 4_circumference_calculation_3s (hairy) | 1831.2 tape | +22.6% | +10.2% |
-| 4_circumference_calculation_3s (shaved) | 1847.1 tape | - | **+2.2%** |
-| 4_circumference_calculation_2c | 1981.7 tape | +14.6% | +23.0% |
+| 4_circumference_calculation_1k | 1398.6 tape | +6.9% | **+0.2%** |
+| 5_circumference_calculation_1k | 1420.2 tape | +6.9% | **+1.7%** |
+| 3_water_displacement_1c | 2070 water | +4.8% | **+0.1%** |
+| 5_circumference_calculation_3s (hairy) | 1831.2 tape | +22.6% | +10.2% |
+| 5_circumference_calculation_3s (shaved) | 1847.1 tape | - | **+2.2%** |
+| 5_circumference_calculation_2c | 1981.7 tape | +14.6% | +23.0% |
 
 **Hair is worth about 4%, not 10%.** The shaving experiment settled a question
 a fitted correction could not. A hair term added to the tape truth can always
@@ -673,7 +673,7 @@ changed between them.
 
 **What this implies for the protocol:** shave the band region, or measure the
 truth by water displacement, which submerges the hair and needs no correction
-(`3_circumference_calculation_5c` is a hairy leg with a water truth and reads +0.1%).
+(`3_water_displacement_1c` is a hairy leg with a water truth and reads +0.1%).
 
 ## 21. Still open
 
@@ -708,9 +708,9 @@ truth by water displacement, which submerges the hair and needs no correction
 - **The band planes are found before the skeleton step corrects the points,**
   and they set both the cut and where girth is measured. Whether re-fitting
   them afterwards moves anything is unmeasured.
-- **`test6_orig` is unrun and unmeasured.** `4_circumference_calculation_1k` ran: +6.9% against a
+- **`test6_orig` is unrun and unmeasured.** `5_circumference_calculation_1k` ran: +6.9% against a
   1420.2 cm3 tape truth (section 18).
-- **The fill-ratio warning fires on a sound capture again** (`4_circumference_calculation_1k`,
+- **The fill-ratio warning fires on a sound capture again** (`5_circumference_calculation_1k`,
   0.775, cube fit 2.19 mm). Section 16 already showed the ratio measures the
   mesh; the threshold is still in Stage 6 and still cries wolf.
 - **Poisson's surface sits ~0.4 mm outside the points** (section 19), worth

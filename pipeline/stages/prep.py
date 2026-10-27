@@ -820,7 +820,7 @@ def _remove_stale_frames(out_dir):
     Stage 1 reads whatever is in this directory, not the list Stage 0 returned.
     So a second run that accepts fewer frames than the first leaves the extras
     behind and VGGT is handed them anyway. It happened: on
-    `output_4_circumference_calculation_2c_hairless` a 7-frame run inherited an eighth frame from
+    `output_5_circumference_calculation_2c_hairless` a 7-frame run inherited an eighth frame from
     an earlier 8-frame run, so the reconstruction used a duplicate viewpoint,
     and the manifest then described 7 frames while the pointmap held 8 --
     which silently disabled every projection keyed to the manifest, because

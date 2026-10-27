@@ -257,11 +257,11 @@ and the cloud cut is further from water on the sixth, so the mesh cut stays.
 ## Running it
 
 ```bash
-python run.py -i inputs/3_circumference_calculation_6k                  # the whole pipeline
+python run.py -i inputs/4_circumference_calculation_1k                  # the whole pipeline
 python stagerun.py 3-6 --name test6_try        # rerun Stages 3-6 on work/test6_try
-LIMB_SKELETON=off python run.py -i inputs/3_circumference_calculation_6k   # without the skeleton step
-FRAME_FIT=crop python run.py -i inputs/3_circumference_calculation_6k      # the old cropped input
-CUT_STAGE=cloud python run.py -i inputs/3_circumference_calculation_6k     # cut the cloud in Stage 3
+LIMB_SKELETON=off python run.py -i inputs/4_circumference_calculation_1k   # without the skeleton step
+FRAME_FIT=crop python run.py -i inputs/4_circumference_calculation_1k      # the old cropped input
+CUT_STAGE=cloud python run.py -i inputs/4_circumference_calculation_1k     # cut the cloud in Stage 3
 ```
 
 Outputs land in `output/` (or `--output_dir`), with every stage's files under

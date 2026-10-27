@@ -11,7 +11,7 @@ after the existing 4× pass, limb only, at 16× point spacing. Gated by
 `MLS_SECOND_RADIUS_MULT` in `pipeline/config.py`, **default 0 (off)**,
 switched on per run with an environment variable:
 
-    MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/3_circumference_calculation_6k
+    MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/4_circumference_calculation_1k
 
 The reference cube is never touched by it, so the scale is identical between
 a run with the pass and a run without. The config comment carries the sweep

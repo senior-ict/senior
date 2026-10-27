@@ -17,8 +17,8 @@ what the slides show is what the pipeline does.
     python docs/reports/make_pipeline_change_deck.py
 
 Needs these run directories, which are not committed (outputs never are):
-`output_4_circumference_calculation_2c` (an unmended cube, the bad capture), `output_test6` (an
-unmended cube, a sound capture) and `output_4_circumference_calculation_2c_hairless` (a run of the
+`output_5_circumference_calculation_2c` (an unmended cube, the bad capture), `output_test6` (an
+unmended cube, a sound capture) and `output_5_circumference_calculation_2c_hairless` (a run of the
 new pipeline, used for the band-stripe picture).
 """
 import json
@@ -47,9 +47,9 @@ from pipeline.core.cube_fit import (  # noqa: E402
 OUTPUT_PDF = HERE / "2026-10-10_pipeline_change_deck.pdf"
 SLIDE_PNG_DIRECTORY = HERE / "figures/2026-10-10_deck_slides"
 
-BAD_CAPTURE_RUN = PROJECT_ROOT / "output_4_circumference_calculation_2c"
+BAD_CAPTURE_RUN = PROJECT_ROOT / "output_5_circumference_calculation_2c"
 SOUND_CAPTURE_RUN = PROJECT_ROOT / "output_test6"
-NEW_PIPELINE_RUN = PROJECT_ROOT / "output_4_circumference_calculation_2c_hairless"
+NEW_PIPELINE_RUN = PROJECT_ROOT / "output_5_circumference_calculation_2c_hairless"
 
 SLIDE_SIZE = (13.33, 7.5)
 INK = "#0b0b0b"
@@ -427,7 +427,7 @@ def slide_band_is_a_stripe(pdf, stripe_data):
         axes_full.axvline(stripe["centre"], color=INK_MUTED, lw=1.8, ls="--")
     axes_full.axvline(lower["high"], color=AFTER_COLOUR, lw=2.2)
     axes_full.axvline(upper["low"], color=AFTER_COLOUR, lw=2.2)
-    tidy_axes(axes_full, "4_circumference_calculation_2c_hairless · all limb points, projected onto the "
+    tidy_axes(axes_full, "5_circumference_calculation_2c_hairless · all limb points, projected onto the "
                          "line joining the two bands")
     axes_full.set_ylabel("points", fontsize=10.5, color=INK_SECONDARY)
     axes_full.legend(fontsize=9.5, frameon=False, loc="upper left")
@@ -470,7 +470,7 @@ def slide_band_is_a_stripe(pdf, stripe_data):
               "Sliding both planes all the way from the inner edges to the outer "
               "edges swings the reported volume by 15–35%.",
               width_characters=40, font_size=11.5, colour=INK_SECONDARY)
-    footer(figure, "output_4_circumference_calculation_2c_hairless Stage 3 clouds, read with band_edges.py")
+    footer(figure, "output_5_circumference_calculation_2c_hairless Stage 3 clouds, read with band_edges.py")
     pdf.savefig(figure)
     save_slide_png(figure, "03_band_is_a_stripe")
     plt.close(figure)
@@ -503,9 +503,9 @@ def slide_inner_edge_fix(pdf, span_rows):
                 va="top")
     draw_table(figure, (0.62, 0.24, 0.33, 0.21),
                ["capture", "before", "after"],
-               [["3_circumference_calculation_6k", "+6.9%", "+0.2%"],
-                ["4_circumference_calculation_1k", "+6.9%", "+1.7%"],
-                ["3_circumference_calculation_5c", "+4.8%", "+0.1%"]],
+               [["4_circumference_calculation_1k", "+6.9%", "+0.2%"],
+                ["5_circumference_calculation_1k", "+6.9%", "+1.7%"],
+                ["3_water_displacement_1c", "+4.8%", "+0.1%"]],
                [0.40, 0.30, 0.30], highlight_rows=(0, 1, 2), font_size=11)
     paragraph(figure, 0.62, 0.20,
               "Volumes with both changes on. The cut is by far the larger of the two "
@@ -583,7 +583,7 @@ def slide_why_the_cube_matters(pdf):
 def slide_two_defects(pdf, bad_capture):
     """The two things wrong with the cube's points, both from real data."""
     figure = new_slide("What is wrong with the cube's points: fuzz, and gaps",
-                       "4_circumference_calculation_2c, a capture where the cube happened to be "
+                       "5_circumference_calculation_2c, a capture where the cube happened to be "
                        "photographed nearly corner-on. 5,418 points.")
 
     offsets_mm = offsets_from_faces(bad_capture["raw"], bad_capture["half_side_cm"])
@@ -632,7 +632,7 @@ def slide_two_defects(pdf, bad_capture):
               "it floated 2.9 mm clear on every side, 9.1% more volume than the cube its "
               "own points describe.",
               width_characters=128, font_size=12)
-    footer(figure, "box_mending.py run on output_4_circumference_calculation_2c; Stage 4 log, 2026-10-09")
+    footer(figure, "box_mending.py run on output_5_circumference_calculation_2c; Stage 4 log, 2026-10-09")
     pdf.savefig(figure)
     save_slide_png(figure, "06_two_defects")
     plt.close(figure)
@@ -742,7 +742,7 @@ def slide_the_four_steps(pdf, bad_capture):
               "reconstructed small, mending makes the mesh say so too, instead of "
               "hiding it under a loose wrap.",
               width_characters=140, font_size=11)
-    footer(figure, "pipeline/core/box_mending.py run live on output_4_circumference_calculation_2c")
+    footer(figure, "pipeline/core/box_mending.py run live on output_5_circumference_calculation_2c")
     pdf.savefig(figure)
     save_slide_png(figure, "07_four_steps")
     plt.close(figure)
@@ -970,7 +970,7 @@ def slide_which_face(pdf, capture, assignment):
         "A reconstructed mesh is thousands of triangles fitted to the noise. The ideal "
         "cube is five numbers, and is known in advance to be the right shape.",
     ], line_gap=0.042, font_size=10, width_characters=74)
-    footer(figure, "cube_fit.fit_cube and box_mending.nearest_face on output_4_circumference_calculation_2c")
+    footer(figure, "cube_fit.fit_cube and box_mending.nearest_face on output_5_circumference_calculation_2c")
     pdf.savefig(figure)
     save_slide_png(figure, "09_which_face")
     plt.close(figure)
@@ -1084,7 +1084,7 @@ def slide_how_the_cube_is_sliced(pdf, bad_capture):
     figure.text(0.40, 0.815, "the same cube unfolded, one square per cell",
                 fontsize=12, color=INK, va="top")
     figure.text(0.40, 0.783,
-                "shaded by what 4_circumference_calculation_2c's capture actually reached",
+                "shaded by what 5_circumference_calculation_2c's capture actually reached",
                 fontsize=10, color=INK_MUTED, va="top")
 
     figure.text(0.845, 0.72, "Reading it", fontsize=12.5, weight="bold", color=INK,
@@ -1110,7 +1110,7 @@ def slide_how_the_cube_is_sliced(pdf, bad_capture):
               "is missing. The bottom face looks at the floor, so it is always the "
               "thinnest — 43% here — and it is most of the filler's work.",
               width_characters=152, font_size=11)
-    footer(figure, "pipeline/core/box_mending.py run live on output_4_circumference_calculation_2c")
+    footer(figure, "pipeline/core/box_mending.py run live on output_5_circumference_calculation_2c")
     pdf.savefig(figure)
     save_slide_png(figure, "10_how_the_cube_is_sliced")
     plt.close(figure)
@@ -1125,7 +1125,7 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
                        "close to a no-op on one that went right.")
 
     axes = figure.add_axes([0.07, 0.42, 0.36, 0.34])
-    labels = ["bad capture\n4_circumference_calculation_2c\n(cube corner-on)",
+    labels = ["bad capture\n5_circumference_calculation_2c\n(cube corner-on)",
               "sound capture\ntest6\n(cube seen all round)"]
     added_counts = [bad_capture["report"]["added"], sound_capture["report"]["added"]]
     worst_coverage = []
@@ -1160,9 +1160,9 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
     bullet_list(figure, 0.50, 0.735, [
         "Poisson closes on the mended cube instead of tunnelling, so Stage 4 stops "
         "falling back to the alpha ladder.",
-        "4_circumference_calculation_3s, a sound capture: the cube's mesh went 1000.0 → 1004 cm³. "
+        "5_circumference_calculation_3s, a sound capture: the cube's mesh went 1000.0 → 1004 cm³. "
         "Four parts in a thousand.",
-        "4_circumference_calculation_2c's alpha wrap had been reading 9.1% more volume than its own "
+        "5_circumference_calculation_2c's alpha wrap had been reading 9.1% more volume than its own "
         "points described. That term is gone.",
         "On a sound capture the step is invisible in the result — which is the "
         "point. It is a guard, not a correction.",
@@ -1177,7 +1177,7 @@ def slide_mending_effect(pdf, bad_capture, sound_capture):
         "covered is still mostly guessing. Re-shoot instead.",
         "Not applied to the limb, whose true shape is the unknown we are after.",
     ], line_gap=0.055, font_size=11.5, width_characters=126)
-    footer(figure, "box_mending.py on output_4_circumference_calculation_2c and output_test6; "
+    footer(figure, "box_mending.py on output_5_circumference_calculation_2c and output_test6; "
                    "EXPERIMENT_LOG §20")
     pdf.savefig(figure)
     save_slide_png(figure, "11_mending_effect")
@@ -1192,8 +1192,8 @@ def slide_results(pdf):
                        "Signed error against each capture's own ground truth. Positive "
                        "means the pipeline read more volume than the truth did.")
 
-    captures = [("3_circumference_calculation_5c", 4.8, 0.1), ("3_circumference_calculation_6k", 6.9, 0.2), ("4_circumference_calculation_1k", 6.9, 1.7),
-                ("4_circumference_calculation_3s\nshaved", None, 2.2), ("4_circumference_calculation_2c\nshaved", None, -0.6)]
+    captures = [("3_water_displacement_1c", 4.8, 0.1), ("4_circumference_calculation_1k", 6.9, 0.2), ("5_circumference_calculation_1k", 6.9, 1.7),
+                ("5_circumference_calculation_3s\nshaved", None, 2.2), ("5_circumference_calculation_2c\nshaved", None, -0.6)]
     axes = figure.add_axes([0.06, 0.34, 0.58, 0.42])
     bar_width = 0.36
     for index, (_, before, after) in enumerate(captures):
@@ -1363,11 +1363,11 @@ def save_slide_png(figure, name):
 
 def build_span_rows():
     """The centre-to-centre and inner-to-inner spans of every run of the new pipeline."""
-    runs = [("4_circumference_calculation_2c_hairless", "output_4_circumference_calculation_2c_hairless"),
-            ("4_circumference_calculation_3s_hairless", "output_4_circumference_calculation_3s_hairless"),
+    runs = [("5_circumference_calculation_2c_hairless", "output_5_circumference_calculation_2c_hairless"),
+            ("5_circumference_calculation_3s_hairless", "output_5_circumference_calculation_3s_hairless"),
+            ("5_circumference_calculation_1k", "output_5_circumference_calculation_1k_v5"),
             ("4_circumference_calculation_1k", "output_4_circumference_calculation_1k_v5"),
-            ("3_circumference_calculation_6k", "output_3_circumference_calculation_6k_v5"),
-            ("3_circumference_calculation_5c", "output_3_circumference_calculation_5c_v5")]
+            ("3_water_displacement_1c", "output_3_water_displacement_1c_v5")]
     rows = []
     for label, directory_name in runs:
         run_directory = PROJECT_ROOT / directory_name

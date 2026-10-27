@@ -33,7 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "docs/experiments/2026-09_test_captures"))
 from ring_gallery import fit_ring, mesh_section, polygon_area, slice_points  # noqa: E402
 
 FRACTIONS = [0.1, 0.5, 0.7, 0.8, 0.9]
-TAPE_PROFILE = PROJECT_ROOT / "docs/experiments/2026-09_test_captures/test6_tape_profile.csv"
+TAPE_PROFILE = PROJECT_ROOT / "docs/experiments/2026-09_test_captures/4_circumference_calculation_1k_tape_profile.csv"
 TAPE_VOLUME_CM3 = 1398.6
 RULER_CM = 27.5
 WINDOW_HALF_WIDTH_CM = 6.5

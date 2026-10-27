@@ -1,14 +1,21 @@
 # Test captures, 2026-09-18
 
-**Renamed 2026-10-09.** The first batch's folders are now `inputs/3_circumference_calculation_1c` …
-`inputs/3_circumference_calculation_6k` (they were `inputs/test1` … `inputs/test6`), so that a batch
-and a subject can be told apart: the second batch is `inputs/4_circumference_calculation_1k` and
-`inputs/4_circumference_calculation_2c`. Prose below still says `test6`, which now lives at
-`inputs/3_circumference_calculation_6k`; `inputs/3_circumference_calculation_6k_orig` holds that capture's original photos.
+**Renamed.** Every folder is now named for the era whose reference it was
+measured against, as `inputs/README.md` sets out. What this page calls `test1`
+through `test6` is spread across two eras: `test1` to `test4` were a pose trial
+with no reference volume and have been removed, `test5` is
+`inputs/3_water_displacement_1c`, and `test6` is
+`inputs/4_circumference_calculation_1k`, with
+`inputs/4_circumference_calculation_1k_orig` holding that capture's original
+photographs. The second batch is era 5, `inputs/5_circumference_calculation_1k`
+onward. Prose below still says `test6`.
 
-Six limb captures and two cans, measured against a tape rather than water.
-Inputs are `inputs/3_circumference_calculation_1c` … `inputs/3_circumference_calculation_6k`, `inputs/fanta_orange`,
-`inputs/fanta_red`. Run outputs are not committed; each regenerates with
+Two limb captures survive from the first batch, plus two cans. The first batch
+mixed references: `test5` was measured by water and then cross-checked by
+circumference, and `test6` by tape alone. Inputs are
+`inputs/3_water_displacement_1c`, `inputs/4_circumference_calculation_1k`,
+`inputs/fanta_orange` and `inputs/fanta_red`. Run outputs are not committed;
+each regenerates with
 `python run.py -i inputs/<name> --output_dir output_<name>` in a few minutes.
 
 ## What was found
@@ -79,5 +86,5 @@ band separation (7% of volume). Water displacement and tape agreed to 4%.
 | `test5_diagnostic.png` | band cross-sections vs taped circles, shell histogram, girth profile |
 | `test5_profile_vs_tape.png` | 2 cm tape profile vs pipeline, by height, with error bars |
 | `ring_gallery.png` | every slice of `test6` with the mesh section overlaid |
-| `test6_tape_profile.csv` | the taped profile, for `tools/limb_volume_from_tape.py` |
+| `4_circumference_calculation_1k_tape_profile.csv` | the taped profile, for `tools/limb_volume_from_tape.py` |
 | `visualise_test5.py`, `ring_gallery.py` | regenerate the figures from a run directory |

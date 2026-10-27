@@ -4,7 +4,7 @@ Stage 3 has to decide which of its two clusters is the reference cube, because
 every centimetre the pipeline reports comes from that object's known 10 cm
 side. Until now it decided by a shape-and-colour score: how cube-like a
 cluster's bounding box is, plus how much of it is near-black or near-white.
-Both are properties a leg can have. On `inputs/4_circumference_calculation_2c_hairless` the leg
+Both are properties a leg can have. On `inputs/5_circumference_calculation_2c_hairless` the leg
 won, the run scaled every measurement off a thigh, and nothing in the output
 said so.
 

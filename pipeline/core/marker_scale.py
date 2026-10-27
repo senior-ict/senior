@@ -11,7 +11,7 @@ mesh: on every frame the model saw, detect the markers, read the model's 3D
 point under each corner, and measure the marker's edges in scene units. The
 marker is REFERENCE_MARKER_CM on a side, so cm-per-unit is that over the
 median edge. On sound captures the two scales agree within 2-3%; on the
-2026-09-19 run of inputs/3_circumference_calculation_6k from full-resolution originals, where the cube
+2026-09-19 run of inputs/4_circumference_calculation_1k from full-resolution originals, where the cube
 fell to the alpha fallback, they disagreed by 6%.
 """
 import cv2
