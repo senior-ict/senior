@@ -57,7 +57,7 @@ def detect_markers(colors_uint8, hue_min=None, hue_max=None, sat_min=None,
 
     The rule this replaces was `sat > 15 AND hue > 60`, an upper-open hue test
     with no brightness floor, which admitted everything but red, orange and
-    yellow. On test2_keng it passed 5,427 points that DBSCAN merged into a
+    yellow. On 5_circumference_calculation_1k it passed 5,427 points that DBSCAN merged into a
     single cluster spanning 0.364 of a 0.597-tall limb; the plane fitted
     through it stood 86.7 degrees from horizontal, so the run cut the leg
     lengthwise. The bounded rule passes 4,452 points that cluster into the two

@@ -9,7 +9,7 @@ import type { CutPlane, SampleDataset, VolumeRow } from "./types";
  *  with a tape, between the two band edges, and the result screen quotes the
  *  error against it.
  *
- *  A third capture, test2_champ_hairless, is deliberately not shipped: on it
+ *  A third capture, 5_circumference_calculation_2c_hairless, is deliberately not shipped: on it
  *  the reference test scored the LEG above the cube, so the run scaled from
  *  the wrong object and produced no usable measurement. It is a real failure
  *  of this pipeline, not a bad capture, and it is written up in the report
@@ -20,7 +20,7 @@ import type { CutPlane, SampleDataset, VolumeRow } from "./types";
  *  re-cut; leg_no_cut.ply is the already-cut mesh. */
 export const SAMPLES: SampleDataset[] = [
   {
-    id: "test2_keng",
+    id: "5_circumference_calculation_1k",
     label: "Lower leg \u2014 subject K",
     subject: "Human lower leg between two green bands",
     nominalMl: null,
@@ -31,16 +31,16 @@ export const SAMPLES: SampleDataset[] = [
     },
     frames: 8,
     meshes: {
-      leg: "/samples/test2_keng/leg_mesh.ply",
-      box: "/samples/test2_keng/box_mesh.ply",
-      scene: "/samples/test2_keng/scene_mesh.ply",
-      legNoCut: "/samples/test2_keng/leg_no_cut.ply",
+      leg: "/samples/5_circumference_calculation_1k/leg_mesh.ply",
+      box: "/samples/5_circumference_calculation_1k/box_mesh.ply",
+      scene: "/samples/5_circumference_calculation_1k/scene_mesh.ply",
+      legNoCut: "/samples/5_circumference_calculation_1k/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/test2_keng/volumes.csv",
-    cuttingLine: "/samples/test2_keng/cutting_line.json",
+    volumesCsv: "/samples/5_circumference_calculation_1k/volumes.csv",
+    cuttingLine: "/samples/5_circumference_calculation_1k/cutting_line.json",
   },
   {
-    id: "test2_sunshine_hairless",
+    id: "5_circumference_calculation_3s_hairless",
     label: "Lower leg \u2014 subject S",
     subject: "Human lower leg, shaved before the capture",
     nominalMl: null,
@@ -51,13 +51,13 @@ export const SAMPLES: SampleDataset[] = [
     },
     frames: 7,
     meshes: {
-      leg: "/samples/test2_sunshine_hairless/leg_mesh.ply",
-      box: "/samples/test2_sunshine_hairless/box_mesh.ply",
-      scene: "/samples/test2_sunshine_hairless/scene_mesh.ply",
-      legNoCut: "/samples/test2_sunshine_hairless/leg_no_cut.ply",
+      leg: "/samples/5_circumference_calculation_3s_hairless/leg_mesh.ply",
+      box: "/samples/5_circumference_calculation_3s_hairless/box_mesh.ply",
+      scene: "/samples/5_circumference_calculation_3s_hairless/scene_mesh.ply",
+      legNoCut: "/samples/5_circumference_calculation_3s_hairless/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/test2_sunshine_hairless/volumes.csv",
-    cuttingLine: "/samples/test2_sunshine_hairless/cutting_line.json",
+    volumesCsv: "/samples/5_circumference_calculation_3s_hairless/volumes.csv",
+    cuttingLine: "/samples/5_circumference_calculation_3s_hairless/cutting_line.json",
   },
 ];
 
@@ -172,7 +172,7 @@ export function linearScale(rows: VolumeRow[]): number | null {
     // 59.8, a 26% error. Its own derivation is the volume ratio, so use that
     // instead and stay consistent with the numbers it printed. The cube root
     // treats V^(1/3) as an edge length, which only holds for a perfect cube:
-    // measured +2% against the fitted-face answer on inputs/small_leg.
+    // measured +2% against the fitted-face answer on inputs/0_first_sample_3.
     scale = Math.cbrt(ref.real_vol_cm3 / ref.volume);
   }
   return Number.isFinite(scale) && scale > 0 ? scale : null;

@@ -69,7 +69,7 @@ python run.py --image_folder ./baam/
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-i`, `--image_folder` | str | `./inputs/baam/` | Input image folder |
+| `-i`, `--image_folder` | str | `./inputs/0_first_sample_1/` | Input image folder |
 | `--output_dir` | str | `./output/` | Output directory |
 | `--conf_thres` | float | 45.0 | Confidence threshold percentile |
 | `--prediction_mode` | choice | `pointmap` | `pointmap` or `depth` |

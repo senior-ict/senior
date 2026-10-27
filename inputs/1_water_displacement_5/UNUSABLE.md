@@ -1,4 +1,4 @@
-# blue shirt — not usable
+# 1_water_displacement_5 — not usable
 
 Excluded from results on 2026-08-27, on inspection of the Stage 1/2 output.
 The reconstruction itself is wrong, so nothing downstream of it can be
