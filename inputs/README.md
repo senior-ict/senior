@@ -94,7 +94,3 @@ split-surface measurement in
 A printed capacity is not an external volume: the 325 ml on a can is what it
 holds, not what it displaces, so `est_325` does not carry a usable reference
 volume without measuring the can itself.
-
-## Not a capture
-
-`meshy_ai` holds a `.glb` produced by another tool, kept for comparison.
