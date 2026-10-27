@@ -76,11 +76,13 @@ The reference volumes recomputed from these profiles are 1420.2 cm3 for
 `test2_champ` and `test2_champ_hairless` are the same subject before and after
 hair removal, which is what makes them a pair worth reading together.
 
-**`test2_sunshine` is missing.** The run record names
-`inputs/test2_sunshine`, 8 photographs beginning `S__122085380_0.jpg`, and that
-folder no longer exists; only the 518 px frames inside `output_test2_sunshine`
-survive, which are not valid input for a fresh run. Its tape profile is still
-on file, so the reference remains even though the capture cannot be repeated.
+**`test2_sunshine` was recovered rather than lost.** It was never committed:
+`5ab597f` added its four siblings on 9 October and left it out, after which it
+disappeared from disk with no record. The frames were recovered from
+`output_test2_sunshine/for_debug/00_prep/images`, which that run wrote before
+inference with nothing cropped or resized, and they are pixel-identical to the
+originals. See `test2_sunshine/RESTORED.md`. They are PNG where the originals
+were JPEG; nothing else differs.
 
 ## Reference objects, no era
 
