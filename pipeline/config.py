@@ -37,5 +37,13 @@ VGGT_USE_COMMERCIAL = os.environ.get("VGGT_USE_COMMERCIAL", "1") != "0"
 VGGT_COMMERCIAL_REPO = "facebook/VGGT-1B-Commercial"
 VGGT_COMMERCIAL_FILE = "vggt_1B_commercial.pt"
 
+# The exact revision and content this pipeline was evaluated on. "main" moves,
+# so a run six months from now would silently load different weights and report
+# different volumes with no sign that anything changed. The hash is checked on
+# load: a file that does not match is refused rather than used.
+VGGT_COMMERCIAL_REVISION = "ebb29a532abe92960eeb6903a5530f16990ef4ab"
+VGGT_COMMERCIAL_SHA256 = ("1f941e207ab8734121f1fe5dbdac50061d4560e1fed13fecd"
+                          "561895b72690a4a")
+
 # Image extensions accepted by the input loader
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp", ".heic", ".heif")

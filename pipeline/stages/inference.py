@@ -1,5 +1,6 @@
 """Stage 1 — Load VGGT model and run inference to produce a predictions dict."""
 import glob
+import hashlib
 import os
 import sys
 import time
@@ -15,7 +16,26 @@ from vggt.utils.device import is_mps, autocast_on, aggressive_cleanup
 
 from pipeline.config import (DEFAULT_MAX_FRAMES_MPS, IMAGE_EXTENSIONS,
                              VGGT_COMMERCIAL_FILE, VGGT_COMMERCIAL_REPO,
+                             VGGT_COMMERCIAL_REVISION, VGGT_COMMERCIAL_SHA256,
                              VGGT_MODEL_URL, VGGT_USE_COMMERCIAL)
+
+
+def _verify_checkpoint(path, expected_sha256):
+    """Raise unless the file on disk is exactly the checkpoint we expect.
+
+    A checkpoint is the largest uncontrolled input this pipeline has: swap it
+    and every reported volume changes, with nothing in the output to say so.
+    Hashing it costs a few seconds against a run of several minutes.
+    """
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    actual = digest.hexdigest()
+    if actual != expected_sha256:
+        raise RuntimeError(
+            f"checkpoint at {path} does not match the pinned hash.\n"
+            f"  expected {expected_sha256}\n  found    {actual}")
 
 
 def _load_checkpoint():
@@ -32,8 +52,11 @@ def _load_checkpoint():
         try:
             from huggingface_hub import hf_hub_download
 
-            path = hf_hub_download(VGGT_COMMERCIAL_REPO, VGGT_COMMERCIAL_FILE)
+            path = hf_hub_download(VGGT_COMMERCIAL_REPO, VGGT_COMMERCIAL_FILE,
+                                   revision=VGGT_COMMERCIAL_REVISION)
+            _verify_checkpoint(path, VGGT_COMMERCIAL_SHA256)
             print(f"  Checkpoint: {VGGT_COMMERCIAL_REPO} (commercial licence)")
+            print(f"  Revision:   {VGGT_COMMERCIAL_REVISION}")
             return torch.load(path, map_location="cpu", weights_only=True)
         except Exception as error:
             print(f"  WARNING: commercial checkpoint unavailable "
