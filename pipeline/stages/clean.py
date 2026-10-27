@@ -117,7 +117,7 @@ def resolve_cut_mode(cut_mode, n_bands=None, n_planes=None):
 
     `n_bands` is Stage 0's count from the photographs, and it is a cross-check
     rather than a vote. It is not used to veto a span, because it is measured to
-    UNDER-count: on inputs/sunshine2, a capture wearing an ankle cord and a
+    UNDER-count: on inputs/1_water_displacement_4s, a capture wearing an ankle cord and a
     below-knee cord, GroundingDINO returns the upper cord on 1 frame of 8 and
     below the corroboration bar, so requiring both sources to agree would make a
     span unreachable on the one capture that needs it. When the two disagree the
@@ -181,7 +181,7 @@ def _merge_projected_planes(colour_planes, band_planes, height_axis):
     it rides along as the colour plane's `projected_backup`, and the gates in
     Phase C fall back to it if the colour fit fails them. Discarding it here
     used to lose the whole band whenever the colour fit was later rejected --
-    on 0_left, 2_left and 5_right of the 2026-09-04 cohort that left one cut
+    on 2_water_displacement_1_left, 2_water_displacement_3_left and 2_water_displacement_6_right of the 2026-09-04 cohort that left one cut
     plane and a sliver or a runaway volume.
     """
     if not band_planes:
@@ -253,7 +253,7 @@ def _limb_axis_near(leg_pts_rot, z, window_frac=0.25, n_slices=10, min_pts=8):
     limb's axis, and getting that wrong rejects real bands. A calf is roughly
     10 cm across; a slab thin enough to be local is thinner than that, so its
     direction of greatest extent is the limb's WIDTH and comes out horizontal.
-    Measured consequence: genuine bands on inputs/orange_shirt and black_shirt
+    Measured consequence: genuine bands on inputs/1_water_displacement_7 and 1_water_displacement_5
     scored 53 and 65 degrees "off the limb axis" and were thrown out.
 
     Slice centroids do not have that failure. Each centroid sits on the limb's
@@ -616,8 +616,8 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         #
         # The cap used to run first, keeping the two with the most points. That
         # ranking prefers exactly the wrong thing: a real band is small because
-        # only its camera-facing arc reconstructs -- 964 points on inputs/champ,
-        # 299 on black_shirt, 208 on keng -- while a false plane fitted to
+        # only its camera-facing arc reconstructs -- 964 points on inputs/1_water_displacement_2c,
+        # 299 on 1_water_displacement_5, 208 on keng -- while a false plane fitted to
         # clothing or floor is thousands. On champ the genuine band (964 pts)
         # was dropped in favour of the shorts (5,265) and a floor-junction blob
         # (2,597); the height gate then removed the blob and the cut ran on the
@@ -636,7 +636,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         #
         # This has to happen HERE rather than in segment_point_cloud: detection
         # runs in original VGGT space, where the vertical axis is whatever the
-        # camera happened to give (on small_leg the limb's long axis is Y, not
+        # camera happened to give (on 0_first_sample_3 the limb's long axis is Y, not
         # Z). Only after R_total does "height" mean height.
         if len(leg_pts_rot) > 0 and len(markers_rotated) > 0:
             lo = float(leg_pts_rot[:, 2].min())
@@ -934,7 +934,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
         on an open one it returns chi=-2 -- not a single closed solid -- which
         sends Stage 4 to its alpha-shape fallback. That ladder has to open to 40x
         point spacing before it seals, and a wrap that loose reads volume high:
-        it is what put inputs/sunshine 10% over its displacement volume.
+        it is what put inputs/1_water_displacement_3s 10% over its displacement volume.
 
         This did not arise while Stage 3 cut the cloud, because Stage 4 then only
         ever saw a limb whose top was the cut face, already capped. Now that the

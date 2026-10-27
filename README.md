@@ -78,7 +78,7 @@ is **CC BY-NC-SA 4.0 — not licensed for commercial use.** Set
 
 ```bash
 python run.py -i inputs/est_325 --no-segment-leg   # rigid object, no marker band
-python run.py -i inputs/small_leg                  # limb with a marker band
+python run.py -i inputs/0_first_sample_3                  # limb with a marker band
 python run.py -i inputs/est_325 --skip_mesh        # point cloud only
 ```
 
@@ -88,13 +88,13 @@ otherwise marker detection has nothing to find.
 ### The reference cube — two of them
 
 `REFERENCE_REAL_SIZE_CM` defaults to **10.0**, the 3D-printed cube used from
-August 2026. The original fixtures (`small_leg`, `short_leg`, `est_325`) were
+August 2026. The original fixtures (`0_first_sample_3`, `0_first_sample_2`, `est_325`) were
 shot with a 14 cm handmade cardboard cube and need the override, because
 measuring one against the other rescales every volume by `(14/10)³ = 2.74`
 with no visible sign:
 
 ```bash
-REFERENCE_REAL_SIZE_CM=14 python run.py -i inputs/small_leg
+REFERENCE_REAL_SIZE_CM=14 python run.py -i inputs/0_first_sample_3
 ```
 
 What you should see at the end:
@@ -109,7 +109,7 @@ Both meshes should report `watertight` with `euler 2`. If either says
 `warp+floodfill` or `convex_hull (UNRELIABLE)`, the reconstruction failed and
 the number is not a measurement.
 
-> That example is `inputs/small_leg`, which uses the **14 cm** cube — run it with
+> That example is `inputs/0_first_sample_3`, which uses the **14 cm** cube — run it with
 > `REFERENCE_REAL_SIZE_CM=14` or every number is 2.74× too large. **The limb
 > figure is also stale:** the current tree reads **1067.57 cm³**, reproducible to
 > seven significant figures across cold runs. The difference is upstream of the
@@ -233,13 +233,13 @@ python pipeline/tools/viewer.py output/scene_mesh.ply --info
   chromaticity, and below `MARKER_MIN_AXIS = 0.05` it stops discriminating:
   every Aug 2026 capture measured 0.021–0.043 with an olive cord on tan skin,
   so the learned-colour detector was refused on all of them and the pipeline
-  fell back to its hardcoded colour window. `small_leg`'s khaki measures 0.094.
+  fell back to its hardcoded colour window. `0_first_sample_3`'s khaki measures 0.094.
   A saturated band roughly triples the separation.
 - **Keep the reference cube close and unobstructed.** It fills 15–18% of the
-  frame width on the Aug 2026 captures against 42% on `small_leg`, which is
-  2 100–3 900 surviving points instead of 19 600. On `inputs/blue shirt` the
+  frame width on the Aug 2026 captures against 42% on `0_first_sample_3`, which is
+  2 100–3 900 surviving points instead of 19 600. On `inputs/1_water_displacement_6` the
   cube sits behind the foot in most frames and the reconstruction failed
-  outright — see `inputs/blue shirt/UNUSABLE.md`.
+  outright — see `inputs/1_water_displacement_6/UNUSABLE.md`.
 - **Even lighting.** Avoid hard shadows under the object — dark pixels have
   numerically meaningless hue and used to be detected as markers.
 - **A matte floor if possible.** Gloss produces reflections that VGGT
@@ -260,22 +260,22 @@ photographs, with `--cut-mode upper` where that flag exists:
 
 | capture | displacement | old pipeline | error | Stage 3 cut | error | Stage 5 cut | error |
 |---|---|---|---|---|---|---|---|
-| `orange shirt` | 4090 cm³ | 5395 cm³ | +31.9% | 4094 cm³ | +0.1% | 4098 cm³ | **+0.2%** |
-| `keng` | 2210 cm³ | 2490 cm³ | +12.7% | 2249 cm³ | +1.8% | 2287 cm³ | **+3.5%** |
-| `black shirt` | 3510 cm³ | 3119 cm³ | −11.1% | 3648 cm³ | +3.9% | 3656 cm³ | **+4.2%** |
-| `sunshine` | 3130 cm³ | 4161 cm³ | +32.9% | 3093 cm³ | −1.2% | 3298 cm³ | **+5.4%** |
-| `champ` | 2810 cm³ | 2432 cm³ | −13.5% | 3354 cm³ | +19.4% | 3371 cm³ | **+20.0%** — unresolved, below |
-| `blue shirt` | 3420 cm³ | — | — | — | — | — | capture unusable |
+| `1_water_displacement_7` | 4090 cm³ | 5395 cm³ | +31.9% | 4094 cm³ | +0.1% | 4098 cm³ | **+0.2%** |
+| `1_water_displacement_1k` | 2210 cm³ | 2490 cm³ | +12.7% | 2249 cm³ | +1.8% | 2287 cm³ | **+3.5%** |
+| `1_water_displacement_5` | 3510 cm³ | 3119 cm³ | −11.1% | 3648 cm³ | +3.9% | 3656 cm³ | **+4.2%** |
+| `1_water_displacement_3s` | 3130 cm³ | 4161 cm³ | +32.9% | 3093 cm³ | −1.2% | 3298 cm³ | **+5.4%** |
+| `1_water_displacement_2c` | 2810 cm³ | 2432 cm³ | −13.5% | 3354 cm³ | +19.4% | 3371 cm³ | **+20.0%** — unresolved, below |
+| `1_water_displacement_6` | 3420 cm³ | — | — | — | — | — | capture unusable |
 | **mean abs. error** | | | **22.17%** | | **1.75%** | | **3.29%** |
 
-Mean excludes `champ`, unresolved under all three (n = 4).
+Mean excludes `1_water_displacement_2c`, unresolved under all three (n = 4).
 
 **The old column is not one variable apart from the others.** That tree had no
 Stage 0 framing gate, so VGGT centre-cropped the raw photographs itself; it
 predates the marker-detection rewrite, the ghost chain and the levelling gates.
 It also could not close most of its meshes: four of the five fell back to
 `warp+floodfill`, which leaks through an open surface, and its errors run in
-both directions — +32.9% on `sunshine`, −11.1% on `black shirt` — which is what
+both directions — +32.9% on `1_water_displacement_3s`, −11.1% on `1_water_displacement_5` — which is what
 an unreliable volume *method* looks like rather than a geometric bias. Both
 current pipelines report `watertight` on every capture, so their errors are
 comparable to each other in a way the old column's are not.
@@ -299,14 +299,14 @@ reconstruction fails, Stage 4 falls back to an alpha shape that has to open to
 -cut figure above is higher than its cloud-cut counterpart; none reads low.
 
 The trade was made deliberately: a clinician places the cut, and placing it on a
-solid surface is far easier than on a scatter of points. `sunshine` carries most
+solid surface is far easier than on a scatter of points. `1_water_displacement_3s` carries most
 of the cost. Closing the limb's upper end before reconstruction recovered about
 a third of it (5.4% from 10.1%); the rest needs the uncut reconstruction itself
 to improve.
 
 **These numbers were measured foot-to-upper-band, so reproducing them now needs
 `--cut-mode upper`.** The default became `auto` on 2026-08-29, and auto cuts a
-span wherever two marker planes survive Stage 3's gates — which `champ` does, so
+span wherever two marker planes survive Stage 3's gates — which `1_water_displacement_2c` does, so
 under the default it now reports the segment between its two bands (~2377 cm³)
 rather than the 3354 cm³ above. That is a different quantity, not a correction.
 
@@ -327,7 +327,7 @@ seed, which is what makes an error bar worth quoting.
   reading.** Printed parts shrink 0.3–0.8%; at 10 cm a 2 mm error is 2.0%
   linear and **6.1% of volume**, which would dominate the residual above.
   Measuring the cube once is still the cheapest accuracy work available.
-- **`champ` is unresolved at +19.4%.** Its cut is the best-aligned of the five
+- **`1_water_displacement_2c` is unresolved at +19.4%.** Its cut is the best-aligned of the five
   (2.4° off the limb's own axis) and its cube the second most cubic, and
   2.81 L matches neither segment its two bands bound — below the upper band is
   3379 cm³, between the two is 2377 cm³. Its limb reconstructs about 9% wider

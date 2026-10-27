@@ -48,7 +48,7 @@ reject stops the run.
 
 ![what VGGT actually receives](experiments/stage0_vggt_input.png)
 
-**Why this is an improvement.** On `inputs/small_leg`, VGGT's own crop cuts 16%
+**Why this is an improvement.** On `inputs/0_first_sample_3`, VGGT's own crop cuts 16%
 off the cube in `IMG_4462`. That is invisible: a truncated cube still
 reconstructs, it just reconstructs *smaller* — and the cube sets the scale for
 every number the run reports. A scale error from a clipped reference cannot be
@@ -144,7 +144,7 @@ accuracy.
 > On the six Aug 2026 captures the learned path is **refused on every one of
 > them** and detection falls back to the hardcoded config window this section
 > argues against. The band-to-limb separation it depends on measures 0.021–0.043
-> in chromaticity where `small_leg` measures 0.094, and below about 0.05 the
+> in chromaticity where `0_first_sample_3` measures 0.094, and below about 0.05 the
 > discriminant selects clothing and floor tile as readily as cord — it put
 > champ's grey shorts at 1.54 against the band's own 1.00.
 >
@@ -434,7 +434,7 @@ runs.
 **Now** the default is `--cut-mode auto`: `upper` measures everything below the
 highest valid band, `span` measures the segment between the outermost two, and
 auto picks span exactly when two marker planes survive Stage 3's height and
-perpendicularity gates. `inputs/champ` resolves to span, `inputs/small_leg` to
+perpendicularity gates. `inputs/1_water_displacement_2c` resolves to span, `inputs/0_first_sample_3` to
 upper, with no flag either way.
 
 **What auto reads, and what it deliberately does not.** The gated plane count
@@ -452,12 +452,12 @@ them, and `framing.json` carries `bands` plus a per-frame `bands_seen`. A captur
 wears two bands when BAND_MIN_FRAME_FRAC of its frames say so — the same
 corroboration rule the band colour already used.
 
-Measured: `champ` 2 bands on 8 of 8 frames, `small_leg` 1 on 6 of 6, `est_325`
+Measured: `1_water_displacement_2c` 2 bands on 8 of 8 frames, `0_first_sample_3` 1 on 6 of 6, `est_325`
 0. Framing on the one-band and no-band captures is **byte-identical** to before;
-on `champ` one frame's window moved 55 px to take in the lower band, and all
+on `1_water_displacement_2c` one frame's window moved 55 px to take in the lower band, and all
 eight verdicts are unchanged.
 
-**Where it does not work, stated plainly.** `inputs/sunshine2` wears an ankle
+**Where it does not work, stated plainly.** `inputs/1_water_displacement_4s` wears an ankle
 cord and a below-knee cord, and the detector returns the upper one on 1 frame of
 8 — below the bar, so Stage 0 reports one band. Stage 3 finds one plane there
 too, so auto measures below the ankle cord. Two ways of forcing the upper cord
@@ -477,12 +477,12 @@ cluster that the 40-point floor dropped. Projection recovers it from 1,842 point
 across 6 frames, and the run now cuts at 18.7% and 72.4% of the limb's span.
 
 It is additive by construction: a projected plane within `SAME_BAND_DISTANCE` of
-a colour plane is the same band, and the colour fit wins. `champ` (colour already
-found both bands) and `small_leg` (one band) produce point-for-point identical
+a colour plane is the same band, and the colour fit wins. `1_water_displacement_2c` (colour already
+found both bands) and `0_first_sample_3` (one band) produce point-for-point identical
 cuts. Projected planes are exempt from the height floor, which exists to reject
 uncorroborated blobs near the ground and would otherwise throw away a real ankle
 cord at 0.66 cube heights; the perpendicularity gate still applies to everything.
-It cannot rescue a band Stage 0 never saw — `sunshine2` still reports one.
+It cannot rescue a band Stage 0 never saw — `1_water_displacement_4s` still reports one.
 
 **Selecting no longer discards.** `cutting_line_levelled.json` carries
 `candidates` — every plane that passed the gates, lowest first — beside
@@ -509,7 +509,7 @@ It is what lets a reviewer put the cut at a height they have a tape measurement
 for and compare on the spot.
 
 **This changes a published number.** The accuracy table was measured
-foot-to-upper-band. `champ` wears two bands, so under the new default it reports
+foot-to-upper-band. `1_water_displacement_2c` wears two bands, so under the new default it reports
 the segment between them (~2377 cm³) instead of 3354 cm³. Reproducing the table
 needs an explicit `--cut-mode upper`; the README says so where the table is.
 
@@ -526,11 +526,11 @@ Stated here so this file cannot be read as more than it is.
   caveat is a narrower one: n = 4, one subject class, one floor, one cord
   colour, and every figure conditional on the printed cube really being
   10.00 cm.
-- **One capture is unresolved.** `champ` reads +19.4% with a cut 2.4° off the
+- **One capture is unresolved.** `1_water_displacement_2c` reads +19.4% with a cut 2.4° off the
   limb's own axis and the most square cube in the set, and its 2.81 L matches
   neither segment its two bands bound. Not the cut, not the reference, not
   surface noise.
-- **One capture is unusable.** `inputs/blue shirt` — VGGT's reconstruction is
+- **One capture is unusable.** `inputs/1_water_displacement_6` — VGGT's reconstruction is
   wrong. It produced a confident number with every gate passing, which is what
   prompted the reference-fill check now in Stage 6.
 - ~~**Stage 6 is reverted to `main`'s version**, pending review.~~ **Resolved
@@ -549,7 +549,7 @@ Stated here so this file cannot be read as more than it is.
 - **`REFERENCE_REAL_SIZE_CM = 14.0` has never been measured.** The cube is
   handmade cardboard; a 2 mm build error is 1.4% linear = 4.3% volume on every
   result — larger than most of the improvements above.
-- **The marker-colour work is validated on one capture.** `small_leg` only.
+- **The marker-colour work is validated on one capture.** `0_first_sample_3` only.
   `est_325` has no band. That a *learned* colour generalises to a red or blue
   marker is argued from the mechanism, not demonstrated.
 - **Three silent failure paths remain**, listed as open items 3, 4 and 5 in

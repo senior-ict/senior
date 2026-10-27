@@ -2,7 +2,7 @@
 
 VGGT is handed a 518x518 square. On 9:16 phone photos its default centre crop
 resizes the width to 518 and cuts the height to match, which discards 43.8% of
-every frame — measured on inputs/small_leg, original rows 840..3000 of 3840
+every frame — measured on inputs/0_first_sample_3, original rows 840..3000 of 3840
 survive. That is not a neutral loss: it clipped the reference cube's base in two
 of six frames and put the limb's marker band outside the frame in several, which
 is why Stage 3 found only one marker plane instead of two.
@@ -36,7 +36,7 @@ reaching up from the floor that the cube itself defines.
 One caveat this stage cannot fix, and it is the reason CENTRE_ON_SUBJECT
 defaults to False. VGGT's pose encoding carries no principal point: it emits
 cx = cy = image centre on every frame. An off-centre crop presents it with a
-camera it cannot represent, and on inputs/small_leg the subject sits 8.5 degrees
+camera it cannot represent, and on inputs/0_first_sample_3 the subject sits 8.5 degrees
 off axis on average and 14.8 at worst. Recentring therefore trades a known pixel
 loss for an unknown geometric bias. The window is kept concentric with the frame
 by default, and merely tightened around the subject.
@@ -61,8 +61,8 @@ MARKER_CM = REFERENCE_MARKER_CM
 # Largest a detected marker band may be, as a fraction of the limb's mask area.
 # An open-vocabulary detector always returns its best candidate for "cord", and
 # on a capture with no cord its best candidate is the leg. Measured band/limb
-# area ratios: real bands on inputs/small_leg 0.04-0.07; false positives on
-# inputs/est_325 1.23 and inputs/short_leg 2.19-2.91. 0.35 is five times the
+# area ratios: real bands on inputs/0_first_sample_3 0.04-0.07; false positives on
+# inputs/est_325 1.23 and inputs/0_first_sample_2 2.19-2.91. 0.35 is five times the
 # largest real band and a third of the smallest false one. See _band_bboxes.
 BAND_MAX_LIMB_FRAC = 0.35
 
@@ -80,7 +80,7 @@ MAX_BANDS = 2
 # 0.12 is a geometric floor rather than a measured separation, and it is stated
 # that way because no capture in hand has yielded two detected bands to measure
 # one from. What it is derived from: a cord's own box is 47-104 px tall on the
-# 1477 px frames of inputs/sunshine2, which is 0.03-0.08 of the limb box, so a
+# 1477 px frames of inputs/1_water_displacement_4s, which is 0.03-0.08 of the limb box, so a
 # second box within 0.12 of the first is inside a cord-width of it and cannot be
 # a separately tied cord. A person ties an upper and a lower band at the two
 # ends of the segment being measured, which is most of the limb apart.
@@ -99,21 +99,21 @@ BAND_CROP_PAD_FRAC = 0.2
 # out of twenty is noise. A fraction asks the right question -- does most of the
 # capture agree that there is a band?
 #
-# What it is guarding against, measured on inputs/short_leg, a capture with no
+# What it is guarding against, measured on inputs/0_first_sample_2, a capture with no
 # marker at all: a single 74x60 px false positive on 1 of 8 frames taught the
 # pipeline that the marker is RGB(217,207,198), which is the floor tile. Stage 3
 # then found 198 "band" points and cut the limb at 61% of its height. With no
 # colour at all Stage 3 correctly finds no plane.
 #
-# At 0.6 the bar is 4 of 6 frames, or 5 of 8. The real band on inputs/small_leg
-# is found on 6 of 6; the false positive on short_leg on 1 of 8.
+# At 0.6 the bar is 4 of 6 frames, or 5 of 8. The real band on inputs/0_first_sample_3
+# is found on 6 of 6; the false positive on 0_first_sample_2 on 1 of 8.
 BAND_MIN_FRAME_FRAC = 0.6
 
 # Fallback height of the marker band above the floor, in cube heights, used only
 # when the band cannot be found by colour. The cube stands on the floor, so its
 # base fixes floor level and its own height fixes the scale. The band is tied at
 # one place on the limb, so its height is a physical constant: measured on
-# inputs/small_leg it reads 0.97, 1.13, 1.46 and 1.51 cube heights on the frames
+# inputs/0_first_sample_3 it reads 0.97, 1.13, 1.46 and 1.51 cube heights on the frames
 # that resolve it, so 1.6 clears all of them without reaching far past the cut.
 LIMB_BAND_CUBE_HEIGHTS = 1.6
 
@@ -140,7 +140,7 @@ MIN_FRAMES = 6
 #
 # ON. The point of the stage is that VGGT never gets to choose the crop: it
 # centre-crops whatever it is given and discards 44% of a 9:16 photo, with no
-# regard for where the reference is. Two frames of inputs/small_leg lose part of
+# regard for where the reference is. Two frames of inputs/0_first_sample_3 lose part of
 # the cube that way. Cropping here means the window is chosen around the cube
 # and the band, and the gate has already verified both survive it.
 #
@@ -160,7 +160,7 @@ CROP_ENABLED = True
 # On by default, because frame-centred cropping cannot do the job: a square
 # centred on the frame that still contains an off-centre subject has to reach
 # the subject's furthest corner, so it comes out at essentially the whole frame
-# and is the centre crop again. Measured on inputs/small_leg, frame-centred
+# and is the centre crop again. Measured on inputs/0_first_sample_3, frame-centred
 # framing left 1 of 6 frames usable against 4 subject-centred.
 #
 # It is not free. VGGT's pose encoding carries no principal point -- it emits
@@ -268,7 +268,7 @@ def _cube_bbox(gray, image_pil=None, dict_name=REFERENCE_MARKER_DICT):
     plane, though, so the face's corners map back exactly.
 
     A face still bounds only itself -- the cube continues behind it -- and on
-    inputs/small_leg a single face understates the cube by up to 203 px. Two
+    inputs/0_first_sample_3 a single face understates the cube by up to 203 px. Two
     adjacent faces share an edge and between them cover most of the silhouette,
     which is why two used to be required. But requiring them rejects a
     legitimate pose where the limb occludes the rest of the reference, and the
@@ -294,7 +294,7 @@ def _cube_bbox(gray, image_pil=None, dict_name=REFERENCE_MARKER_DICT):
             # Say so. This is the one swallowed exception in the pipeline that
             # makes a GATE MORE PERMISSIVE: without the detector the union is
             # the face quads alone, which is SMALLER than the true silhouette
-            # (by 22-90 px per frame on inputs/small_leg). A smaller cube box
+            # (by 22-90 px per frame on inputs/0_first_sample_3). A smaller cube box
             # fits inside the crop window more easily, so a frame that should
             # be warned about can pass instead -- and the whole purpose of
             # Stage 0 is to refuse a clipped reference.
@@ -445,7 +445,7 @@ def _band_bboxes(image_pil, bgr, leg_box, limb_mask=None):
     The previous rule was 2G - R - B > 10, which encodes one khaki band: its own
     config notes that raising the threshold lost the only marker in the dataset,
     and it fired on a houseplant instead of the band on two frames. Naming the
-    band works whatever colour it is -- measured on inputs/small_leg it is found
+    band works whatever colour it is -- measured on inputs/0_first_sample_3 it is found
     on 6 of 6 frames at 0.81-0.84, including both frames the colour rule missed.
 
     Plural, because the count is a fact about the capture and not a detail of
@@ -474,15 +474,15 @@ def _band_bboxes(image_pil, bgr, leg_box, limb_mask=None):
     Guard 2 is measured, not guessed. Band area as a fraction of the limb's mask
     area, over three datasets:
 
-        inputs/small_leg (a real band)   0.04 - 0.07
+        inputs/0_first_sample_3 (a real band)   0.04 - 0.07
         inputs/est_325   (no band)       1.23
-        inputs/short_leg (no band)       2.19 - 2.91
+        inputs/0_first_sample_2 (no band)       2.19 - 2.91
 
     A cord tied around a limb cannot be larger than the limb. BAND_MAX_LIMB_FRAC
     sits at 0.35 -- five times the largest real band seen, and a third of the
     smallest false one.
 
-    What this cost before it was fixed: on inputs/short_leg the hallucinated band
+    What this cost before it was fixed: on inputs/0_first_sample_2 the hallucinated band
     inflated the crop window until nothing fit, and Stage 0 rejected 5 of 8
     frames as `objects out of window`. With the guard, all 8 pass. It also fed
     `trace_band_colour` a box that is mostly skin, so the "band" colour handed to
@@ -819,7 +819,7 @@ def _remove_stale_frames(out_dir):
     Stage 1 reads whatever is in this directory, not the list Stage 0 returned.
     So a second run that accepts fewer frames than the first leaves the extras
     behind and VGGT is handed them anyway. It happened: on
-    `output_test2_champ_hairless` a 7-frame run inherited an eighth frame from
+    `output_4_circumference_calculation_2c_hairless` a 7-frame run inherited an eighth frame from
     an earlier 8-frame run, so the reconstruction used a duplicate viewpoint,
     and the manifest then described 7 frames while the pointmap held 8 --
     which silently disabled every projection keyed to the manifest, because

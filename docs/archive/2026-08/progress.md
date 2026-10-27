@@ -24,7 +24,7 @@ different times and carry different confidence:
 - **Layer 2** — uncommitted work from the current session. +666 / −65 across 9 files,
   plus three new modules and one new pipeline stage.
 
-Every number quoted below was measured on `inputs/small_leg` or `inputs/est_325`
+Every number quoted below was measured on `inputs/0_first_sample_3` or `inputs/est_325`
 unless stated otherwise. Where a change was made and later found to be wrong, that
 is recorded too — the reasoning matters more than the diff.
 
@@ -190,7 +190,7 @@ orange and yellow — with **no brightness floor at all**.
 
 ### Why that failed
 
-On `inputs/small_leg` it classified two things as markers:
+On `inputs/0_first_sample_3` it classified two things as markers:
 
 ```
 shadow  RGB(8,6,8)      V=3.1%    hue is arbitrary at that brightness
@@ -215,14 +215,14 @@ MARKER_EXG_MIN = 10       # 2G-R-B
 `MARKER_VAL_MIN` is the important one: hue is numerically unstable as value
 approaches zero, so any dark pixel can land anywhere on the wheel.
 
-A detail worth recording, because it explains the design: the `small_leg` band is
+A detail worth recording, because it explains the design: the `0_first_sample_3` band is
 **khaki**, RGB(60,52,30), hue 44° — it fails every green hue test. What finds it is
 excess green, +14 against skin at −54. The hue window's job is to *exclude* skin,
 not to describe the band. Raising `MARKER_EXG_MIN` to 15 silently lost the only real
 marker in the dataset.
 
 `MARKER_MIN_CLUSTER_PTS = 40` replaced a hardcoded 150. A real band is small — 99
-points out of 182k on `small_leg`, because only the part facing a camera
+points out of 182k on `0_first_sample_3`, because only the part facing a camera
 reconstructs — and 150 rejected it. The old loose colour rule only cleared 150 by
 padding clusters with shadow, which is what produced the 3349-point "marker".
 
@@ -840,7 +840,7 @@ every run, because scale is derived as `(real_vol / mesh_vol)^(1/3)` from that s
 cube. That is not an accuracy result — it is an identity. The stage currently emits
 no error signal about itself.
 
-Cold full run, `inputs/small_leg`, after the revert: 80 s wall, 5 of 6 frames
+Cold full run, `inputs/0_first_sample_3`, after the revert: 80 s wall, 5 of 6 frames
 accepted, 302 marker points, plane 18.4°, alpha 55× watertight with euler 2, limb
 1091.79 cm³.
 
@@ -882,14 +882,14 @@ across those edits. That whole file is now main's anyway.
    1091.79 — they were measuring different pixels.
 
    Fixed by chaining Stage 0's output into the next stage inside a range
-   (`stagerun.py`, `run_stage_range`). Re-measured on `inputs/small_leg` after the
+   (`stagerun.py`, `run_stage_range`). Re-measured on `inputs/0_first_sample_3` after the
    fix, both entry points now produce **bit-identical** `volumes.csv` —
    `leg_cut.ply` at `0.00479626174799353` mesh units and **1081.9362025528196
    cm³** from both, `box.ply` at `0.012164249800904262`. The only difference left
    is row order (`run.py` writes the limb first, `stagerun.py` the reference),
    which no consumer depends on. The 0.8% is not an error bar on Stage 6; it was
    this bug.
-4. **The marker-colour fix is validated on one dataset.** `small_leg` only —
+4. **The marker-colour fix is validated on one dataset.** `0_first_sample_3` only —
    `est_325` has no band. The claim that a learned colour generalises to a red or
    blue marker is argued but not demonstrated; a capture with a differently
    coloured band is the test.
@@ -1042,7 +1042,7 @@ into every other view and require its depth to be corroborated by at least
 `MULTIVIEW_MIN_VIEWS` others within `MULTIVIEW_REL_THRESHOLD` relative error.
 
 **It does not work here, and the reason is worth keeping.** Measured on
-`small_leg`, using local shell thickness (std of point distance to a locally
+`0_first_sample_3`, using local shell thickness (std of point distance to a locally
 fitted plane) as the ghost metric:
 
 | `min_views` | points | shell std |
@@ -1085,7 +1085,7 @@ $$\text{remove } \{p : |\,\hat{n}\cdot p + d\,| \le \tau\}, \qquad
 
 **This is the single most consequential bug fixed.** VGGT ghosts the floor the
 same way it ghosts the limb, so the floor is a *sandwich* roughly two thresholds
-thick. Removing the middle leaves both skins. Measured on `small_leg`:
+thick. Removing the middle leaves both skins. Measured on `0_first_sample_3`:
 
 ```
 signed distance from the fitted plane, points surviving a 1x removal
@@ -1145,7 +1145,7 @@ rewards compactness. Note the sign change: `main` *subtracted* raw `max_dim`
 (units-dependent); this adds a normalised compactness score in [0, 1].
 
 Box identification uses **cubeness** $= \min(\text{extent}) / \max(\text{extent})$
-plus an ArUco-likeness score. After the band fix, on `small_leg`:
+plus an ArUco-likeness score. After the band fix, on `0_first_sample_3`:
 
 ```
 cluster #1: 112,468 pts, cubeness=0.7315  ->  OBJ
@@ -1226,7 +1226,7 @@ result lands between them.
 **The radius must exceed the ghost separation** or the two sheets never share a
 neighbourhood — at $m = 2.0$ nothing moved at all. This *moves* points, so it is
 a genuine change to geometry, not a cleanup, and it costs volume. Measured on
-`small_leg` (shell std / convex hull volume):
+`0_first_sample_3` (shell std / convex hull volume):
 
 | `MLS_RADIUS_MULT` | shell std | hull vol | Δ |
 |---|---|---|---|
@@ -1256,7 +1256,7 @@ is computed as a ratio of channel differences to the channel maximum,
 $$H = 60 \cdot \left(\frac{G-B}{\Delta} \bmod 6\right) \text{ etc.}, \qquad
 S = \frac{\Delta}{\max}, \qquad V = \max$$
 
-so as $V \to 0$ the hue becomes **numerically arbitrary**. On `small_leg` this
+so as $V \to 0$ the hue becomes **numerically arbitrary**. On `0_first_sample_3` this
 classified:
 
 | what | RGB | ExG | hue | V | old rule |
@@ -1278,7 +1278,7 @@ exg_mask = bright & (exg > MARKER_EXG_MIN)                       # 10
 ```
 
 **Critical detail:** the hue window is *not* what finds the marker. The
-`small_leg` band is khaki, hue 44°, and fails every green hue test. **ExG** finds
+`0_first_sample_3` band is khaki, hue 44°, and fails every green hue test. **ExG** finds
 it — $2G - R - B = +14$ against skin at −54. Raising `MARKER_EXG_MIN` to 15
 silently lost the only real marker in the dataset. It stays at 10.
 
@@ -1293,7 +1293,7 @@ Two geometric plausibility gates were added:
 
   This gate runs in `clean.py` **after** `R_total`, not inside
   `segment_point_cloud`. Detection runs in original VGGT space, where the
-  vertical axis is whatever the camera gave — on `small_leg` the limb's long
+  vertical axis is whatever the camera gave — on `0_first_sample_3` the limb's long
   axis is **Y**, not Z — so a Z-based height test there measures sideways. Only
   after levelling does "height" mean height.
 
@@ -1552,7 +1552,7 @@ open it. Safe: a watertight surface has exactly one component, so the component
 filter had nothing to remove anyway.
 
 The guard uses **trimesh's** definition of watertight, not Open3D's. They
-disagree — the `small_leg` mesh at α = 25× is watertight to trimesh (χ = 2) and
+disagree — the `0_first_sample_3` mesh at α = 25× is watertight to trimesh (χ = 2) and
 not to Open3D, which is stricter about vertex-manifoldness. The α search, Stage
 5 and Stage 6 all use trimesh, so guarding on Open3D would protect a property
 nothing downstream reads.
@@ -1733,7 +1733,7 @@ objects — so every object was merged twice. Coincident duplicate geometry turn
 two closed surfaces into **7,554 fragments, euler 3113**. `orchestrator.py`
 always passed `recon_mesh_paths` and excluded it, so `run.py` was never affected;
 only the experiment harness was. The broken mesh did reach
-`web/public/samples/small_leg/scene_mesh.ply` and has been regenerated.
+`web/public/samples/0_first_sample_3/scene_mesh.ply` and has been regenerated.
 
 **`MAX_RECON_POINTS = 90000`** replaces two magic `150000` literals in the worker.
 
@@ -1809,7 +1809,7 @@ under `for_debug/<NN_stagename>/`.
 
 ### 9. End-to-end result
 
-`inputs/small_leg`, 6 photos, stages 3–6:
+`inputs/0_first_sample_3`, 6 photos, stages 3–6:
 
 ```
        name     method  euler   volume    obb_a    obb_b    obb_c
@@ -1835,7 +1835,7 @@ circular. Both meshes reach Stage 5 already watertight with χ = 2.
 2. **No compute backend.** The web Upload path probes `NEXT_PUBLIC_API_URL` and
    degrades honestly; the FastAPI service wrapping `stagerun.py` does not exist,
    so browser uploads cannot run the pipeline. Review sliders are display-only.
-3. **`est_325` fixtures are stale** — only `small_leg` was regenerated.
+3. **`est_325` fixtures are stale** — only `0_first_sample_3` was regenerated.
 4. **No caliper ground truth.** The can's nominal 325 ml is its *fill* volume;
    the pipeline measures external displacement. Different quantities — no error
    percentage is defensible until the can is physically measured.
@@ -1905,7 +1905,7 @@ The alternative — parked in `pipeline/stages/volume.py` — calibrates on a
 linear_scale = REFERENCE_REAL_SIZE_CM / mean(two horizontal fitted-face edges)
 ```
 
-which leaves the cube's volume **free to disagree**, and on `small_leg` it does:
+which leaves the cube's volume **free to disagree**, and on `0_first_sample_3` it does:
 2694 cm³ against 2744 nominal, −1.8%. That residual is the only internal error
 signal the system has, and the shipping method sets it to zero by definition.
 
@@ -1986,15 +1986,15 @@ volume ranged **972 to 1174 cm³, a 21% spread**, against alpha's 2.5%.
 
 **A mixed configuration was tried** — alpha shape for the cube, Poisson for the
 limb, which the pipeline already supports via `--box-recon-method` and
-`--obj-recon-method`. On `small_leg` both objects reached χ = 2 and the volume
-moved −1.0%. On `short_leg` the limb closed at **χ = −4** and the volume moved
+`--obj-recon-method`. On `0_first_sample_3` both objects reached χ = 2 and the volume
+moved −1.0%. On `0_first_sample_2` the limb closed at **χ = −4** and the volume moved
 −16%. The deciding measurement:
 
 | | Stage 4 → Stage 5 volume change |
 |---|---|
 | alpha shape, both captures | **+0.00%** — already closed, repair is a no-op |
-| Poisson, `small_leg` | −4.22% |
-| Poisson, `short_leg` | **+158.08%** |
+| Poisson, `0_first_sample_3` | −4.22% |
+| Poisson, `0_first_sample_2` | **+158.08%** |
 
 Poisson's mesh is not closed when Stage 4 hands it over, so **the repair is part
 of the answer**. A method whose reported volume is between 4% and 158% the work
@@ -2003,7 +2003,7 @@ enters that regime because Stage 4 does not emit anything open.
 
 **One thing Poisson genuinely wins, recorded because it is a real cost of the
 current choice**: p95 point-to-surface of 1.30 mm against alpha's 2.39 mm on
-`small_leg`, and 1.70 mm against **11.84 mm** on `short_leg`. Alpha buys its
+`0_first_sample_3`, and 1.70 mm against **11.84 mm** on `0_first_sample_2`. Alpha buys its
 guarantee with a coarse α, and coarse means loose.
 
 ---
@@ -2128,9 +2128,9 @@ The max row reproduces the recorded pair to a tenth of a point, which is how the
 cause was identified rather than guessed. **The two percentages are withdrawn;
 the +1 pp gap between plane and quadratic survives every statistic.**
 
-**"`short_leg` is a badly framed capture."** It is not. Stage 0 rejected 5 of its
+**"`0_first_sample_2` is a badly framed capture."** It is not. Stage 0 rejected 5 of its
 8 frames because of a hallucinated marker band, and with that fixed all 8 pass.
-Any conclusion that leaned on `short_leg` being a poor capture — including the
+Any conclusion that leaned on `0_first_sample_2` being a poor capture — including the
 excuse offered for Poisson's failure on it — does not hold.
 
 ---
@@ -2145,15 +2145,15 @@ fraction of the limb's mask:
 
 | capture | ratio |
 |---|---|
-| `small_leg` — a real band | **0.04 – 0.07** |
+| `0_first_sample_3` — a real band | **0.04 – 0.07** |
 | `est_325` — no band | 1.23 |
-| `short_leg` — no band | 2.19 – 4.02 |
+| `0_first_sample_2` — no band | 2.19 – 4.02 |
 
 `BAND_MAX_LIMB_FRAC = 0.35`: five times the largest real band, a third of the
 smallest false one.
 
 **One detection was enough to set the marker colour.** A single 74 × 60 px false
-positive on 1 of 8 `short_leg` frames — small enough to pass the size guard —
+positive on 1 of 8 `0_first_sample_2` frames — small enough to pass the size guard —
 taught the pipeline that the marker is RGB(217, 207, 198), which is the floor
 tile. Consequence, measured by running Stage 3's detector both ways on the same
 cloud:
@@ -2194,8 +2194,8 @@ a genuine absence is unrecoverable.
 
 | capture | before | after |
 |---|---|---|
-| `small_leg` | 5 of 6 usable, 1 rejected | **6 of 6 used, 1 warning** — `IMG_4458` no longer needs `--continue-on-rejected`; same learned colour, same downstream numbers |
-| `short_leg` | 1 of 8, run refused | **8 of 8**, spurious colour discarded |
+| `0_first_sample_3` | 5 of 6 usable, 1 rejected | **6 of 6 used, 1 warning** — `IMG_4458` no longer needs `--continue-on-rejected`; same learned colour, same downstream numbers |
+| `0_first_sample_2` | 1 of 8, run refused | **8 of 8**, spurious colour discarded |
 | `est_325` | 0 of 8, all unreadable | **8 of 8**, correctly finds no band |
 
 ---
@@ -2234,7 +2234,7 @@ Stage 6 derives scale from the reference's own volume, so the cube reports its
 nominal whatever that nominal is.
 
 It now defaults to 10.0 and is overridable per run, because the older fixtures
-(`small_leg`, `short_leg`, `est_325`) still need 14:
+(`0_first_sample_3`, `0_first_sample_2`, `est_325`) still need 14:
 
 ```python
 REFERENCE_REAL_SIZE_CM = float(os.environ.get("REFERENCE_REAL_SIZE_CM", 10.0))
@@ -2250,12 +2250,12 @@ at all.
 
 | capture | measured | displacement | error |
 |---|---|---|---|
-| `orange shirt` | 4094 cm³ | 4090 | **+0.1%** |
-| `keng` | 2249 cm³ | 2210 | **+1.8%** |
-| `black shirt` | 3648 cm³ | 3510 | **+3.9%** |
-| `sunshine` | 3093 cm³ | 3130 | **−1.2%** |
-| `champ` | 3354 cm³ | 2810 | +19.4% — unresolved, §5 |
-| `blue shirt` | — | 3420 | capture unusable, §6 |
+| `1_water_displacement_7` | 4094 cm³ | 4090 | **+0.1%** |
+| `1_water_displacement_1k` | 2249 cm³ | 2210 | **+1.8%** |
+| `1_water_displacement_5` | 3648 cm³ | 3510 | **+3.9%** |
+| `1_water_displacement_3s` | 3093 cm³ | 3130 | **−1.2%** |
+| `1_water_displacement_2c` | 3354 cm³ | 2810 | +19.4% — unresolved, §5 |
+| `1_water_displacement_6` | — | 3420 | capture unusable, §6 |
 
 **Mean absolute error 1.7% on four captures**, worst case 3.9%. Verified on a
 full cold run — Stage 0's detectors, a fresh VGGT pass, every stage after it —
@@ -2284,8 +2284,8 @@ won the cut. `MARKER_SCORE_MAX = 1.5`.
 inside the window:
 
 ```
-small_leg     0.0941   neutral grey scores −0.30   works
-black shirt   0.0433                       +1.12   grey selected
+0_first_sample_3     0.0941   neutral grey scores −0.30   works
+1_water_displacement_5   0.0433                       +1.12   grey selected
 champ         0.0323                       +1.14   grey selected
 sunshine      0.0308                       +2.62   the whole limb selected
 keng          0.0213                       +0.04   marginal
@@ -2312,7 +2312,7 @@ in favour of the 5,265-point shorts. Gating now runs first.
 **The height floor could not transfer between captures.**
 `MARKER_MIN_HEIGHT_FRAC = 0.20` is a fraction of the limb's own span, and the
 span is not a property of the subject — it is however much leg was in shot. The
-same physical ankle band sits at 44% of the span on `small_leg` and 18% on
+same physical ankle band sits at 44% of the span on `0_first_sample_3` and 18% on
 these. `MARKER_MIN_HEIGHT_CUBES = 1.0` measures it in reference-cube heights
 instead, which is one physical length.
 
@@ -2339,7 +2339,7 @@ it.** Fitting the limb's axis as the principal direction of a thin slab of
 points returns the limb's *width*: a calf is ~10 cm across, and a slab thin
 enough to be local is thinner than that, so its greatest-extent direction comes
 out horizontal. It passed a synthetic test on a narrow cylinder and then
-rejected the genuine bands on `orange_shirt` (53° "off axis") and `black_shirt`
+rejected the genuine bands on `1_water_displacement_7` (53° "off axis") and `1_water_displacement_5`
 (65°), sending both from +0.1% and +4.4% to +45.9% and +30.9%. A regression that
 size is invisible without a scoreboard. The axis now comes from **slice
 centroids** — divide a window of the limb into slices, take each centroid, fit a
@@ -2385,10 +2385,10 @@ A tape measure round the calf at a marked height separates "reconstructs wide"
 from "truth is wrong", costs a minute, and is independent of both the water and
 the cube.
 
-## 7. blue shirt: the failure no gate catches
+## 7. 1_water_displacement_6: the failure no gate catches
 
 Excluded at its owner's instruction —
-[`inputs/blue shirt/UNUSABLE.md`](../../../inputs/blue%20shirt/UNUSABLE.md). VGGT's
+[`inputs/1_water_displacement_6/UNUSABLE.md`](../../../inputs/1_water_displacement_6/UNUSABLE.md). VGGT's
 reconstruction is wrong, so nothing downstream can correct it.
 
 What is worth keeping is that **the run still produced a confident 5280 cm³ with
@@ -2401,14 +2401,14 @@ So Stage 6 now runs one that does. The cube is the only object whose true shape
 is known and it goes through the identical pipeline as the subject:
 
 ```
-orange shirt  0.874     sunshine    0.891
+1_water_displacement_7  0.874     sunshine    0.891
 keng          0.873     champ       0.876
-black shirt   0.873     blue shirt  0.787   <- flagged
+1_water_displacement_5   0.873     1_water_displacement_6  0.787   <- flagged
 ```
 
 `REFERENCE_FILL_MIN = 0.83` — mesh volume over its own oriented box. The five
 sound captures span 1.8 percentage points; the bad one sits 8.6 below all of
-them. Note what does *not* separate them: the cube's edge lengths. blue shirt's
+them. Note what does *not* separate them: the cube's edge lengths. 1_water_displacement_6's
 read 9.67 / 10.23 / 10.30 cm, squarely mid-pack. A dented surface keeps its
 bounding box and loses volume.
 
@@ -2449,7 +2449,7 @@ threads `crop=` and `output_size=` through so `run.py --no-prep-crop` works.
 
 ## 10. Corrections to this record
 
-**`small_leg` no longer reads 1081.94 cm³.** Two cold runs on the current tree
+**`0_first_sample_3` no longer reads 1081.94 cm³.** Two cold runs on the current tree
 give **1067.57**, reproducible to seven significant figures with the same 284
 marker points. The difference is upstream of Stage 3: the archived
 `work/verify_full` accepted 5 of 6 frames where the current Stage 0 accepts 6,
@@ -2459,7 +2459,7 @@ so none of the 2026-08-27 changes moved it. **Every 1081.94 in these documents
 is a figure from the older tree.**
 
 **The two entry points agree to 7 significant figures, not bit-for-bit.**
-`run.py` reads 2249.0995 on `keng` where `stagerun.py` reads 2249.0992, a
+`run.py` reads 2249.0995 on `1_water_displacement_1k` where `stagerun.py` reads 2249.0992, a
 relative difference of 1.3 × 10⁻⁷. Two runs of the *same* entry point differ by
 2–3 × 10⁻⁷, so the entry points agree as closely as a run agrees with itself.
 The standing regression test passes in substance; "bit-identical" is no longer

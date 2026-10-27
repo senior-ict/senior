@@ -16,7 +16,7 @@ import type { CutPlane, SampleDataset, VolumeRow } from "./types";
  *  shipped here as if they were comparable. */
 export const SAMPLES: SampleDataset[] = [
   {
-    id: "test2_keng",
+    id: "4_circumference_calculation_1k",
     label: "Lower leg — subject K",
     subject: "Human lower leg between two green bands",
     nominalMl: null,
@@ -27,16 +27,16 @@ export const SAMPLES: SampleDataset[] = [
     },
     frames: 8,
     meshes: {
-      leg: "/samples/test2_keng/leg_mesh.ply",
-      box: "/samples/test2_keng/box_mesh.ply",
-      scene: "/samples/test2_keng/scene_mesh.ply",
-      legNoCut: "/samples/test2_keng/leg_no_cut.ply",
+      leg: "/samples/4_circumference_calculation_1k/leg_mesh.ply",
+      box: "/samples/4_circumference_calculation_1k/box_mesh.ply",
+      scene: "/samples/4_circumference_calculation_1k/scene_mesh.ply",
+      legNoCut: "/samples/4_circumference_calculation_1k/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/test2_keng/volumes.csv",
-    cuttingLine: "/samples/test2_keng/cutting_line.json",
+    volumesCsv: "/samples/4_circumference_calculation_1k/volumes.csv",
+    cuttingLine: "/samples/4_circumference_calculation_1k/cutting_line.json",
   },
   {
-    id: "test2_sunshine",
+    id: "4_circumference_calculation_3s",
     label: "Lower leg — subject S",
     subject: "Human lower leg, shaved before the capture",
     nominalMl: null,
@@ -47,16 +47,16 @@ export const SAMPLES: SampleDataset[] = [
     },
     frames: 7,
     meshes: {
-      leg: "/samples/test2_sunshine/leg_mesh.ply",
-      box: "/samples/test2_sunshine/box_mesh.ply",
-      scene: "/samples/test2_sunshine/scene_mesh.ply",
-      legNoCut: "/samples/test2_sunshine/leg_no_cut.ply",
+      leg: "/samples/4_circumference_calculation_3s/leg_mesh.ply",
+      box: "/samples/4_circumference_calculation_3s/box_mesh.ply",
+      scene: "/samples/4_circumference_calculation_3s/scene_mesh.ply",
+      legNoCut: "/samples/4_circumference_calculation_3s/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/test2_sunshine/volumes.csv",
-    cuttingLine: "/samples/test2_sunshine/cutting_line.json",
+    volumesCsv: "/samples/4_circumference_calculation_3s/volumes.csv",
+    cuttingLine: "/samples/4_circumference_calculation_3s/cutting_line.json",
   },
   {
-    id: "test2_champ",
+    id: "4_circumference_calculation_2c",
     label: "Lower leg — subject C",
     subject: "Human lower leg, shaved before the capture",
     nominalMl: null,
@@ -67,13 +67,13 @@ export const SAMPLES: SampleDataset[] = [
     },
     frames: 7,
     meshes: {
-      leg: "/samples/test2_champ/leg_mesh.ply",
-      box: "/samples/test2_champ/box_mesh.ply",
-      scene: "/samples/test2_champ/scene_mesh.ply",
-      legNoCut: "/samples/test2_champ/leg_no_cut.ply",
+      leg: "/samples/4_circumference_calculation_2c/leg_mesh.ply",
+      box: "/samples/4_circumference_calculation_2c/box_mesh.ply",
+      scene: "/samples/4_circumference_calculation_2c/scene_mesh.ply",
+      legNoCut: "/samples/4_circumference_calculation_2c/leg_no_cut.ply",
     },
-    volumesCsv: "/samples/test2_champ/volumes.csv",
-    cuttingLine: "/samples/test2_champ/cutting_line.json",
+    volumesCsv: "/samples/4_circumference_calculation_2c/volumes.csv",
+    cuttingLine: "/samples/4_circumference_calculation_2c/cutting_line.json",
   },
 ];
 
@@ -188,7 +188,7 @@ export function linearScale(rows: VolumeRow[]): number | null {
     // 59.8, a 26% error. Its own derivation is the volume ratio, so use that
     // instead and stay consistent with the numbers it printed. The cube root
     // treats V^(1/3) as an edge length, which only holds for a perfect cube:
-    // measured +2% against the fitted-face answer on inputs/small_leg.
+    // measured +2% against the fitted-face answer on inputs/0_first_sample_3.
     scale = Math.cbrt(ref.real_vol_cm3 / ref.volume);
   }
   return Number.isFinite(scale) && scale > 0 ? scale : null;

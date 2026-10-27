@@ -1,13 +1,13 @@
 # Test captures, 2026-09-18
 
-**Renamed 2026-10-09.** The first batch's folders are now `inputs/test1_1` …
-`inputs/test1_6` (they were `inputs/test1` … `inputs/test6`), so that a batch
-and a subject can be told apart: the second batch is `inputs/test2_keng` and
-`inputs/test2_champ`. Prose below still says `test6`, which now lives at
-`inputs/test1_6`; `inputs/test1_6_orig` holds that capture's original photos.
+**Renamed 2026-10-09.** The first batch's folders are now `inputs/3_circumference_calculation_1c` …
+`inputs/3_circumference_calculation_6k` (they were `inputs/test1` … `inputs/test6`), so that a batch
+and a subject can be told apart: the second batch is `inputs/4_circumference_calculation_1k` and
+`inputs/4_circumference_calculation_2c`. Prose below still says `test6`, which now lives at
+`inputs/3_circumference_calculation_6k`; `inputs/3_circumference_calculation_6k_orig` holds that capture's original photos.
 
 Six limb captures and two cans, measured against a tape rather than water.
-Inputs are `inputs/test1_1` … `inputs/test1_6`, `inputs/fanta_orange`,
+Inputs are `inputs/3_circumference_calculation_1c` … `inputs/3_circumference_calculation_6k`, `inputs/fanta_orange`,
 `inputs/fanta_red`. Run outputs are not committed; each regenerates with
 `python run.py -i inputs/<name> --output_dir output_<name>` in a few minutes.
 

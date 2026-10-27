@@ -69,8 +69,8 @@ step that bundles and optimises the code, routing, and static file serving.
 Here it is used in a deliberately simple way. There is **one page**
 (`src/app/page.tsx`) and the "screens" are swapped inside it, rather than being
 separate URLs. Next.js also serves `public/` directly — so a file at
-`public/samples/small_leg/leg_mesh.ply` is fetchable at
-`/samples/small_leg/leg_mesh.ply`. That is how the meshes reach the browser.
+`public/samples/0_first_sample_3/leg_mesh.ply` is fetchable at
+`/samples/0_first_sample_3/leg_mesh.ply`. That is how the meshes reach the browser.
 
 `next build` produces a fully static site: plain files that can be hosted
 anywhere, with no server running behind them.
@@ -182,7 +182,7 @@ Samples ────────────────────────
                              new volume returns to Result)
 ```
 
-**Samples** — two precomputed runs ship with the site (`small_leg`, `est_325`), so
+**Samples** — two precomputed runs ship with the site (`0_first_sample_3`, `est_325`), so
 it demonstrates fully with no GPU and no server. This is what you would show in a
 presentation.
 
@@ -263,17 +263,17 @@ where those files sit.
 ```ts
 export const SAMPLES: SampleDataset[] = [
   {
-    id: "small_leg",
+    id: "0_first_sample_3",
     label: "Lower leg",
     nominalMl: null,          // no ground truth for a limb — do not invent one
     frames: 6,
     meshes: {
-      leg: "/samples/small_leg/leg_mesh.ply",
-      box: "/samples/small_leg/box_mesh.ply",
+      leg: "/samples/0_first_sample_3/leg_mesh.ply",
+      box: "/samples/0_first_sample_3/box_mesh.ply",
       ...
     },
-    volumesCsv: "/samples/small_leg/volumes.csv",
-    cuttingLine: "/samples/small_leg/cutting_line.json",
+    volumesCsv: "/samples/0_first_sample_3/volumes.csv",
+    cuttingLine: "/samples/0_first_sample_3/cutting_line.json",
   },
   ...
 ];

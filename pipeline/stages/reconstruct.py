@@ -17,7 +17,7 @@ _RECONS_WORKER = os.path.join(_PROJECT_ROOT, "pipeline", "workers",
 # PyMeshFix's `repair()` rather than `fill_holes()` alone.
 #
 # The earlier evidence against Poisson was an artefact of that weaker repair.
-# Re-measured with it fixed, on inputs/small_leg:
+# Re-measured with it fixed, on inputs/0_first_sample_3:
 #
 #   arm                     limb cm3   box chi   limb chi   p95 to the cloud
 #   alpha / alpha            1081.94      2         2         2.39 mm
@@ -30,7 +30,7 @@ _RECONS_WORKER = os.path.join(_PROJECT_ROOT, "pipeline", "workers",
 #
 # WHAT THIS COSTS, stated because it is real: alpha shape SELECTS on chi = 2 --
 # its ladder takes the smallest rung that is both watertight and chi = 2 --
-# while Poisson has no such criterion at all. On inputs/short_leg, an uncut
+# while Poisson has no such criterion at all. On inputs/0_first_sample_2, an uncut
 # whole leg including the foot and genuinely awkward topology, Poisson closes at
 # chi = -18 and reports 22% below the alpha answer. Stage 5 prints a loud
 # warning whenever the final mesh is not chi = 2, because a closed-but-holed
@@ -76,7 +76,7 @@ def _survives_repair(recon_ply):
     Runs the same repair Stage 5 does and asks the question Stage 6 actually
     needs answered. `is_watertight` is NOT that question: a surface with tunnels
     is closed, returns True, and its signed volume is not the volume of a solid.
-    Measured case: Poisson on inputs/short_leg repairs to watertight at chi=-18,
+    Measured case: Poisson on inputs/0_first_sample_2 repairs to watertight at chi=-18,
     about ten handles, and reads 22% below the alpha-shape answer for the same
     cloud.
 

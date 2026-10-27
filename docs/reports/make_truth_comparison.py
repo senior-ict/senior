@@ -33,20 +33,20 @@ MEASURED_COLOUR = "#2a78d6"
 VOLUMES = [
     ("test6", "tape", 1398.6, 1485.2),
     ("test5", "water", 2070.0, 2167.6),
-    ("0_right", "water", 1830.0, 1743.5),
-    ("1_left", "water", 1600.0, 1591.1),
-    ("6_left", "water", 2800.0, 2647.2),
-    ("2_left", "water", 1050.0, 1180.2),
+    ("2_water_displacement_1_right", "water", 1830.0, 1743.5),
+    ("2_water_displacement_2_left", "water", 1600.0, 1591.1),
+    ("2_water_displacement_7_left", "water", 2800.0, 2647.2),
+    ("2_water_displacement_3_left", "water", 1050.0, 1180.2),
 ]
 
 # capture, tape lower, tape upper, measured lower, measured upper (cm)
 GIRTHS = [
     ("test6", 19.0, 28.0, 19.51, 29.28),
     ("test5", 22.0, 32.5, 22.12, 32.86),
-    ("0_right", 20.5, 29.5, 18.60, 29.42),
-    ("1_left", 21.5, 32.0, 19.67, 30.14),
-    ("6_left", 24.3, 35.0, 21.87, 34.96),
-    ("2_left", 18.5, 27.5, 18.74, 27.56),
+    ("2_water_displacement_1_right", 20.5, 29.5, 18.60, 29.42),
+    ("2_water_displacement_2_left", 21.5, 32.0, 19.67, 30.14),
+    ("2_water_displacement_7_left", 24.3, 35.0, 21.87, 34.96),
+    ("2_water_displacement_3_left", 18.5, 27.5, 18.74, 27.56),
 ]
 
 
@@ -119,7 +119,7 @@ def main():
     girth_errors = np.array(girth_errors)
     figure.text(0.075, 0.035,
                 f"Volume: mean error {np.abs(volume_errors).mean():.1f}% ignoring sign, "
-                f"{volume_errors.mean():+.1f}% with sign, worst {volume_errors.max():+.1f}% (2_left).     "
+                f"{volume_errors.mean():+.1f}% with sign, worst {volume_errors.max():+.1f}% (2_water_displacement_3_left).     "
                 f"Girth: mean {np.abs(girth_errors).mean():.1f}% ignoring sign, {girth_errors.mean():+.1f}% with sign.",
                 fontsize=11.5, color=INK)
     figure.savefig(OUTPUT, dpi=110, facecolor=SURFACE)

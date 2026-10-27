@@ -1,6 +1,6 @@
 # The rework, stage by stage — `main` against the current tree
 
-Both runs measure the **same six photographs** (`inputs/small_leg`) on the same
+Both runs measure the **same six photographs** (`inputs/0_first_sample_3`) on the same
 machine, an RTX 4060. `main` is `bab2bbc`, run from a clean `git worktree` so
 nothing from the current tree could leak into it.
 
@@ -21,8 +21,8 @@ Reproduce with:
 
 ```bash
 git worktree add --detach /tmp/maintree main
-cd /tmp/maintree && python run.py --image_folder inputs/small_leg --output_dir output/main_run
-cd -            && python stagerun.py 0-6 -i inputs/small_leg --name verify --continue-on-rejected
+cd /tmp/maintree && python run.py --image_folder inputs/0_first_sample_3 --output_dir output/main_run
+cd -            && python stagerun.py 0-6 -i inputs/0_first_sample_3 --name verify --continue-on-rejected
 ```
 
 ---
@@ -280,7 +280,7 @@ peak-to-peak, which is larger than either fit's effect.
 
 ## What is *not* shown here
 
-- **One capture.** Every number is `inputs/small_leg`. `est_325` has no marker
+- **One capture.** Every number is `inputs/0_first_sample_3`. `est_325` has no marker
   band, so it exercises a different path.
 - **No ground truth for the limb.** Both columns are internally consistent; neither
   is validated against a measured volume. Water displacement on a held-out object

@@ -219,10 +219,10 @@ def slide_v3_v4_effects(pdf):
     figure = new_slide("Each v4 change, and what it did", "Volume between the bands against tape / water; changes applied in order")
     header = ["Change", "test6 (tape)", "test5 (water)", "Cohort (water)"]
     rows = [
-        ["v3 starting point", "+38.7%  (alpha wrap)", "+24.9%  (alpha wrap)", "+25 to +36%;  2_left +222%"],
+        ["v3 starting point", "+38.7%  (alpha wrap)", "+24.9%  (alpha wrap)", "+25 to +36%;  2_water_displacement_3_left +222%"],
         ["+ 2nd MLS pass", "+21.8%  Poisson closes", "+17.8%  Poisson closes", "within 1% of v3 where\nPoisson already closed"],
         ["+ ghost-voxel spacing fix", "+21.8%  (unchanged)", "—", "stops denser photos\nbeing cleaned coarser"],
-        ["+ band-plane backup", "unchanged", "unchanged", "0_left 10 cm³ → −1.5%\n2_left +222% → +37%"],
+        ["+ band-plane backup", "unchanged", "unchanged", "2_water_displacement_1_left 10 cm³ → −1.5%\n2_water_displacement_3_left +222% → +37%"],
         ["+ pad, do not crop", "+7.3%", "+4.7%", "−5.5% to +11.2%\nmean |error| 29% → 5.7%"],
     ]
     draw_table(figure, (0.05, 0.14, 0.90, 0.66), header, rows, [0.24, 0.23, 0.23, 0.30], highlight_rows=(4,),
@@ -241,10 +241,10 @@ def slide_problems(pdf):
     rows = [
         ["Alpha fallback\ninflated the volume", "Double 'ghost' skin 1 cm apart;\nPoisson tunnels, falls back", "2nd MLS pass (16x)\nmerges the two skins", "test6 +38.7% → +21.8%\ntest5 +24.9% → +17.8%"],
         ["Sharper photos\nread bigger", "Cleaning spacing measured\non a sample against itself", "Measure the spacing\non the whole cloud", "Full-res photos no longer\ncleaned coarser"],
-        ["A band vanished,\nsliver volumes", "Colour-fitted plane gated out,\nnothing to fall back on", "Keep Stage 0's projected\nplane as a backup", "0_left 10 cm³ → −1.5%\n2_left +222% → +37%"],
+        ["A band vanished,\nsliver volumes", "Colour-fitted plane gated out,\nnothing to fall back on", "Keep Stage 0's projected\nplane as a backup", "2_water_displacement_1_left 10 cm³ → −1.5%\n2_water_displacement_3_left +222% → +37%"],
         ["Leg 9% too big\nagainst the cube", "Stage 0's crop moves the\noptical centre 19–74 px", "Pad the whole photo;\ndo not crop", "Mean error 29.0% → 5.7%\n(6 captures)"],
         ["Two scales\ndisagree", "Marker corners unreliable\non busy texture", "Trust the cube volume;\ncheck removed", "Ruler agrees with\nthe cube scale"],
-        ["Reflective floor:\na 15 L 'can'", "Floor fit fails on\nthe mirror sheen", "Shoot on the matte tile\n(capture rule)", "5_right, fanta_red\nexcluded"],
+        ["Reflective floor:\na 15 L 'can'", "Floor fit fails on\nthe mirror sheen", "Shoot on the matte tile\n(capture rule)", "2_water_displacement_6_right, fanta_red\nexcluded"],
     ]
     draw_table(figure, (0.05, 0.1, 0.90, 0.7), header, rows, [0.2, 0.28, 0.25, 0.27], font_size=11)
     footer(figure, "docs/experiments/2026-09_test_captures/EXPERIMENT_LOG.md")
@@ -275,10 +275,10 @@ BETWEEN_BANDS = [
     # capture, truth, truth kind, v3 volume, v4 mid volume, v4 final volume
     ("test6", 1398.6, "tape", 1939.4, 1704.0, 1500.5),
     ("test5", 2070.0, "water", 2585.3, 2438.6, 2167.5),
-    ("0_right", 1830.0, "water", 2485.2, 2503.9, 1730.8),
-    ("1_left", 1600.0, "water", 2125.8, 2154.7, 1599.4),
-    ("6_left", 2800.0, "water", 3489.7, 3507.7, 2646.8),
-    ("2_left", 1050.0, "water", 3381.0, 1442.0, 1168.1),
+    ("2_water_displacement_1_right", 1830.0, "water", 2485.2, 2503.9, 1730.8),
+    ("2_water_displacement_2_left", 1600.0, "water", 2125.8, 2154.7, 1599.4),
+    ("2_water_displacement_7_left", 2800.0, "water", 3489.7, 3507.7, 2646.8),
+    ("2_water_displacement_3_left", 1050.0, "water", 3381.0, 1442.0, 1168.1),
 ]
 
 
@@ -342,12 +342,12 @@ def slide_results_table(pdf):
     header = ["Capture", "Truth", "v3  (cut at Stage 5)", "v4 midweek", "v4 today (padded)"]
     rows = []
     for capture, truth, kind, version_three, version_mid, version_final in BETWEEN_BANDS:
-        note = "  band lost" if capture == "2_left" else ""
+        note = "  band lost" if capture == "2_water_displacement_3_left" else ""
         rows.append([capture, f"{truth:.0f} ({kind})",
                      f"{version_three:.0f}   {percent_error(version_three, truth):+.1f}%{note}",
                      f"{version_mid:.0f}   {percent_error(version_mid, truth):+.1f}%",
                      f"{version_final:.0f}   {percent_error(version_final, truth):+.1f}%"])
-    rows.append(["Mean |error|", "", "63.2%  (31.4% without 2_left)", "29.0%", "5.7%"])
+    rows.append(["Mean |error|", "", "63.2%  (31.4% without 2_water_displacement_3_left)", "29.0%", "5.7%"])
     rows.append(["Mean bias", "", "+63.2%", "+29.0%", "+2.0%"])
     draw_table(figure, (0.05, 0.14, 0.90, 0.64), header, rows, [0.14, 0.17, 0.26, 0.2, 0.23],
                highlight_rows=(6, 7), bold_columns=(4,), font_size=12)
@@ -363,10 +363,10 @@ def slide_girths(pdf):
     rows = [
         ["test6", "19.0 / 28.0", "19.95 (+5%) / 31.85 (+14%)", "19.61 (+3%) / 29.42 (+5%)"],
         ["test5", "22.0 / 32.5", "22.16 (+1%) / 34.55 (+6%)", "22.19 (+1%) / 32.86 (+1%)"],
-        ["0_right", "20.5 / 29.5", "19.98 (−3%) / 33.30 (+13%)", "18.59 (−9%) / 29.45 (0%)"],
-        ["1_left", "21.5 / 32.0", "20.80 (−3%) / 33.95 (+6%)", "19.89 (−7%) / 30.13 (−6%)"],
-        ["6_left", "24.3 / 35.0", "23.69 (−3%) / 39.10 (+12%)", "22.15 (−9%) / 34.99 (0%)"],
-        ["2_left", "18.5 / 27.5", "19.05 (+3%) / 30.61 (+11%)", "18.69 (+1%) / 27.52 (0%)"],
+        ["2_water_displacement_1_right", "20.5 / 29.5", "19.98 (−3%) / 33.30 (+13%)", "18.59 (−9%) / 29.45 (0%)"],
+        ["2_water_displacement_2_left", "21.5 / 32.0", "20.80 (−3%) / 33.95 (+6%)", "19.89 (−7%) / 30.13 (−6%)"],
+        ["2_water_displacement_7_left", "24.3 / 35.0", "23.69 (−3%) / 39.10 (+12%)", "22.15 (−9%) / 34.99 (0%)"],
+        ["2_water_displacement_3_left", "18.5 / 27.5", "19.05 (+3%) / 30.61 (+11%)", "18.69 (+1%) / 27.52 (0%)"],
     ]
     draw_table(figure, (0.05, 0.2, 0.90, 0.58), header, rows, [0.15, 0.2, 0.33, 0.32], bold_columns=(3,), font_size=12.5)
     figure.text(0.05, 0.12, "The upper band is now within 1% on four of six captures. The lower band reads a few percent low",
@@ -535,10 +535,10 @@ def slide_skeleton_volumes(pdf):
     rows = [
         ["test6", "1398.6 tape", "1490.4   +6.6%", "1485.2   +6.2%"],
         ["test5", "2070 water", "2165.8   +4.6%", "2167.6   +4.7%"],
-        ["0_right", "1830 water", "1734.5   −5.2%", "1743.5   −4.7%"],
-        ["1_left", "1600 water", "1612.0   +0.8%", "1591.1   −0.6%"],
-        ["6_left", "2800 water", "2648.8   −5.4%", "2647.2   −5.5%"],
-        ["2_left", "1050 water", "1179.4   +12.3%", "1180.2   +12.4%"],
+        ["2_water_displacement_1_right", "1830 water", "1734.5   −5.2%", "1743.5   −4.7%"],
+        ["2_water_displacement_2_left", "1600 water", "1612.0   +0.8%", "1591.1   −0.6%"],
+        ["2_water_displacement_7_left", "2800 water", "2648.8   −5.4%", "2647.2   −5.5%"],
+        ["2_water_displacement_3_left", "1050 water", "1179.4   +12.3%", "1180.2   +12.4%"],
         ["Mean |error|", "", "5.8%", "5.7%"],
         ["Mean error (bias)", "", "+2.3%", "+2.1%"],
     ]
@@ -594,7 +594,7 @@ def slide_older_versions(pdf):
     header = ["Comparison", "Quantity", "Captures", "v1 Old", "v2 / v3 Reworked"]
     rows = [
         ["README set", "below one band", "5 older captures", "22.17%", "3.29%  (re-run 3.12%)"],
-        ["Cohort, 4 Sep", "foot to upper band", "0_left, 0_right, 1_left, 1_right", "11.8%", "34.4%  (v3)"],
+        ["Cohort, 4 Sep", "foot to upper band", "2_water_displacement_1_left, 2_water_displacement_1_right, 2_water_displacement_2_left, 2_water_displacement_2_right", "11.8%", "34.4%  (v3)"],
         ["test5, 18 Sep", "old cut: 3 markers, 40.8 cm", "test5", "not comparable", "—"],
     ]
     draw_table(figure, (0.05, 0.46, 0.90, 0.32), header, rows, [0.16, 0.23, 0.27, 0.14, 0.2], font_size=12)
@@ -616,7 +616,7 @@ def slide_next(pdf):
         "Re-run the can control: its cube fell to the alpha fallback on today's run",
         "Ruler definition on test6: cord centre to centre, or inner edges?",
         "Re-run the README set and the below-one-band mode on v4",
-        "Remaining cohort captures (0_left, 1_right, 2_right, 3–6) on v4",
+        "Remaining cohort captures (2_water_displacement_1_left, 2_water_displacement_2_right, 2_water_displacement_3_right, 3–6) on v4",
         "Capture rules: matte floor, cube and both bands in every photo",
         "Deferred, lower priority now: fine-tuning VGGT; training a MoGe–VGGT join",
     ], font_size=16, spacing=0.085)

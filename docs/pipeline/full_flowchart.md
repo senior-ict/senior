@@ -336,7 +336,7 @@ scan when you already know which function you want and only need its signature,
 and easier to search than an SVG. The chart is the better way to follow the
 dataflow; this is the better way to look one thing up.
 
-Numbers throughout are one real run of `inputs/small_leg` (6 photos, RTX 4060,
+Numbers throughout are one real run of `inputs/0_first_sample_3` (6 photos, RTX 4060,
 re-measured 2026-08-22). They are there to give a sense of scale, not as
 specifications.
 
@@ -507,7 +507,7 @@ which is what releases the memory Open3D's tetrahedralisation holds.
 |---|---|---|---|
 | `_pick_method(path, method, box_method, obj_method)` | path + overrides | method name | **`poisson` for both by default.** `--box-recon-method` / `--obj-recon-method` override per object. Note `--recon-method` does **not** reach the cube — it is resolved from `_DEFAULT_BOX_METHOD` |
 | `_survives_repair(recon_ply)` | the mesh just written | `(ok, euler)` | runs the same repair Stage 5 will and asks whether the result is χ = 2. **Not** whether it is watertight: a tunnelled surface is closed and `is_watertight` returns True. On a check error it returns `ok=True` and says so, rather than swapping method because trimesh hiccupped |
-| alpha fallback | the same cloud | alpha-shape mesh | fires per object when `_survives_repair` says no, then re-checks and reports either way. Poisson gives χ = −18 on `short_leg`'s uncut foot; alpha rebuilds it at χ = 2 |
+| alpha fallback | the same cloud | alpha-shape mesh | fires per object when `_survives_repair` says no, then re-checks and reports either way. Poisson gives χ = −18 on `0_first_sample_2`'s uncut foot; alpha rebuilds it at χ = 2 |
 | `TetraMesh.create_from_point_cloud` | `(N,3)` | Delaunay complex | computed **once** and reused for every rung — the expensive part |
 | alpha ladder | complex | candidate meshes | 8, 10, 12, 14, 16, 20, 25, 30, 40, 55, 70, 90, 110, 140, 170, 200 × point spacing. The ladder used to stop at 90× and a cropped limb needs up to 140× |
 | selection test | candidate | accept / reject | **watertight AND Euler characteristic 2.** Chosen: box 55×, limb 25× |

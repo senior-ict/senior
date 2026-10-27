@@ -5,10 +5,10 @@ Each stage reads the previous stage's artifacts from work/<input_name>/ and
 writes its own, so a stage can be re-run and inspected without repeating the
 expensive ones (inference in particular).
 
-    python3 stagerun.py 1 -i inputs/small_leg          # inference only
-    python3 stagerun.py 2 -i inputs/small_leg          # pointcloud, reuses stage 1
-    python3 stagerun.py 1-3 -i inputs/small_leg        # range
-    python3 stagerun.py 1 -i inputs/small_leg --force  # ignore cache
+    python3 stagerun.py 1 -i inputs/0_first_sample_3          # inference only
+    python3 stagerun.py 2 -i inputs/0_first_sample_3          # pointcloud, reuses stage 1
+    python3 stagerun.py 1-3 -i inputs/0_first_sample_3        # range
+    python3 stagerun.py 1 -i inputs/0_first_sample_3 --force  # ignore cache
 
 Layout:
     work/<name>/01_inference/   predictions.npz, input_frames.png, summary.txt
@@ -814,7 +814,7 @@ def main():
     """Parses the stage spec and runs each requested stage in order."""
     p = argparse.ArgumentParser(description="Run pipeline stages individually")
     p.add_argument("stages", help="stage number or range, e.g. 1 or 1-3")
-    p.add_argument("-i", "--image_folder", default="./inputs/small_leg/")
+    p.add_argument("-i", "--image_folder", default="./inputs/0_first_sample_3/")
     p.add_argument("--name", default=None, help="work dir name (default: input folder name)")
     p.add_argument("--force", action="store_true", help="ignore cached stage 1")
     p.add_argument("--prep-band", dest="prep_band", type=float, default=1.6,

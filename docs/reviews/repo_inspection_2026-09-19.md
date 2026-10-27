@@ -47,7 +47,7 @@ checked against the 22 run logs in `~/MU/senior_compare_artifacts/` and the
 | 3 | RANSAC ×4 (floor removal, level, upside-down check, floor height) | trim | four fits of the same plane on the same 350–760k cloud; 13.5 s stage total, so cheap, but one fit re-used is simpler |
 | 3 | `segment_point_cloud` | **trim** | Stage 3 keeps only `summary["planes"]`; the function also clusters, fits and then *cuts* the cloud with a "marker below 30%" rule whose result is thrown away |
 | 3 | colour marker planes (`marker_mask_by_contrast`, HSV fallback) | keep, but see bug 1 | the fallback window fires when the learned contrast is refused |
-| 3 | projected band planes (`bands3d`) | keep | the only thing that saved 0_left; its normals are better than the colour fits' |
+| 3 | projected band planes (`bands3d`) | keep | the only thing that saved 2_water_displacement_1_left; its normals are better than the colour fits' |
 | 3 | ghost voxel dedup | keep | spacing bug fixed today; it sets the spacing every radius hangs off |
 | 3 | normal-aware filter | keep, low value | removes ~3% of points, not load-bearing on volume (its own docstring) |
 | 3 | MLS 4x then 16x | keep | validated today on water truth; the 16x pass removes the alpha fallback |
@@ -79,7 +79,7 @@ checked against the 22 run logs in `~/MU/senior_compare_artifacts/` and the
    fired: the highest score in 22 runs is 0.57. Legacy from an earlier setup
    with a separate marker. Delete the branch.
 2. **Colour-fit plane normals.** `compute_cluster_planes` takes the normal
-   from the SVD of the cord's points. On `0_left` the knee band's 144-point
+   from the SVD of the cord's points. On `2_water_displacement_1_left` the knee band's 144-point
    fit came out 51° from vertical and passed the 35° limb-axis gate because
    the limb itself leans, so the cut slices the band obliquely (40.8 cm girth
    against a 30.0 tape). The projected planes' normals, fitted to the limb

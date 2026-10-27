@@ -53,7 +53,7 @@ SLICE_FRACTIONS = (0.35, 0.45, 0.55, 0.65)
 # The rigid cylindrical control, then the limbs.
 CONTROL = ("rigid can", "work/fanta_orange", "00_prep",
            "01_inference/predictions.npz", "02_pointcloud/points.ply")
-LIMBS = ["output_test2_keng", "output_test2_sunshine", "output_test2_champ"]
+LIMBS = ["output_4_circumference_calculation_1k", "output_4_circumference_calculation_3s", "output_4_circumference_calculation_2c"]
 
 
 def sheets_in_wedge(radii_mm):

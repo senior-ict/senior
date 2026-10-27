@@ -34,11 +34,11 @@ Two changes failed this rule already:
 >
 > | capture | measured | displacement | error |
 > |---|---|---|---|
-> | `orange shirt` | 4094 cm³ | 4090 | +0.1% |
-> | `keng` | 2249 cm³ | 2210 | +1.8% |
-> | `black shirt` | 3648 cm³ | 3510 | +3.9% |
-> | `sunshine` | 3093 cm³ | 3130 | −1.2% |
-> | `champ` | 3354 cm³ | 2810 | +19.4% — unresolved |
+> | `1_water_displacement_7` | 4094 cm³ | 4090 | +0.1% |
+> | `1_water_displacement_1k` | 2249 cm³ | 2210 | +1.8% |
+> | `1_water_displacement_5` | 3648 cm³ | 3510 | +3.9% |
+> | `1_water_displacement_3s` | 3093 cm³ | 3130 | −1.2% |
+> | `1_water_displacement_2c` | 3354 cm³ | 2810 | +19.4% — unresolved |
 >
 > **Mean absolute error 1.7% on four captures.** Two decisions this file left
 > open are settled by it: Stage 6 keeps M1 (`stage06_experiments.md`), and the
@@ -46,7 +46,7 @@ Two changes failed this rule already:
 > question — can now be re-run against something external.
 >
 > The `14.0 cm` row below still describes the cardboard cube used by
-> `small_leg`, `short_leg` and `est_325`.
+> `0_first_sample_3`, `0_first_sample_2` and `est_325`.
 
 | object | quantity | value | confidence |
 |---|---|---|---|
@@ -106,13 +106,13 @@ alpha_shape (obj) + box_primitive (box) + watertight volume
 
 | date | flag / change | dataset | result | verdict |
 |---|---|---|---|---|
-| 2026-08-11 | `GHOST_VOXEL_FACTOR` 1.5 → 0.75 | small_leg | 5,005 → 20,413 pts, meshes visibly smoother | adopted for appearance; **accuracy unverified** |
+| 2026-08-11 | `GHOST_VOXEL_FACTOR` 1.5 → 0.75 | 0_first_sample_3 | 5,005 → 20,413 pts, meshes visibly smoother | adopted for appearance; **accuracy unverified** |
 | 2026-08-11 | `alpha_shape` for object | est_325 | −5.9% vs poisson −10.6%; wins under all 4 volume methods | **adopted** |
 | 2026-08-11 | `alpha_shape` for box | est_325 | can +3.3% | **rejected** — reference under-measured 11.4% |
 | 2026-08-11 | forced cube | est_325 | 0.0% | **rejected** — tautology |
-| 2026-08-11 | `ball_pivot` | est_325 / small_leg | 5.5e7 cm³, non-watertight | **reject; remove from METHODS** |
+| 2026-08-11 | `ball_pivot` | est_325 / 0_first_sample_3 | 5.5e7 cm³, non-watertight | **reject; remove from METHODS** |
 | 2026-08-11 | extend-to-floor | all | cube Z/XY 0.82–0.85 → 0.97–0.98 | **adopted** — validated against independent floor plane |
-| 2026-08-11 | `R_total` flip fix | small_leg | cut edge 99 mm → 9 mm from marker band | **adopted** — bug fix, verified against marker colour |
+| 2026-08-11 | `R_total` flip fix | 0_first_sample_3 | cut edge 99 mm → 9 mm from marker band | **adopted** — bug fix, verified against marker colour |
 
 ## Stage 1 tests
 
@@ -130,7 +130,7 @@ alpha_shape (obj) + box_primitive (box) + watertight volume
 Pad wins every multi-view consistency metric. But on est_325 the crop was
 **not** amputating the subject — both objects sit centred and fully inside the
 cropped frame — so this gain is from added context, not from rescuing lost
-content. On `small_leg` the crop cuts the leg at the knee, so the effect there
+content. On `0_first_sample_3` the crop cuts the leg at the knee, so the effect there
 should be larger; that is the test that matters.
 
 Scene scale shifts 0.561 → 0.642 under pad, so absolute downstream numbers are
@@ -139,7 +139,7 @@ not directly comparable across modes (the ArUco cube renormalises).
 Status: **provisional** — self-consistency only. Needs a stage 2–6 accuracy run
 before becoming default.
 
-### T2 — preprocess mode: crop vs pad (small_leg, 6 frames)
+### T2 — preprocess mode: crop vs pad (0_first_sample_3, 6 frames)
 
 | metric | crop | pad | |
 |---|---|---|---|
@@ -159,10 +159,10 @@ discards two stages later — so the amputation is real but harmless. The region
 of interest (calf, ankle, foot, cube) is fully inside the cropped frame.
 
 Conclusion: **crop vs pad is dataset-dependent, not a global default.** est_325
-favours pad (centred subjects, added context); small_leg favours crop (less
+favours pad (centred subjects, added context); 0_first_sample_3 favours crop (less
 clutter). Tie must be broken by a stage 2–6 accuracy run on est_325.
 
-Note: `small_leg` has a much worse consistency baseline than est_325
+Note: `0_first_sample_3` has a much worse consistency baseline than est_325
 (2.20% vs 1.12% median, 2.47 vs 4.38 agreeing views) — a harder scene with
 fewer frames (6 vs 8) and a non-rigid subject.
 
@@ -218,13 +218,13 @@ Values are comparable **within** a dataset, not across.
 
 pointmap wins on both datasets (2.30 vs 2.74 mm; 2.78 vs 3.67 mm).
 **Default confirmed correct.** The depth head is genuinely worse for surface
-localisation, not merely unused. Depth mode yields more points on small_leg
+localisation, not merely unused. Depth mode yields more points on 0_first_sample_3
 (885k vs 541k) while being less accurate — point count is not quality.
 
 ### T5 — conf_thres sweep
 
 est_325 falls monotonically 3.50 → 1.57 mm across 30 → 75.
-small_leg goes 2.78 → 2.90 mm — slightly **worse** at 75.
+0_first_sample_3 goes 2.78 → 2.90 mm — slightly **worse** at 75.
 
 So the effect is dataset-dependent and cannot be adopted globally. Also, the
 object/floor retention bias grows with threshold:
@@ -304,7 +304,7 @@ Remaining caveats:
 ### T9 — ball_pivot removed
 
 Produced 5.5e7 cm³ and non-watertight output on est_325, 36.2 cm³ on
-small_leg, degrading as point density rose. Deleted from `METHODS` and CLI.
+0_first_sample_3, degrading as point density rose. Deleted from `METHODS` and CLI.
 
 ## Validation gap — no second reference
 
@@ -471,7 +471,7 @@ Stage 6. What ships today reports 1081.94 cm³ for the same capture, because Sta
 is reverted to main's volume-ratio scale; the 0.33% is the agreement between two
 *detectors*, and holds whichever Stage 6 consumes them.
 
-**Scope.** `small_leg` only. `est_325` has no band, so the claim that a learned
+**Scope.** `0_first_sample_3` only. `est_325` has no band, so the claim that a learned
 colour generalises to a red or blue marker is argued, not demonstrated.
 
 ---
@@ -623,7 +623,7 @@ shape regardless.
 
 Not deleted, because this violates the decision rule at the top of this file. The
 evidence is one capture, measured against the pipeline itself rather than a known
-volume, and `small_leg` reconstructs cleanly either way. The failure the step
+volume, and `0_first_sample_3` reconstructs cleanly either way. The failure the step
 guards against — misoriented points seeding spurious tetrahedra — is a *bad
 capture* failure. **Re-run this A/B on the first dataset with independent ground
 truth and decide it there.**
@@ -1123,10 +1123,10 @@ Poisson on the limb. The pipeline already supports this:
 `--box-recon-method alpha_shape --obj-recon-method poisson`.
 
 **Method.** Run stages 4-6 both ways from the same cached Stage 3, on **two**
-captures. `small_leg` (6 photos, 5 accepted by Stage 0) and `short_leg`
+captures. `0_first_sample_3` (6 photos, 5 accepted by Stage 0) and `0_first_sample_2`
 (8 photos). Everything before Stage 4 is identical between the two arms.
 
-> **`short_leg` is a badly framed capture.** Stage 0 rejected essentially every
+> **`0_first_sample_2` is a badly framed capture.** Stage 0 rejected essentially every
 > frame with `objects out of window`, and the run only proceeded under
 > `--continue-on-rejected`, with all frames handed to VGGT uncropped. It is
 > included precisely because a method should be judged on the capture that went
@@ -1134,7 +1134,7 @@ captures. `small_leg` (6 photos, 5 accepted by Stage 0) and `short_leg`
 
 **Result — it works on one capture and fails on the other.**
 
-| | `small_leg` | `short_leg` |
+| | `0_first_sample_3` | `0_first_sample_2` |
 |---|---|---|
 | cube, alpha shape | χ = **2** | χ = **2** |
 | limb, alpha shape | χ = **2** | χ = **2** |
@@ -1149,8 +1149,8 @@ whatever Stage 5's PyMeshFix does to close it is part of the answer:
 | | Stage 4 → Stage 5 volume change |
 |---|---|
 | alpha shape, both captures | **+0.00%** — already closed, repair is a no-op |
-| Poisson, `small_leg` | **−4.22%** |
-| Poisson, `short_leg` | **+158.08%** |
+| Poisson, `0_first_sample_3` | **−4.22%** |
+| Poisson, `0_first_sample_2` | **+158.08%** |
 
 A 158% swing is the repair inventing geometry to bridge holes it cannot see the
 shape of. Alpha shape never enters that regime because Stage 4 does not hand over
@@ -1160,13 +1160,13 @@ anything open — the ladder searches until it is closed.
 
 | | alpha p95 | Poisson p95 |
 |---|---|---|
-| `small_leg` | 2.39 mm | **1.30 mm** |
-| `short_leg` | 11.84 mm | **1.70 mm** |
+| `0_first_sample_3` | 2.39 mm | **1.30 mm** |
+| `0_first_sample_2` | 11.84 mm | **1.70 mm** |
 
 Poisson tracks the points about twice as closely on a good capture and **seven
 times** as closely on the bad one. That is a real advantage and it is worth
 recording, because it says something uncomfortable about alpha shape: on
-`short_leg` its surface sits nearly 12 mm from the cloud at p95. Alpha buys its
+`0_first_sample_2` its surface sits nearly 12 mm from the cloud at p95. Alpha buys its
 guarantee with a coarse α (40× spacing there), and coarse means loose.
 
 **Verdict — no, but this was the closest anything has come.** The proposal is
@@ -1177,13 +1177,13 @@ volume cannot be trusted to report a measurement.
 
 **What would change the answer.** Poisson's problem here is holes, and holes come
 from sparse or inconsistent coverage. If the framing gate were enforced rather
-than overridden — `short_leg` should never have been measured at all — Poisson's
+than overridden — `0_first_sample_2` should never have been measured at all — Poisson's
 failure case might simply not occur. That is testable the moment a second
 *well-framed* capture exists, and it is the experiment to run before dismissing
 this idea for good.
 
 **Not tested.** Screened Poisson with sharp-feature weighting; whether alpha's
-11.84 mm p95 on `short_leg` is the capture's fault or the ladder giving up too
+11.84 mm p95 on `0_first_sample_2` is the capture's fault or the ladder giving up too
 coarse; per-slice contour smoothing as a way to close Poisson's holes without
 PyMeshFix.
 
@@ -1204,14 +1204,14 @@ There was no size check. Band area as a fraction of the limb's mask:
 
 | capture | ratio |
 |---|---|
-| `inputs/small_leg` — a real band | **0.04 – 0.07** |
+| `inputs/0_first_sample_3` — a real band | **0.04 – 0.07** |
 | `inputs/est_325` — no band | 1.23 |
-| `inputs/short_leg` — no band | 2.19 – 4.02 |
+| `inputs/0_first_sample_2` — no band | 2.19 – 4.02 |
 
 A cord tied round a limb cannot be larger than the limb. `BAND_MAX_LIMB_FRAC`
 = 0.35 — five times the largest real band, a third of the smallest false one.
 
-**2. One detection was enough to set the marker colour.** On `short_leg` a single
+**2. One detection was enough to set the marker colour.** On `0_first_sample_2` a single
 74 × 60 px false positive on 1 of 8 frames — small enough to pass the size guard —
 taught the pipeline that the marker is RGB(217, 207, 198). That is the floor tile.
 Measured consequence, running Stage 3's detector both ways on the same cloud:
@@ -1269,18 +1269,18 @@ have refused every band-free upload.
 
 | capture | before | after |
 |---|---|---|
-| `inputs/small_leg` | 5 of 6 usable, colour RGB [44,37,16] | **6 of 6 used** — `IMG_4458` is now a warning rather than a rejection, so no `--continue-on-rejected` is needed; same learned colour, same downstream numbers |
-| `inputs/short_leg` | 1 of 8, run refused | **8 of 8**, colour correctly discarded |
+| `inputs/0_first_sample_3` | 5 of 6 usable, colour RGB [44,37,16] | **6 of 6 used** — `IMG_4458` is now a warning rather than a rejection, so no `--continue-on-rejected` is needed; same learned colour, same downstream numbers |
+| `inputs/0_first_sample_2` | 1 of 8, run refused | **8 of 8**, colour correctly discarded |
 | `inputs/est_325` | 0 of 8, all unreadable | **8 of 8**, colour correctly discarded |
 
 **Not tested.** Whether `BAND_MAX_LIMB_FRAC` = 0.35 holds for a wide bandage or a
 band seen edge-on; both would read larger than a cord. Whether 0.6 is right when a
 band is genuinely occluded on half the orbit. Both want a second banded capture.
 
-**Consequence for earlier work.** `short_leg` was described in E-mixed-recon as
+**Consequence for earlier work.** `0_first_sample_2` was described in E-mixed-recon as
 "a badly framed capture", and that was wrong — it was well framed and rejected for
 a hallucinated band. Every frame now reaches VGGT cropped rather than raw, so the
-`short_leg` baseline and the Poisson comparison built on it both need re-running.
+`0_first_sample_2` baseline and the Poisson comparison built on it both need re-running.
 
 ---
 
@@ -1301,10 +1301,10 @@ attributed that to Poisson.
 
 | | `fill_holes` | `repair()` |
 |---|---|---|
-| `small_leg` box | χ = 30 | **χ = 2** |
-| `small_leg` limb | χ = 22 | **χ = 2** |
-| `short_leg` box | χ = 10 | **χ = 2** |
-| `short_leg` limb | χ = 14 | χ = −16 |
+| `0_first_sample_3` box | χ = 30 | **χ = 2** |
+| `0_first_sample_3` limb | χ = 22 | **χ = 2** |
+| `0_first_sample_2` box | χ = 10 | **χ = 2** |
+| `0_first_sample_2` limb | χ = 14 | χ = −16 |
 
 And it is free: the reported volume moves **0.005%** (1069.56 → 1069.61 cm³).
 The shape is preserved after all; it is the tunnels that go. `joincomp` and
@@ -1331,23 +1331,23 @@ discarding the bottom 1% is enough. The pipeline already trims at 2–5%.
 
 **Head-to-head, three arms, two captures**
 
-| `small_leg` | limb cm³ | box χ | limb χ | Stage 5 moved | p95 to cloud |
+| `0_first_sample_3` | limb cm³ | box χ | limb χ | Stage 5 moved | p95 to cloud |
 |---|---|---|---|---|---|
 | alpha / alpha | 1081.94 | 2 | 2 | +0.00% | 2.39 mm |
 | alpha cube + PSR limb | 1070.85 | 2 | 2 | −4.22% | **1.30 mm** |
 | **PSR / PSR** | **1074.32** | **2** | **2** | −4.22% | **1.30 mm** |
 
-| `short_leg` | limb cm³ | box χ | limb χ | Stage 5 moved | p95 to cloud |
+| `0_first_sample_2` | limb cm³ | box χ | limb χ | Stage 5 moved | p95 to cloud |
 |---|---|---|---|---|---|
 | alpha / alpha | 2763.24 | 2 | **2** | +0.00% | 21.80 mm |
 | PSR / PSR | 2146.39 | 2 | **−18** | +2.25% | **2.19 mm** |
 
 **Decision: Poisson is now the default for both objects.** It fits the points
-1.8× closer on `small_leg` and 10× closer on `short_leg`, reaches χ = 2 on both
+1.8× closer on `0_first_sample_3` and 10× closer on `0_first_sample_2`, reaches χ = 2 on both
 objects there, and is insensitive to its own parameters at 0.32%.
 
 **What it costs, stated plainly.** Alpha shape's ladder *guarantees* χ = 2 because
-it selects on it; Poisson has no such guarantee and on `short_leg` closes at
+it selects on it; Poisson has no such guarantee and on `0_first_sample_2` closes at
 χ = −18 — a surface with about ten handles, whose signed volume is not the volume
 of a solid, and which reads 22% below the alpha answer.
 
@@ -1374,7 +1374,7 @@ that anything was wrong. That gap existed under alpha shape too; it simply could
 not fire, because Stage 4's ladder never emitted such a mesh.
 
 **Not tested.** Whether Poisson holds up on a *cut* limb from a second capture —
-both successes here are `small_leg` and both failures are the same uncut foot.
+both successes here are `0_first_sample_3` and both failures are the same uncut foot.
 That is the experiment that would settle whether the default is right.
 
 ---
@@ -1388,7 +1388,7 @@ the pipeline.
 **The failure.** On the six Aug 2026 captures the cut landed wrong on four. The
 plane fit was not at fault; the colour rule was selecting the wrong points.
 Stage 3 keeps `score > 0.5` along the limb→band chromaticity axis, with no upper
-bound. Measured on `champ` with its own learned colours: skin −0.06, floor +0.94,
+bound. Measured on `1_water_displacement_2c` with its own learned colours: skin −0.06, floor +0.94,
 band 1.00, neutral grey +1.14, **grey shorts +1.54**.
 
 **Four changes, and which one mattered.**
@@ -1397,22 +1397,22 @@ band 1.00, neutral grey +1.14, **grey shorts +1.54**.
 |---|---|---|
 | refuse a short axis | `MARKER_MIN_AXIS = 0.05` | **the load-bearing one** — fires on all five captures |
 | bound the score above | `MARKER_SCORE_MAX = 1.5` | never fires on this corpus |
-| gate before capping | — | recovers the real band on champ and black shirt |
+| gate before capping | — | recovers the real band on champ and 1_water_displacement_5 |
 | height floor in cube heights | `MARKER_MIN_HEIGHT_CUBES = 1.0` | transfers between captures where a span fraction cannot |
 | perpendicular to the limb | `MARKER_MAX_AXIS_ANGLE_DEG = 35` | separates genuine bands (2.4–27°) from false planes (53–89°) |
 
 The ceiling is worth singling out as a **negative result**: it changes nothing on
-any capture in hand. The axis check refuses first on all five, and on `small_leg`
+any capture in hand. The axis check refuses first on all five, and on `0_first_sample_3`
 — the only capture that uses the learned path — a neutral grey scores −0.30 and
 was never near the window. Disabling the axis check to test it in isolation, the
 ceiling alone cuts champ's marker mask 8,854 → 4,629 points and still leaves
 clusters of 2,556 / 1,242 / 803, i.e. it would **not** have fixed the cut. Kept
 as a guard for a case no capture exercises; it should not be quoted as a fix.
 
-**Result:** mean absolute error 30.6% → **1.7%** on four captures. `sunshine`
-went +27.5% → −1.2%; `orange shirt` and `keng` did not move, which is the other
+**Result:** mean absolute error 30.6% → **1.7%** on four captures. `1_water_displacement_3s`
+went +27.5% → −1.2%; `1_water_displacement_7` and `1_water_displacement_1k` did not move, which is the other
 half of the result — their cuts were already right and none of the new gates
-disturbed them. `small_leg`'s marker plane is bit-identical with Stage 2 held
+disturbed them. `0_first_sample_3`'s marker plane is bit-identical with Stage 2 held
 fixed.
 
 **A wrong implementation, caught by the truth table.** The perpendicularity gate
@@ -1420,7 +1420,7 @@ first fitted the limb's axis as the principal direction of a thin slab of points
 That returns the limb's *width*: a calf is ~10 cm across and a local slab is
 thinner, so the direction of greatest extent comes out horizontal. It passed a
 synthetic test on a narrow cylinder, then rejected the genuine bands on
-`orange_shirt` (53° "off axis") and `black_shirt` (65°), sending both from +0.1%
+`1_water_displacement_7` (53° "off axis") and `1_water_displacement_5` (65°), sending both from +0.1%
 and +4.4% to **+45.9% and +30.9%**. The axis now comes from slice centroids. A
 regression that size is invisible without ground truth, which is the argument for
 having it.
@@ -1432,7 +1432,7 @@ capture reaches it. Whether 35° holds for a band on a strongly bent limb.
 
 ## E-reference-probe — the cube as a reconstruction check · 2026-08-27
 
-**Question.** `inputs/blue shirt` produced a confident 5280 cm³ against a
+**Question.** `inputs/1_water_displacement_6` produced a confident 5280 cm³ against a
 measured 3420 with **every gate passing**: Stage 0 rejected its cube-less frame,
 the corroboration rule discarded its marker colour, the deferred cut declined to
 cut. Each of those checks the capture or the cut. Nothing checks whether the
@@ -1445,15 +1445,15 @@ volume as a fraction of its own oriented bounding box.
 
 | capture | fitted-face edges (cm) | spread | fill |
 |---|---|---|---|
-| orange shirt | 9.57 / 10.27 / 10.34 | 7.6% | 0.874 |
+| 1_water_displacement_7 | 9.57 / 10.27 / 10.34 | 7.6% | 0.874 |
 | keng | 9.77 / 10.05 / 10.40 | 6.3% | 0.873 |
-| black shirt | 9.88 / 9.90 / 10.31 | 4.3% | 0.873 |
+| 1_water_displacement_5 | 9.88 / 9.90 / 10.31 | 4.3% | 0.873 |
 | sunshine | 9.68 / 10.14 / 10.31 | 6.3% | 0.891 |
 | champ | 9.96 / 9.96 / 10.25 | 2.9% | 0.876 |
-| **blue shirt** | 9.67 / 10.23 / 10.30 | 6.3% | **0.787** |
+| **1_water_displacement_6** | 9.67 / 10.23 / 10.30 | 6.3% | **0.787** |
 
-**The edges do not separate it.** blue shirt's spread is mid-pack and its worst
-edge deviates 3.3% from nominal, less than orange shirt's 4.3%. **The fill ratio
+**The edges do not separate it.** 1_water_displacement_6's spread is mid-pack and its worst
+edge deviates 3.3% from nominal, less than 1_water_displacement_7's 4.3%. **The fill ratio
 does**: the five sound captures span 1.8 percentage points and the bad one sits
 8.6 below all of them. The mechanism is straightforward — a dented or eroded
 surface keeps its bounding box and loses volume.

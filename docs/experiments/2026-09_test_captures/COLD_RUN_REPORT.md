@@ -11,7 +11,7 @@ after the existing 4× pass, limb only, at 16× point spacing. Gated by
 `MLS_SECOND_RADIUS_MULT` in `pipeline/config.py`, **default 0 (off)**,
 switched on per run with an environment variable:
 
-    MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/test1_6
+    MLS_SECOND_RADIUS_MULT=16 python run.py -i inputs/3_circumference_calculation_6k
 
 The reference cube is never touched by it, so the scale is identical between
 a run with the pass and a run without. The config comment carries the sweep
@@ -82,7 +82,7 @@ slices do not sample. The real number is the one that counts.
 ## Validation — done 2026-09-19, pass is now the default
 
 test5 (water 2070): 2585.3 / +24.9% / alpha χ=-4 → 2438.6 / +17.8% / Poisson.
-0_right, 1_left, 6_left (water): Poisson before and after, volumes within
+2_water_displacement_1_right, 2_water_displacement_2_left, 2_water_displacement_7_left (water): Poisson before and after, volumes within
 1%, girth within 0.3 cm. Table in EXPERIMENT_LOG.md section 10.
 `MLS_SECOND_RADIUS_MULT` defaults to 16 in config.py.
 

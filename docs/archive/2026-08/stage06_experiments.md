@@ -131,7 +131,7 @@ the time: *"the cube cannot validate scale on its own."*
 
 **Verdict:** replaced at the time, on the reasoning above — and then reverted to,
 in Aug 2026, as a hand-off rather than a reversal of that reasoning. Both defects
-still hold and are reproducible on demand: a cold run on `inputs/small_leg` reports
+still hold and are reproducible on demand: a cold run on `inputs/0_first_sample_3` reports
 the cube at exactly 2744.00 cm³ and 19.18 × 19.47 × 14.09 cm. A calibration that
 guarantees its own success is not a calibration; that judgement has not changed,
 only who gets to make it.
@@ -171,7 +171,7 @@ The vertical edge is excluded because the cube's underside rests on the floor
 and never reconstructs — including it drags the estimate small and inflates
 everything measured against it.
 
-Measured on `small_leg`:
+Measured on `0_first_sample_3`:
 
 ```
 horizontal  0.2264, 0.2325 units — disagree by 2.68%

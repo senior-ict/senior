@@ -24,8 +24,8 @@ already 0.11–0.13 cm and this can only add to it.
 ran per cluster). Stages 3–6 run twice from the same Stage 1–2 source
 (`--src rerun_leg`), so the only difference is the fit.
 
-    python stagerun.py 3-6 -i ./inputs/small_leg --name mls_quad  --src rerun_leg
-    python stagerun.py 3-6 -i ./inputs/small_leg --name mls_plane --src rerun_leg
+    python stagerun.py 3-6 -i ./inputs/0_first_sample_3 --name mls_quad  --src rerun_leg
+    python stagerun.py 3-6 -i ./inputs/0_first_sample_3 --name mls_plane --src rerun_leg
 
 ## Result
 

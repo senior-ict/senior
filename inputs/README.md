@@ -5,90 +5,134 @@ is only meaningful next to the reference that produced it. A number from one
 era cannot be compared with a number from another, so this file records which
 capture belongs to which, in order.
 
-The order comes from the filenames. Photographs transferred through LINE are
-named `S__<serial>_0.jpg`, and the serial increases with every transfer, so it
-orders the sessions reliably even though it is not a date. EXIF timestamps were
-stripped in transfer on every folder except `test1_6_orig`, whose photographs
-still carry 2026-09-18 and anchor the `test1_*` group.
+## How a folder is named
+
+    <era>_<reference method>_<subject id>[_hairless]
+
+The leading number is the era, which fixes the reference method the capture was
+measured against. The subject id counts subjects within that era, and carries a
+letter where the subject is known: `k` for Keng, `c` for Champ, `s` for
+Sunshine. Two captures of one leg before and after hair removal share an id and
+differ only by the `_hairless` suffix, which is what makes them a pair worth
+reading together.
+
+Era 2 captures both legs of each subject, so their ids carry `_left` or
+`_right` instead of a subject letter.
+
+The order within an era comes from the filenames. Photographs transferred
+through LINE are named `S__<serial>_0.jpg`, and the serial increases with every
+transfer, so it orders the sessions reliably even though it is not a date. EXIF
+timestamps were stripped in transfer on every folder except
+`3_circumference_calculation_6k_orig`, whose photographs still carry
+2026-09-18 and anchor the era 3 group.
 
 ---
 
 ## Era 0 — no ground truth
 
-`small_leg`, `short_leg`, `baam`
+`0_first_sample_1`, `0_first_sample_2`, `0_first_sample_3`
 
 The first inputs. There is no reference volume for these, and none was
 intended: they existed so the program's output could be looked at, stage by
 stage, while the pipeline was being built. **No accuracy claim can be made from
 them**, and none is.
 
-They are still cited, for things that need no reference volume. `small_leg`
-shows what a centre crop removes from a 2160 x 3840 photograph, which is a
-framing observation. `short_leg` is used to compare two reconstruction methods
-against each other on the same points, which is a relative comparison.
+They are still cited, for things that need no reference volume.
+`0_first_sample_3` shows what a center crop removes from a 2160 x 3840
+photograph, which is a framing observation. `0_first_sample_2` is used to
+compare two reconstruction methods against each other on the same points,
+which is a relative comparison.
 
 ## Era 1 — water displacement, first procedure
 
-`black shirt`, `blue shirt`, `orange shirt`, `keng`, `champ`, `sunshine`,
-`sunshine2`  (serials up to S__119914xxx)
+`1_water_displacement_1k`, `1_water_displacement_2c`,
+`1_water_displacement_3s`, `1_water_displacement_4s`,
+`1_water_displacement_5`, `1_water_displacement_6`, `1_water_displacement_7`
+(serials up to S__119914xxx)
 
 The first attempt at a physical reference. The subject's leg was immersed and
 the displaced water weighed.
 
-## Era 2 — water displacement, the 0 to 6 set
+Ids 1 to 4 are the named subjects, `4s` being Sunshine's second capture. Ids 5
+to 7 were recorded only by the shirt the subject wore — black, blue and orange
+in that order — so no subject letter can be given for them.
 
-`0_left` and `0_right` through `6_left` and `6_right`
+## Era 2 — water displacement, the fourteen-capture set
+
+`2_water_displacement_1_left` and `2_water_displacement_1_right` through
+`2_water_displacement_7_left` and `2_water_displacement_7_right`
 (S__120233988 to S__120250418)
 
-Fourteen captures, measured into `groundtruth0-6.csv`. This is the set the
-pipeline read 24.6% to 35.8% high against, and the disagreement could not be
-attributed: the displacement procedure under-reads when the container is not at
-its overflow point, by roughly 100 cm3 per millimetre of shortfall, while the
-pipeline over-reads girth where the reconstructed ring is incomplete. Two
-mechanisms, opposite directions, neither isolated.
+Fourteen captures, seven subjects, both legs of each. They are measured into
+`groundtruth0-6.csv`, whose `no` column still counts from zero, so **subtract
+one from the folder id to find the row**: `2_water_displacement_1_left` is row
+`no = 0`, column `left_vol`, and `2_water_displacement_7_right` is row
+`no = 6`, column `right_vol`.
+
+None of the seven is Keng, Champ or Sunshine, which is why these ids carry no
+subject letter. The CSV records only sex: five W, two M.
+
+This is the set the pipeline read 24.6% to 35.8% high against, and the
+disagreement could not be attributed: the displacement procedure under-reads
+when the container is not at its overflow point, by roughly 100 cm3 per
+millimeter of shortfall, while the pipeline over-reads girth where the
+reconstructed ring is incomplete. Two mechanisms, opposite directions, neither
+isolated.
 
 `docs/guides/measuring_ground_truth.md` records both and why the method was
 replaced.
 
 ## Era 3 — tape measurement, first formula
 
-`test1_1` through `test1_6`, and `test1_6_orig`
-(S__120774660 to S__120938508; `test1_6_orig` carries EXIF 2026-09-18)
+`3_circumference_calculation_1c` through `3_circumference_calculation_5c` are
+Champ; `3_circumference_calculation_6k` is Keng, and
+`3_circumference_calculation_6k_orig` is the same capture before LINE stripped
+its EXIF.
+(S__120774660 to S__120938508; the `_orig` folder carries EXIF 2026-09-18)
 
 The move to tape. Circumferences at successive heights, summed as truncated
 cones. This removed every error mechanism the water method carried, because
 nothing is immersed.
 
+No hairless counterpart exists for any era 3 capture.
+
 ## Era 4 — tape profile, current
 
-`test2_keng`, `test2_champ`, `test2_champ_hairless`,
-`test2_sunshine_hairless`  (S__122068997 onward)
+`4_circumference_calculation_1k`, `4_circumference_calculation_2c`,
+`4_circumference_calculation_2c_hairless`, `4_circumference_calculation_3s`,
+`4_circumference_calculation_3s_hairless`  (S__122068997 onward)
 
 The current and most stable reference: a full profile of 27 to 28 readings per
 leg rather than a few heights, so the error can be located by height instead of
 being summed into one number.
 
 The reference volumes recomputed from these profiles are 1420.2 cm3 for
-`test2_keng`, 1981.7 for `test2_champ`, 1954.7 for `test2_champ_hairless` and
-1847.1 for `test2_sunshine_hairless`. The profiles are in
+`4_circumference_calculation_1k`, 1981.7 for `4_circumference_calculation_2c`,
+1954.7 for `4_circumference_calculation_2c_hairless`, 1831.2 for
+`4_circumference_calculation_3s` and 1847.1 for
+`4_circumference_calculation_3s_hairless`. The profiles are in
 `docs/experiments/2026-09_test_captures/*_tape_profile.csv`.
 
-`test2_champ` and `test2_champ_hairless` are the same subject before and after
-hair removal, which is what makes them a pair worth reading together.
+Two pairs read before and after hair removal: `2c` with `2c_hairless`, and
+`3s` with `3s_hairless`.
 
-**`test2_sunshine` is missing.** The run record names
-`inputs/test2_sunshine`, 8 photographs beginning `S__122085380_0.jpg`, and that
-folder no longer exists; only the 518 px frames inside `output_test2_sunshine`
-survive, which are not valid input for a fresh run. Its tape profile is still
-on file, so the reference remains even though the capture cannot be repeated.
+`4_circumference_calculation_3s` was recovered rather than kept. Its original
+folder was lost, and the eight photographs in it were restored from the 518 px
+frames the run had written; `4_circumference_calculation_3s/RESTORED.md`
+records how, and the recovery was checked as pixel-identical on the captures
+where both copies survive.
+
+`4_circumference_calculation_3s_hairless` holds seven photographs, not eight.
+That is the capture itself, not a frame that was dropped.
 
 ## Reference objects, no era
 
 `est_325`, `fanta_orange`, `fanta_red`
 
-Rigid objects, not limbs, used as controls. A rigid cylinder cannot move
-between photographs, which is what makes `fanta_orange` the control for the
-split-surface measurement in
+Rigid objects, not limbs, used as controls, and named for the object rather
+than an era because they carry no leg and no era's reference applies to them. A
+rigid cylinder cannot move between photographs, which is what makes
+`fanta_orange` the control for the split-surface measurement in
 `docs/experiments/2026-10_proposal_evidence/`.
 
 A printed capacity is not an external volume: the 325 ml on a can is what it

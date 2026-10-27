@@ -31,7 +31,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pipeline.core.cube_fit import fit_cube  # noqa: E402
 
 OUTPUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "2026-10-09_box_mending.png"
-EXAMPLE_RUN = PROJECT_ROOT / "output_test2_keng"
+EXAMPLE_RUN = PROJECT_ROOT / "output_4_circumference_calculation_1k"
 
 SURFACE = "#fcfcfb"
 INK = "#1a1a1a"
@@ -42,14 +42,14 @@ IDEAL_COLOUR = "#b3261e"
 # capture, truth cm3, as reconstructed, snapped at 1 mm, the fitted cube itself
 RESULTS = [
     ("test6", 1398.6, 1495.8, 1472.3, 1495.0),
-    ("test2_keng", 1420.2, 1517.5, 1506.1, 1523.6),
+    ("4_circumference_calculation_1k", 1420.2, 1517.5, 1506.1, 1523.6),
     ("test5", 2070.0, 2169.3, 2152.1, 2187.6),
-    ("0_right", 1830.0, 1740.3, 1720.0, 1802.1),
-    ("1_left", 1600.0, 1588.9, 1495.8, 1681.6),
-    ("6_left", 2800.0, 2644.0, 2629.1, 2630.0),
-    ("2_left", 1050.0, 1169.0, 1162.9, 1175.0),
+    ("2_water_displacement_1_right", 1830.0, 1740.3, 1720.0, 1802.1),
+    ("2_water_displacement_2_left", 1600.0, 1588.9, 1495.8, 1681.6),
+    ("2_water_displacement_7_left", 2800.0, 2644.0, 2629.1, 2630.0),
+    ("2_water_displacement_3_left", 1050.0, 1169.0, 1162.9, 1175.0),
 ]
-TRUTH_UNCERTAINTY = {"test2_keng": 2.5}   # the band tilted between measuring and shooting
+TRUTH_UNCERTAINTY = {"4_circumference_calculation_1k": 2.5}   # the band tilted between measuring and shooting
 
 
 def cube_frame_points(points, fit):
@@ -193,7 +193,7 @@ def main():
 
     figure.text(0.065, 0.015,
                 "Every row uses the same limb mesh; only the reference changes. "
-                "test2_keng's truth carries ±2.5% (the band tilted between measuring and shooting).",
+                "4_circumference_calculation_1k's truth carries ±2.5% (the band tilted between measuring and shooting).",
                 fontsize=10, color="#52514e")
     figure.savefig(OUTPUT, dpi=110, facecolor=SURFACE)
     print(OUTPUT)

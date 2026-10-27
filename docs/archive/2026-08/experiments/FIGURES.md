@@ -6,7 +6,7 @@ verified run** on the current tree. Written after one figure
 made the general question worth answering explicitly rather than assuming.
 
 The reference run throughout is `work/verify_full` — a cold `stagerun.py 0-6` on
-`inputs/small_leg` whose `volumes.csv` is bit-identical to `run.py`'s on the same
+`inputs/0_first_sample_3` whose `volumes.csv` is bit-identical to `run.py`'s on the same
 photographs.
 
 | figure | status | notes |
@@ -45,7 +45,7 @@ photographs.
 Every figure that draws a cross-section — `ghost_removal_chain.png`,
 `mls_ghost_limb_section.png`, `recon_method_comparison.png` — now uses **the same
 slice**, picked by one rule: **all 36 of 36 ten-degree sectors occupied**, in the
-raw cloud, the MLS cloud and the measured cloud alike. On `inputs/small_leg` that
+raw cloud, the MLS cloud and the measured cloud alike. On `inputs/0_first_sample_3` that
 is 15.9 cm above the floor.
 
 The rule exists because the obvious alternative is actively wrong. Selecting "the
@@ -99,5 +99,5 @@ states the method in enough detail to rewrite it. The data they read is
 `work/verify_full`, regenerable with:
 
 ```bash
-python stagerun.py 0-6 -i inputs/small_leg --name verify_full --continue-on-rejected
+python stagerun.py 0-6 -i inputs/0_first_sample_3 --name verify_full --continue-on-rejected
 ```

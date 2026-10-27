@@ -338,10 +338,10 @@ bullets(slide, [
 ], w=7000000, size=20)
 table(slide, [
     ["χ after Stage 5", "fill_holes", "repair()"],
-    ["small_leg · reference cube", "30", "2"],
-    ["small_leg · limb", "22", "2"],
-    ["short_leg · reference cube", "10", "2"],
-    ["short_leg · limb (uncut, with foot)", "14", "−16"],
+    ["0_first_sample_3 · reference cube", "30", "2"],
+    ["0_first_sample_3 · limb", "22", "2"],
+    ["0_first_sample_2 · reference cube", "10", "2"],
+    ["0_first_sample_2 · limb (uncut, with foot)", "14", "−16"],
     ["48-config sweep, χ = 2 on both", "0 of 48", "38 of 46"],
 ], x=8915400, y=2590800, w=8344200, col_widths=[2.2, 1, 1], size=20)
 footnote(slide, "The reported volume moves 0.005% when Stage 5 is fixed — "
@@ -352,31 +352,31 @@ slide = presentation.slides.add_slide(blank)
 heading(slide, "STAGE 4 · WHAT SHIPS NOW",
         "Poisson everywhere, alpha shape as the fallback")
 bullets(slide, [
-    "Poisson fits the points 1.8× closer on small_leg and 10× closer on short_leg.",
+    "Poisson fits the points 1.8× closer on 0_first_sample_3 and 10× closer on 0_first_sample_2.",
     "It is insensitive to its own parameters: twelve depth/trim combinations span "
     "0.32% of limb volume. trim > 0 is required — every trim = 0 run gives χ = 4.",
-    "What it costs, stated plainly: Poisson has no genus guarantee. On short_leg "
+    "What it costs, stated plainly: Poisson has no genus guarantee. On 0_first_sample_2 "
     "it closes at χ = −18, about ten handles, and reads 22% below the alpha answer.",
     "So Stage 5 now checks χ, and any object that does not reach 2 is reconstructed "
-    "again with alpha shape. Verified firing on short_leg and not firing on small_leg.",
+    "again with alpha shape. Verified firing on 0_first_sample_2 and not firing on 0_first_sample_3.",
 ], w=7000000, size=20)
 table(slide, [
-    ["small_leg", "limb cm³", "box χ", "limb χ", "p95"],
+    ["0_first_sample_3", "limb cm³", "box χ", "limb χ", "p95"],
     ["alpha / alpha", "1081.94", "2", "2", "2.39 mm"],
     ["alpha cube + Poisson limb", "1070.85", "2", "2", "1.30 mm"],
     ["Poisson / Poisson  ← ships", "1074.32", "2", "2", "1.30 mm"],
-    ["short_leg · no cut", "", "", "", ""],
+    ["0_first_sample_2 · no cut", "", "", "", ""],
     ["alpha / alpha", "2763.24", "2", "2", "21.80 mm"],
     ["Poisson / Poisson", "2146.39", "2", "−18", "2.19 mm"],
 ], x=8915400, y=2590800, w=8344200,
    col_widths=[2.5, 1.05, 0.7, 0.7, 1.05], size=18)
-footnote(slide, "short_leg is the honest counter-example: no band means no cut, "
+footnote(slide, "0_first_sample_2 is the honest counter-example: no band means no cut, "
                 "so the object is the whole foot — toes, arch, the gap under the "
                 "instep. Genuine topology — and the reason the fallback exists.", WARN)
 
 # ── 13 · new · results ───────────────────────────────────────────────────
 slide = presentation.slides.add_slide(blank)
-heading(slide, "RESULTS", "Where the numbers stand, on inputs/small_leg")
+heading(slide, "RESULTS", "Where the numbers stand, on inputs/0_first_sample_3")
 table(slide, [
     ["", "main", "current"],
     ["wall clock", "136.7 s", "80 s"],
@@ -411,7 +411,7 @@ bullets(slide, [
     "measurement against a known volume.",
     "est_325's 325 ml is a fill volume, not external displacement, so it does not "
     "settle the error target either.",
-    "Poisson has no genus guarantee, and short_leg shows what that looks like: "
+    "Poisson has no genus guarantee, and 0_first_sample_2 shows what that looks like: "
     "χ = −18 on an uncut foot, where toes and the gap under the instep are "
     "genuine topological complexity rather than a defect.",
     "Both Poisson successes are the same capture. Whether it holds on a cut limb "

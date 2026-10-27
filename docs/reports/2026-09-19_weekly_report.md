@@ -29,8 +29,8 @@ one was validated and made the default.
 | | | Stage 0's cube constants corrected from the cardboard cube (14 / 6.3 cm) to the printed one (10 / 5 cm) | Framing only; no volume changes |
 | | | `marker_scale_check.py`: scale from the 5 cm ArUco marker edges in VGGT's own point map | Cube-volume scale is within 2–3% on limbs, under 1% on the can. Retracts the earlier "+4.2% scale" term |
 | Fri 19 Sep 02:09 | `4fb9e44` | Stage 6 prints the marker scale beside the cube scale and warns above 3% | Fires at 6.0% on the run whose cube fell to the alpha wrap, silent at 2.7% on sound runs |
-| Fri 19 Sep 02:42 | `4306baf` | Second MLS pass made the default after a water-truth batch | test5 +24.9% (alpha) to +17.8% (Poisson); 0_right, 1_left, 6_left within 1%; can held |
-| Fri 19 Sep 03:12 | `81443a4` | Projected-plane merge defect fixed: a band vanished when its colour fit was gated out; the projected plane now stands in | 0_left 10.1 cm³ sliver to 1773 (water 1800); 2_left +222% to +37%; test6 identical |
+| Fri 19 Sep 02:42 | `4306baf` | Second MLS pass made the default after a water-truth batch | test5 +24.9% (alpha) to +17.8% (Poisson); 2_water_displacement_1_right, 2_water_displacement_2_left, 2_water_displacement_7_left within 1%; can held |
+| Fri 19 Sep 03:12 | `81443a4` | Projected-plane merge defect fixed: a band vanished when its colour fit was gated out; the projected plane now stands in | 2_water_displacement_1_left 10.1 cm³ sliver to 1773 (water 1800); 2_water_displacement_3_left +222% to +37%; test6 identical |
 | Fri 19 Sep 03:25 | `aeb32a1` | Stage-by-stage inspection of the whole pipeline written up | Lists what can be dropped and four further bugs, below |
 | Fri 19 Sep | docs | `docs/` reorganised by purpose, zero broken links | |
 
@@ -62,7 +62,7 @@ The remaining error is the leg itself as the model returns it: girth +5% at the 
 2. **Colour-fit plane normals** can sit up to 51° off the limb and still pass the 35° gate; the cut then slices the band obliquely. Take the normal from the projected plane or the band axis instead.
 3. **Reference fill check** at 0.83 is stale and warns on 15 of 22 runs. Re-baseline or retire it in favour of the marker-scale check.
 4. **Dead weight to drop** (from the inspection): the duplicate `predictions.npz`, the voxel/warp volume path, Stage 3's unreachable cloud-cut path, the wasted normal estimation in the bottom cap, two legacy tools, `log.csv` in git.
-5. **Environment.** A Windows-side process holds 40% of the GPU and makes inference take 8 minutes instead of 46 seconds. The reflective floor destroys captures (5_right, fanta_red); shoot on the matte tile.
+5. **Environment.** A Windows-side process holds 40% of the GPU and makes inference take 8 minutes instead of 46 seconds. The reflective floor destroys captures (2_water_displacement_6_right, fanta_red); shoot on the matte tile.
 
 ## Earlier in September, for context
 

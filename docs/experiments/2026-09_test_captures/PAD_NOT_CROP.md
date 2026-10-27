@@ -29,10 +29,10 @@ truth then; that was the volume moving toward it.
  capture   truth              sliding crop       padded
  test6     1398.6 tape        1704  +21.8%       1500   +7.3%
  test5     2070   water       2439  +17.8%       2167   +4.7%
- 0_right   1830   water       2504  +36.8%       1731   -5.4%
- 1_left    1600   water       2155  +34.7%       1599   -0.0%
- 6_left    2800   water       3508  +25.3%       2647   -5.5%
- 2_left    1050   water       1442  +37.3%       1168  +11.2%
+ 2_water_displacement_1_right   1830   water       2504  +36.8%       1731   -5.4%
+ 2_water_displacement_2_left    1600   water       2155  +34.7%       1599   -0.0%
+ 2_water_displacement_7_left    2800   water       3508  +25.3%       2647   -5.5%
+ 2_water_displacement_3_left    1050   water       1442  +37.3%       1168  +11.2%
  mean |error|                 29.0%              5.7%
  mean signed error            +29.0%             +2.0%
 ```

@@ -5,7 +5,7 @@ bands" is ambiguous by one stripe width, and that ambiguity is the pipeline's
 largest single error. Measured on 2026-10-09, sliding both planes from the
 stripes' inner edges to their outer edges swings the limb volume by 15-35%:
 
-    test2_keng   26.30 cm inner -> 30.79 cm outer, 1404 cm3 -> 1629 cm3
+    4_circumference_calculation_1k   26.30 cm inner -> 30.79 cm outer, 1404 cm3 -> 1629 cm3
     test6        26.41 cm inner -> 32.42 cm outer, 1363 cm3 -> 1696 cm3
 
 The tape is read between the bands' INNER edges, so that is where the planes

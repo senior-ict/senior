@@ -14,7 +14,7 @@ Examples:
   python run.py --skip_mesh                      # PLY only
 """,
     )
-    p.add_argument("-i", "--image_folder", type=str, default="./inputs/baam/",
+    p.add_argument("-i", "--image_folder", type=str, default="./inputs/0_first_sample_1/",
                    help="Path to folder containing input images (default: ./baam/)")
     p.add_argument("--output_dir", type=str, default=None,
                    help="Directory for output files (default: ./output/)")

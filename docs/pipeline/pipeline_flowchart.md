@@ -52,7 +52,7 @@ Conventions: blue = a file on disk · amber dashed = **not built yet**.
 >    rather than `fill_holes()` alone — see `../archive/2026-08/experiments.md`, E-psr-adopted.
 > 5. **The reference cube is 10 cm** on captures from August 2026 onward.
 >    `REFERENCE_REAL_SIZE_CM` defaults to 10.0 and is env-overridable; the
->    fixtures in these figures (`small_leg`, `est_325`) need 14.
+>    fixtures in these figures (`0_first_sample_3`, `est_325`) need 14.
 > 6. **Stage 6 is resolved, not open.** Figure 6 below describes the *parked*
 >    derivation and recommends it. Measured against five water-displacement
 >    volumes it is the less accurate of the two — 4.1% against the shipping
@@ -137,7 +137,7 @@ its size to be known. See `docs/archive/2026-08/experiments.md`, E-preconfirm-sc
 | 5 watertight | ~0.1 s | `*_recon.ply` | `*.ply` + `.stl` |
 | 6 volume | ~0.1 s | watertight meshes | `volumes.csv` |
 
-Cold run end to end on `inputs/small_leg`: **80 s** (re-measured 2026-08-22,
+Cold run end to end on `inputs/0_first_sample_3`: **80 s** (re-measured 2026-08-22,
 after Stage 0's output stopped being discarded). The re-cut after a review costs
 about 10 s, because Stage 1 is not repeated.
 
@@ -271,7 +271,7 @@ the first rotation. `main` applied the flip to the cloud but kept the original
 99 mm off the wrong end.
 
 **Why C2 lives here and not in detection.** Detection runs in original VGGT
-space, where the vertical axis is whatever the camera gave — on `small_leg` the
+space, where the vertical axis is whatever the camera gave — on `0_first_sample_3` the
 limb's long axis is **Y**, not Z. A Z-based height test there measures sideways.
 Only after `R_total` does "height" mean height.
 

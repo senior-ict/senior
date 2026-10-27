@@ -8,7 +8,7 @@ Section is 15.9 cm above the floor, chosen because it is a **closed ring** — a
 
 ![the chain](ghost_removal_chain.png)
 
-Reproduce: `python stagerun.py 0-3 -i inputs/small_leg --name verify --continue-on-rejected`,
+Reproduce: `python stagerun.py 0-3 -i inputs/0_first_sample_3 --name verify --continue-on-rejected`,
 then the script in the session scratchpad that replays Phase A step by step.
 
 > **Counts re-measured 2026-08-22**, after the fix that stopped `stagerun.py`
@@ -68,7 +68,7 @@ been too narrow to hold both sheets at once.
 > **Decided 2026-08-23 — the swap was made.** The hand-rolled 30-line grid
 > (`voxel_dedup`) is deleted; `ghost_voxel_downsample` is a thin wrapper around
 > Open3D's call. The section below is the measurement the decision rests on.
-> What ships now reports **1081.94 cm³** on `inputs/small_leg` where the
+> What ships now reports **1081.94 cm³** on `inputs/0_first_sample_3` where the
 > hand-rolled version reported 1081.94 — the 0.15% below.
 
 ![dedup vs open3d](dedup_vs_open3d.png)
@@ -189,7 +189,7 @@ agree.
 **−0.08% on the reported volume** — indistinguishable from nothing.
 **Not.** Not load-bearing.
 
-> **REMOVABLE — but not yet proven removable.** On `inputs/small_leg` this step
+> **REMOVABLE — but not yet proven removable.** On `inputs/0_first_sample_3` this step
 > changes the answer by 0.08%, which is noise. That is one capture that happens to
 > reconstruct cleanly, and it is measured against the pipeline itself rather than
 > against a known volume. The failure this step guards against — misoriented points

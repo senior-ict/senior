@@ -10,7 +10,7 @@ re-run the comparison and its renderer. The committed PDF was built while it
 existed, so the figure is in there.
 
 That figure is the cut solid from a real reconstruction
-from inputs/1_left -- the segment its own cut produced, whose two ends ARE the
+from inputs/2_water_displacement_2_left -- the segment its own cut produced, whose two ends ARE the
 bands -- annotated with the heights the tape method would use.
 
     python docs/guides/make_ground_truth_handbook.py
@@ -28,7 +28,7 @@ from PIL import Image
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CUT_SHEET = os.path.join(PROJECT_ROOT, "compare_old_vs_new", "renders",
-                         "rework", "1_left", "05_cut.png")
+                         "rework", "2_water_displacement_2_left", "05_cut.png")
 OUTPUT = os.path.join(PROJECT_ROOT, "docs", "guides", "measuring_ground_truth.pdf")
 
 PAGE = (8.27, 11.69)               # A4 portrait
@@ -145,7 +145,7 @@ def page_disc_model(pdf):
         axes.text(image_width * 0.64, bottom_fraction * image_height + 4,
                   "lower band", fontsize=8, color=ACCENT)
     axes.axis("off")
-    axes.set_title("the segment between the bands (inputs/1_left)\n"
+    axes.set_title("the segment between the bands (inputs/2_water_displacement_2_left)\n"
                    "marked every 4 cm", fontsize=9, color=MUTED)
 
     # Right: one frustum and its formula.
@@ -376,7 +376,7 @@ def page_open_question(pdf):
     axes = figure.add_axes([0.12, 0.60, 0.76, 0.26])
     coverage = np.array([94, 89, 72, 58, 26])
     girth_error = np.array([5.3, 11.3, 14.1, 12.8, 46.6])
-    labels = ["1_left", "6_left", "1_right", "0_right", "5_right"]
+    labels = ["2_water_displacement_2_left", "2_water_displacement_7_left", "2_water_displacement_2_right", "2_water_displacement_1_right", "2_water_displacement_6_right"]
     axes.scatter(coverage, girth_error, s=70, color=WARN, zorder=3)
     for ring_coverage, over_read, label in zip(coverage, girth_error, labels):
         axes.annotate(label, (ring_coverage, over_read),

@@ -38,10 +38,10 @@ Current accuracy, volume between the bands against water or tape:
 |---|---|---|---|
 | test6 | 1398.6 tape | 1485.2 | +6.2% |
 | test5 | 2070 water | 2167.6 | +4.7% |
-| 0_right | 1830 water | 1743.5 | −4.7% |
-| 1_left | 1600 water | 1591.1 | −0.6% |
-| 6_left | 2800 water | 2647.2 | −5.5% |
-| 2_left | 1050 water | 1180.2 | +12.4% |
+| 2_water_displacement_1_right | 1830 water | 1743.5 | −4.7% |
+| 2_water_displacement_2_left | 1600 water | 1591.1 | −0.6% |
+| 2_water_displacement_7_left | 2800 water | 2647.2 | −5.5% |
+| 2_water_displacement_3_left | 1050 water | 1180.2 | +12.4% |
 | **mean error, ignoring sign** | | | **5.7%** |
 | **mean error, with sign** | | | **+2.1%** |
 
@@ -240,7 +240,7 @@ and the cloud cut is further from water on the sixth, so the mesh cut stays.
 |---|---|---|---|
 | v1 | main | VGGT's centre crop, one band, cut on the cloud | not comparable |
 | v2 | 12–24 Aug | Stage 0 framing; Poisson with alpha fallback | — |
-| v3 | 31 Aug | cut moved to the mesh in Stage 5; two bands | 31% on five captures; 2_left lost a band (+222%) |
+| v3 | 31 Aug | cut moved to the mesh in Stage 5; two bands | 31% on five captures; 2_water_displacement_3_left lost a band (+222%) |
 | v4 | 18–21 Sep | second MLS pass, ghost-voxel spacing fix, projected band planes as backup (29% while still cropping), then **pad instead of crop**, marker-scale check removed, limb skeleton | 5.7% |
 
 ## What is still open
@@ -248,7 +248,7 @@ and the cloud cut is further from water on the sixth, so the mesh cut stays.
 - **Length on `test6`.** The leg reads 28.87 cm between the band centres
   against a 27.5 cm ruler (+5%), most of `test6`'s error. Whether the ruler
   was read between band centres or inner edges is not yet known.
-- **`2_left` at +12%.** Its band girths match the tape almost exactly, so the
+- **`2_water_displacement_3_left` at +12%.** Its band girths match the tape almost exactly, so the
   extra is in length or in the water truth.
 - **How repeatable the truth and the pipeline are.** Three captures and three
   water measurements of one limb would say how much of the 5–6% is noise.
@@ -257,11 +257,11 @@ and the cloud cut is further from water on the sixth, so the mesh cut stays.
 ## Running it
 
 ```bash
-python run.py -i inputs/test1_6                  # the whole pipeline
+python run.py -i inputs/3_circumference_calculation_6k                  # the whole pipeline
 python stagerun.py 3-6 --name test6_try        # rerun Stages 3-6 on work/test6_try
-LIMB_SKELETON=off python run.py -i inputs/test1_6   # without the skeleton step
-FRAME_FIT=crop python run.py -i inputs/test1_6      # the old cropped input
-CUT_STAGE=cloud python run.py -i inputs/test1_6     # cut the cloud in Stage 3
+LIMB_SKELETON=off python run.py -i inputs/3_circumference_calculation_6k   # without the skeleton step
+FRAME_FIT=crop python run.py -i inputs/3_circumference_calculation_6k      # the old cropped input
+CUT_STAGE=cloud python run.py -i inputs/3_circumference_calculation_6k     # cut the cloud in Stage 3
 ```
 
 Outputs land in `output/` (or `--output_dir`), with every stage's files under

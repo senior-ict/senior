@@ -9,7 +9,7 @@ the cube lands in every measurement. Two things it does badly:
   the gaps   a face seen from too few angles reconstructs with holes, which is
              what makes Poisson tunnel (chi != 2). Stage 4 then falls back to
              the alpha ladder, and the loosest rungs float millimetres clear of
-             the points: on test2_champ (2026-10-09) the 30x wrap sat 2.9 mm
+             the points: on 4_circumference_calculation_2c (2026-10-09) the 30x wrap sat 2.9 mm
              proud on every side, 9.1% of volume.
 
 The cube is the one object in the scene whose shape is known exactly, so both
@@ -20,7 +20,7 @@ empty cell. The bottom face, which always faces the floor, is filled almost
 entirely, which is what lets Poisson close without the fallback.
 
 What this does NOT do is decide how big the cube is. The fit is driven by the
-points and sits in the middle of their scatter -- on test2_champ, 42% of the
+points and sits in the middle of their scatter -- on 4_circumference_calculation_2c, 42% of the
 points end up outside it and 58% inside, mean offset +0.10 mm. Where the
 points say the cube reconstructed small, mending makes the mesh say so too
 rather than hiding it under a loose wrap.

@@ -165,21 +165,21 @@ is released between stages rather than accumulating across jobs.
   method the reference cube reports exactly 1000.00 cm³ by construction, which is
   an identity rather than a measurement. Treat volumes as provisional until
   Stage 6 settles.
-- **The three shipped samples are current** (10 October 2026). `test2_keng`,
-  `test2_sunshine` and `test2_champ` were produced by the pipeline as it stands:
+- **The three shipped samples are current** (10 October 2026). `4_circumference_calculation_1k`,
+  `4_circumference_calculation_3s` and `4_circumference_calculation_2c` were produced by the pipeline as it stands:
   the cut on the bands' inner edges, the reference cube mended before meshing,
   and main's Stage 6. A live job on the same photos reproduces them, which was
   not true of the samples they replaced.
 
   Each ships with a truth measured on the same leg between the same two band
   edges, so the result screen quotes a signed error: +1.7%, +2.2% and −0.6%.
-  `test2_sunshine` and `test2_champ` were shaved before being photographed; the
+  `4_circumference_calculation_3s` and `4_circumference_calculation_2c` were shaved before being photographed; the
   hairy captures of those two legs read +10.2% and +23.0% against a tape, which
   is a disagreement about which surface the truth describes rather than a
   pipeline error, and they are not shipped as samples for that reason.
 
-  Removing `small_leg` and `est_325` also removed the only worked example of the
+  Removing `0_first_sample_3` and `est_325` also removed the only worked example of the
   PARKED Stage 6 schema (`obb_a/obb_b/obb_c/height_cm`). The viewer still reads
   it — `parseVolumesCsv` branches on which columns are present — but nothing in
   the repo exercises that branch any more. Recover one with
-  `git show <commit>^:web/public/samples/small_leg/volumes.csv` if it is needed.
+  `git show <commit>^:web/public/samples/0_first_sample_3/volumes.csv` if it is needed.
