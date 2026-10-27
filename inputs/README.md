@@ -46,16 +46,24 @@ which is a relative comparison.
 ## Era 1 — water displacement, first procedure
 
 `1_water_displacement_1k`, `1_water_displacement_2c`,
-`1_water_displacement_3s`, `1_water_displacement_4s`,
-`1_water_displacement_5`, `1_water_displacement_6`, `1_water_displacement_7`
+`1_water_displacement_3s`, `1_water_displacement_5`,
+`1_water_displacement_6`, `1_water_displacement_7`
 (serials up to S__119914xxx)
 
 The first attempt at a physical reference. The subject's leg was immersed and
 the displaced water weighed.
 
-Ids 1 to 4 are the named subjects, `4s` being Sunshine's second capture. Ids 5
-to 7 were recorded only by the shirt the subject wore — black, blue and orange
-in that order — so no subject letter can be given for them.
+Ids 1 to 3 are the named subjects. Ids 5 to 7 were recorded only by the shirt
+the subject wore — black, blue and orange in that order — so no subject letter
+can be given for them.
+
+**Id 4 is retired.** `1_water_displacement_4s` was a second capture of
+Sunshine, and the capture itself failed, so it was removed rather than kept as
+an input nothing should be run on. The id is left vacant rather than closed up,
+because the measurements taken on that capture are still cited in
+`pipeline/stages/clean.py` and `pipeline/stages/prep.py`, where it is named as
+the under-count case, and renumbering the shirts would make those comments
+point at the wrong capture.
 
 ## Era 2 — water displacement, the fourteen-capture set
 
