@@ -158,3 +158,8 @@ CLAUDE.md
 
 # ...but the faculty templates are reference material, not run output
 !docs/senior_docs/*.zip
+
+# Working documents: drafting, experiment logs, faculty material. They stay on
+# disk and are not part of the project the repository ships. README.md and
+# pipeline.md describe it in-tree.
+docs/
