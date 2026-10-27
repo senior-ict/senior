@@ -1,5 +1,7 @@
 """Pipeline-wide configuration constants."""
 
+import os
+
 # Stage 7 volume calibration
 # The ArUco marker is identified as the "obj" cluster (non-box).
 # REFERENCE_REAL_SIZE_CM is the real-world linear size of the ArUco marker cube.
@@ -21,8 +23,19 @@ MARKER_EXG_MIN = 10       # excess green, 2*G - R - B
 # Stage 1 frame limits
 DEFAULT_MAX_FRAMES_MPS = 6
 
-# Model weights
+# Model weights.
+#
+# Two checkpoints exist and they are NOT interchangeable. facebook/VGGT-1B is
+# released under CC BY-NC-SA 4.0 and is not licensed for commercial use;
+# facebook/VGGT-1B-Commercial is, and is a separate gated repository that needs
+# a Hugging Face token the first time it is fetched.
+#
+# The checkpoint a run used must be recorded with that run: two runs of the same
+# capture on different checkpoints are not comparable.
 VGGT_MODEL_URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+VGGT_USE_COMMERCIAL = os.environ.get("VGGT_USE_COMMERCIAL", "1") != "0"
+VGGT_COMMERCIAL_REPO = "facebook/VGGT-1B-Commercial"
+VGGT_COMMERCIAL_FILE = "vggt_1B_commercial.pt"
 
 # Image extensions accepted by the input loader
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp", ".heic", ".heif")

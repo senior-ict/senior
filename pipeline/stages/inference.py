@@ -13,7 +13,36 @@ from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
 from vggt.utils.device import is_mps, autocast_on, aggressive_cleanup
 
-from pipeline.config import DEFAULT_MAX_FRAMES_MPS, IMAGE_EXTENSIONS, VGGT_MODEL_URL
+from pipeline.config import (DEFAULT_MAX_FRAMES_MPS, IMAGE_EXTENSIONS,
+                             VGGT_COMMERCIAL_FILE, VGGT_COMMERCIAL_REPO,
+                             VGGT_MODEL_URL, VGGT_USE_COMMERCIAL)
+
+
+def _load_checkpoint():
+    """The model weights, preferring the commercially licensed checkpoint.
+
+    facebook/VGGT-1B is CC BY-NC-SA 4.0 and not licensed for commercial use.
+    The commercial weights live in a separate gated repository, which needs a
+    Hugging Face token the first time it is fetched: set HF_TOKEN or run
+    `huggingface-cli login`. Falling back silently would hand back a
+    non-commercial model while the operator believed otherwise, so the fallback
+    says so loudly and the chosen checkpoint is printed either way.
+    """
+    if VGGT_USE_COMMERCIAL:
+        try:
+            from huggingface_hub import hf_hub_download
+
+            path = hf_hub_download(VGGT_COMMERCIAL_REPO, VGGT_COMMERCIAL_FILE)
+            print(f"  Checkpoint: {VGGT_COMMERCIAL_REPO} (commercial licence)")
+            return torch.load(path, map_location="cpu", weights_only=True)
+        except Exception as error:
+            print(f"  WARNING: commercial checkpoint unavailable "
+                  f"({type(error).__name__}: {str(error)[:120]})")
+            print("  WARNING: falling back to facebook/VGGT-1B — CC BY-NC-SA 4.0, "
+                  "NOT licensed for commercial use.")
+
+    print("  Checkpoint: facebook/VGGT-1B (non-commercial)")
+    return torch.hub.load_state_dict_from_url(VGGT_MODEL_URL, map_location="cpu")
 
 
 def _select_frames(image_names, max_frames):
@@ -44,7 +73,7 @@ def run_inference(image_folder, device, max_frames=None):
 
     print("  Loading VGGT model...")
     model = VGGT()
-    model.load_state_dict(torch.hub.load_state_dict_from_url(VGGT_MODEL_URL, map_location="cpu"))
+    model.load_state_dict(_load_checkpoint())
     model.eval()
     model = model.to(device)
     print(f"  Model loaded in {time.time() - t0:.1f}s")
