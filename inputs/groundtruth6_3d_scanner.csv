@@ -1,0 +1,5 @@
+capture,scan_mesh,span_cm,ankle_circumference_cm,knee_circumference_cm,volume_cm3,established,note
+6_3d_scanner_1k,keng_r.ply,,,,,no,band detection fails on this scan: it reads 45.44 cm at the ankle band, wider than the knee band, so neither the span nor the volume can be trusted
+6_3d_scanner_2k,keng_r_2.ply,28.83,19.09,29.02,1566.8,yes,
+6_3d_scanner_3c,champ_r.ply,,,,,no,the scanner left this mesh open, so the cut segment is not watertight and the pipeline volume method does not apply until the holes are filled
+6_3d_scanner_4s,sunshine_r.ply,26.50,22.29,32.76,1945.3,yes,

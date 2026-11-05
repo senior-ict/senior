@@ -138,3 +138,9 @@ CLAUDE.md
 
 # ...except the web app's shipped samples, which are the demo.
 !web/public/samples/**
+
+# Era 6 scanner meshes: 519 MB in total, and one file is over GitHub's 100 MB
+# limit. The measured reference values live in inputs/groundtruth6_3d_scanner.csv
+# and the scripts that derive them in tools/scan_ground_truth/.
+inputs/6_3d_scanner_*/*.ply
+inputs/6_3d_scanner_*/*.asc

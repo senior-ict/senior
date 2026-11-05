@@ -154,6 +154,48 @@ One frame of `5_circumference_calculation_2c_hairless` shows no reference
 cube. This pipeline inspects no photograph before reconstruction, so it reads
 that frame like any other.
 
+## Era 6 — a 3D scanner
+
+`6_3d_scanner_1k`, `6_3d_scanner_2k`, `6_3d_scanner_3c`, `6_3d_scanner_4s`
+
+The first reference that is itself a three dimensional measurement rather than
+a reading taken by hand. An Einstar scanner records the limb with the bands
+still tied on, so the same two cutting planes the pipeline uses can be placed
+on the same two cords, and the reference volume comes from the same code the
+pipeline measures a reconstruction with: the cut by `apply_marker_cut_to_mesh`,
+the volume by the exact volume of the resulting watertight mesh. Nothing about
+the measurement differs between the reference and the reconstruction, so a
+difference between them is a difference in the limb.
+
+The scanner was checked before it was trusted. It reads a 100 mm reference cube
+at 99.50 mm, which is -0.50%, and reads a flat floor flat to 0.203 mm. Two
+scans of one leg taken minutes apart agree to 1.5 mm in circumference.
+
+The reference volumes are in `groundtruth6_3d_scanner.csv`, and
+`tools/scan_ground_truth/` holds the scripts that produce them.
+
+**This reference disagrees with era 5 in sign.** A tape compresses soft tissue
+and a scan does not, so the tape reads the same limb small, by 1.3% to 7.2%,
+and by more at the fleshy upper band than at the ankle. An error measured
+against a tape and the same error measured against a scan therefore point in
+opposite directions, and the two cannot be mixed.
+
+**The span between the bands is a property of each capture, not of the
+protocol.** Measured on these four scans it came to 27.43, 28.80, 26.87 and
+26.40 cm, a spread of 2.4 cm. There is no standard gap to assume.
+
+Two of the four carry no reference volume yet. `6_3d_scanner_1k` defeats the
+band detection, which reads 45.44 cm at its ankle band, wider than its knee
+band, so neither the span nor the volume can be trusted from it.
+`6_3d_scanner_3c` was left open by the scanner, so the cut segment is not
+watertight and the exact volume method does not apply until its holes are
+filled the way Stage 5 fills a reconstruction's.
+
+The scan meshes themselves are not in this repository. They are 519 MB in
+total and one of them is over GitHub's 100 MB limit for a single file, so the
+`.ply` and `.asc` files are kept outside version control and only the measured
+reference values and the scripts that derive them are committed.
+
 ## Reference objects, no era
 
 `est_325`, `fanta_orange`, `fanta_red`
