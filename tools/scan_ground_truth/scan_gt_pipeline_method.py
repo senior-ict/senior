@@ -143,10 +143,17 @@ def repair_scan_mesh(mesh):
 
     import pymeshfix
 
-    fixer = pymeshfix.MeshFix(np.asarray(mesh.vertices),
-                              np.asarray(mesh.faces))
-    fixer.repair()
-    return trimesh.Trimesh(vertices=fixer.v, faces=fixer.f, process=False)
+    # Called exactly as pipeline/workers/meshfix_worker.py calls it, including
+    # leaving joincomp and remove_smallest_components off, so the reference is
+    # repaired by the same recipe a reconstruction is.
+    fixer = pymeshfix.MeshFix(
+        np.ascontiguousarray(mesh.vertices, dtype=np.float64),
+        np.ascontiguousarray(mesh.faces, dtype=np.int32))
+    fixer.repair(joincomp=False, remove_smallest_components=False)
+    repaired_vertices = np.asarray(fixer.points, dtype=np.float64)
+    repaired_faces = np.asarray(fixer.faces, dtype=np.int64)
+    return trimesh.Trimesh(vertices=repaired_vertices, faces=repaired_faces,
+                           process=False)
 
 
 def main():
