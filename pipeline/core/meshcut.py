@@ -8,6 +8,12 @@ way, in terms of above and below rather than sides:
     1 marker  -> keep what is BELOW the plane
     2 markers -> keep what lies BETWEEN the two planes
 
+Slicing leaves everything in the slab, which on a bent leg can include another
+body part passing through it. So one rule is added on top of the shared three,
+and it has no counterpart in the cloud path: of the solids the cut leaves, keep
+the one the bands are tied round, judged in plan view with height ignored. The
+planes cannot make that call, since the stray piece shares their z range exactly.
+
 Cutting the solid rather than the cloud is what lets a clinician place the cut
 on a surface instead of a scatter of points. It also removes the reconstruction
 step that used to sit between the cut and the measurement: the cloud cut had to
@@ -35,6 +41,11 @@ MIN_VERTICAL_COMPONENT = 1e-3
 # A cut that leaves almost nothing behind is a failed cut, not a small limb.
 # Matches the cloud path's floor of 50 points.
 MIN_FACES_AFTER_CUT = 50
+
+# A piece the bands do not encircle is kept anyway if dropping it would leave
+# almost nothing, on the same reasoning as MIN_FACES_AFTER_CUT: a selection that
+# throws away the limb is a failed selection, not a tiny limb.
+MIN_FACES_AFTER_SELECTION = 50
 
 
 def _upward_plane(marker, up_axis):
@@ -104,6 +115,82 @@ def _restore_vertex_colours(cut_mesh, source_mesh):
     return cut_mesh
 
 
+def _plan_view_outsideness(component, band_centres):
+    """How far outside a piece's plan-view outline the band centres fall, in units.
+
+    Measured in x and y only, with height thrown away on purpose. The two cut
+    planes have already fixed the z range, so the limb and any other body part
+    passing through the slab share that range exactly and height cannot tell them
+    apart. Plan view can: the bands are tied round the limb, so the limb is the
+    piece whose outline the band centres sit inside.
+
+    Returns the largest signed distance over the two centres, which is negative
+    when every centre lies inside the outline. Returns None when the piece has no
+    usable outline, which is treated as "not the limb" by the caller.
+    """
+    try:
+        from scipy.spatial import ConvexHull, QhullError
+    except ImportError:
+        return None
+
+    flattened = np.asarray(component.vertices, dtype=np.float64)[:, :2]
+    if len(flattened) < 3:
+        return None
+    try:
+        outline = ConvexHull(flattened)
+    except QhullError:
+        return None
+
+    # scipy writes each edge as normal . point + offset <= 0 for points inside,
+    # so the largest value over all edges is negative exactly when the point is
+    # inside, and grows with how far outside it is.
+    worst_distance = -np.inf
+    for centre in band_centres:
+        signed_distances = outline.equations[:, :2] @ centre + outline.equations[:, 2]
+        worst_distance = max(worst_distance, float(signed_distances.max()))
+    return worst_distance
+
+
+def _keep_the_piece_the_bands_encircle(cut, planes):
+    """Of the solids the cut left behind, keep the one the bands are tied round.
+
+    Slicing between two planes keeps everything in the slab, which on a bent leg
+    includes whatever else passes through it -- on one capture a 144.8 cm3 flake
+    of thigh, sitting 22.8 cm away from the bands in plan view, which Stage 6 was
+    summing into the limb volume. The planes cannot exclude it, because it shares
+    their z range. The bands can, because they are tied round the limb and
+    nothing else.
+
+    A single-piece cut is returned untouched, which is every capture measured so
+    far except that one.
+    """
+    pieces = cut.split(only_watertight=False)
+    if len(pieces) < 2:
+        return cut
+
+    band_centres = [origin[:2] for origin, _normal in planes]
+
+    best_piece = None
+    best_outsideness = None
+    for piece in pieces:
+        outsideness = _plan_view_outsideness(piece, band_centres)
+        if outsideness is None:
+            continue
+        if best_outsideness is None or outsideness < best_outsideness:
+            best_piece, best_outsideness = piece, outsideness
+
+    if best_piece is None or len(best_piece.faces) < MIN_FACES_AFTER_SELECTION:
+        print(f"  Band selection: {len(pieces)} pieces, but none the bands "
+              f"encircle is big enough -- keeping all of them")
+        return cut
+
+    dropped = len(pieces) - 1
+    inside = "inside" if best_outsideness <= 0 else f"{best_outsideness:.4f} outside"
+    print(f"  Band selection: kept the piece the bands sit {inside} of, "
+          f"dropped {dropped} other piece(s)")
+    return best_piece
+
+
 def apply_marker_cut_to_mesh(mesh, markers, up_axis=(0.0, 0.0, 1.0)):
     """Cuts a watertight mesh against at most two marker planes, by height.
 
@@ -162,6 +249,8 @@ def apply_marker_cut_to_mesh(mesh, markers, up_axis=(0.0, 0.0, 1.0)):
 
     if cut is None or len(cut.faces) < MIN_FACES_AFTER_CUT:
         return mesh, "too_few_after_cut"
+
+    cut = _keep_the_piece_the_bands_encircle(cut, planes)
 
     cut = _restore_vertex_colours(cut, mesh)
     return cut, case
