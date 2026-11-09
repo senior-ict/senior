@@ -30,6 +30,19 @@ import numpy as np
 # not load-bearing.
 SLAB_HALF_MM = 4.0
 
+# How far inside each cut face to take the section, in millimetres. The face
+# itself is a flat triangulated cap, so a section taken on it returns the cap
+# rather than a ring. Far enough in to clear the cap, near enough that the limb
+# has not tapered: on 6_3d_scanner_3c the knee read 31.33 cm at 5 mm and
+# 31.54 cm at 10 mm, against the scan's 31.24 cm.
+SECTION_INSET_MM = 5.0
+
+# A vertex this far outside the band planes says the mesh was never cut. Stage 5
+# publishes the uncut solid under the cut name when the cut fails, and scaling
+# from a whole leg because of that would be silent.
+UNCUT_TOLERANCE_MM = 10.0
+UNCUT_VERTEX_FRACTION = 0.02
+
 # Below this angular coverage the fit is extrapolating across a gap rather than
 # interpolating a ring, and the reported number is not a measurement.
 MAX_ARC_GAP_DEG = 45.0
@@ -136,16 +149,24 @@ def plane_basis(normal):
     return u, np.cross(n, u), n
 
 
-def fit_slice(points, centroid, normal, linear_scale, slab_half_mm=SLAB_HALF_MM):
+def fit_slice(points, centroid, normal, linear_scale, slab_half_mm=SLAB_HALF_MM,
+              points_already_on_plane=False):
     """Fit one cross-section. Returns a dict of centimetre measurements.
 
     `linear_scale` is cm per mesh unit, taken from whatever derivation Stage 6
     used, so this reports on exactly the same scale as `volumes.csv`.
+
+    `points_already_on_plane` says the caller has supplied a ring that lies on
+    the plane already, as `section_ring` does, so the slab filter would throw
+    all of it away. The fit itself is identical either way.
     """
     c = np.asarray(centroid, dtype=np.float64)
     u, v, n = plane_basis(normal)
 
-    slab = points[np.abs((points - c) @ n) <= (slab_half_mm / 10.0) / linear_scale]
+    if points_already_on_plane:
+        slab = np.asarray(points, dtype=np.float64)
+    else:
+        slab = points[np.abs((points - c) @ n) <= (slab_half_mm / 10.0) / linear_scale]
     if len(slab) < 12:
         raise ValueError(f"only {len(slab)} points in the slab — need 12")
 
@@ -246,6 +267,141 @@ def load_cut_geometry(clean_dir):
     return pts, markers
 
 
+def cut_mesh_path(clean_dir):
+    """Where Stage 5 leaves the cut limb, given a Stage 3 directory."""
+    run_dir = os.path.dirname(os.path.normpath(clean_dir))
+    return os.path.join(run_dir, "05_watertight", "mesh", "leg_cut.ply")
+
+
+def mesh_was_really_cut(mesh, markers):
+    """True when the mesh lies between the band planes, so a cut really happened.
+
+    Stage 5 publishes the UNCUT solid under the cut name whenever the cut fails
+    or no marker survives, which is deliberate: a rigid object with no band
+    still has to get a volume. Scaling from that without noticing would measure
+    a whole leg and call it a segment, so it is checked rather than assumed.
+    """
+    vertices = np.asarray(mesh.vertices, dtype=np.float64)
+    if len(vertices) == 0:
+        return False
+
+    outside = np.zeros(len(vertices), dtype=bool)
+    for marker in markers:
+        centroid = np.asarray(marker["centroid"], dtype=np.float64)
+        normal = np.asarray(marker["normal"], dtype=np.float64)
+        normal = normal / (np.linalg.norm(normal) + 1e-8)
+        signed = (vertices - centroid) @ normal
+        # Only the far side of each plane counts as outside, and which side that
+        # is comes from where the rest of the mesh sits.
+        if float(np.median(signed)) < 0.0:
+            signed = -signed
+        outside |= signed < -(UNCUT_TOLERANCE_MM / 10.0)
+
+    return float(outside.mean()) <= UNCUT_VERTEX_FRACTION
+
+
+def load_cut_mesh_geometry(clean_dir):
+    """(mesh, markers) from the Stage 5 cut limb, both in levelled space.
+
+    Returns (None, None) with a printed reason whenever the cut mesh cannot be
+    trusted, so the caller can fall back to Stage 3's cloud.
+    """
+    import trimesh
+
+    _points, markers = load_cut_geometry(clean_dir)
+    if markers is None:
+        return None, None
+
+    mesh_path = cut_mesh_path(clean_dir)
+    if not os.path.exists(mesh_path):
+        print(f"  circumference: no {os.path.basename(mesh_path)}, "
+              f"falling back to the Stage 3 cloud")
+        return None, None
+
+    mesh = trimesh.load(mesh_path, process=False)
+    if not hasattr(mesh, "faces") or len(mesh.faces) == 0:
+        print("  circumference: the cut mesh has no faces, "
+              "falling back to the Stage 3 cloud")
+        return None, None
+
+    if not mesh_was_really_cut(mesh, markers):
+        print("  circumference: leg_cut.ply reaches past the band planes, so the "
+              "cut did not happen — falling back to the Stage 3 cloud")
+        return None, None
+
+    return mesh, markers
+
+
+def section_ring(mesh, centroid, normal, linear_scale,
+                 inset_mm=SECTION_INSET_MM):
+    """The limb's outline where a plane crosses it, taken a little inside the face.
+
+    Cuts the plane against every triangle it crosses, so the points come back on
+    the surface and on the plane however the mesher happened to place vertices.
+    A slab of nearby vertices cannot promise either: on these meshes it returned
+    between 0 and 33 points where this returns a few hundred.
+
+    The section is taken `inset_mm` inside the cut face. On the face itself the
+    mesh is a flat cap, and a section of a cap is a disc rather than a ring.
+
+    When the plane crosses more than one piece, the piece the band is tied round
+    is the one whose outline the band centre falls inside — the same rule the
+    cut itself uses.
+
+    Returns an (N, 3) array, or None when no outline could be taken.
+    """
+    centroid = np.asarray(centroid, dtype=np.float64)
+    unit_normal = np.asarray(normal, dtype=np.float64)
+    unit_normal = unit_normal / (np.linalg.norm(unit_normal) + 1e-8)
+
+    # Step inward, towards the body of the mesh rather than out through the face.
+    vertices = np.asarray(mesh.vertices, dtype=np.float64)
+    if float(np.median((vertices - centroid) @ unit_normal)) < 0.0:
+        unit_normal = -unit_normal
+    origin = centroid + unit_normal * ((inset_mm / 10.0) / linear_scale)
+
+    section = mesh.section(plane_origin=origin, plane_normal=unit_normal)
+    if section is None:
+        return None
+
+    loops = [np.asarray(loop, dtype=np.float64) for loop in section.discrete
+             if len(loop) >= 12]
+    if not loops:
+        return None
+    if len(loops) == 1:
+        return loops[0]
+
+    first_axis, second_axis, _ = plane_basis(unit_normal)
+    flat_centre = np.array([centroid @ first_axis, centroid @ second_axis])
+
+    best_loop = None
+    best_outsideness = None
+    for loop in loops:
+        flattened = np.column_stack([loop @ first_axis, loop @ second_axis])
+        outsideness = _how_far_outside(flattened, flat_centre)
+        if outsideness is None:
+            continue
+        if best_outsideness is None or outsideness < best_outsideness:
+            best_loop, best_outsideness = loop, outsideness
+    return best_loop if best_loop is not None else loops[0]
+
+
+def _how_far_outside(outline_points, probe_point):
+    """How far outside an outline a point falls, negative when it is inside."""
+    try:
+        from scipy.spatial import ConvexHull, QhullError
+    except ImportError:
+        return None
+    if len(outline_points) < 3:
+        return None
+    try:
+        hull = ConvexHull(outline_points)
+    except QhullError:
+        return None
+    signed = hull.equations[:, :2] @ probe_point + hull.equations[:, 2]
+    return float(signed.max())
+
+
 def report_cut_circumference(clean_dir, linear_scale, slab_half_mm=SLAB_HALF_MM):
     """Print the circumference at each cutting plane. Returns a list of results.
 
@@ -254,21 +410,48 @@ def report_cut_circumference(clean_dir, linear_scale, slab_half_mm=SLAB_HALF_MM)
     `docs/reviews/repo_review.md` swept for.
     """
     try:
-        pts, markers = load_cut_geometry(clean_dir)
+        mesh, markers = load_cut_mesh_geometry(clean_dir)
     except Exception as exc:
-        print(f"  circumference: skipped — {type(exc).__name__}: {exc}")
-        return []
-    if pts is None:
-        return []
+        print(f"  circumference: the cut mesh would not load — "
+              f"{type(exc).__name__}: {exc}")
+        mesh, markers = None, None
 
-    print(f"\n  Circumference at the cutting plane "
-          f"(least-squares ellipse, Ramanujan II, slab ±{slab_half_mm:.0f} mm):")
+    pts = None
+    if mesh is None:
+        try:
+            pts, markers = load_cut_geometry(clean_dir)
+        except Exception as exc:
+            print(f"  circumference: skipped — {type(exc).__name__}: {exc}")
+            return []
+        if pts is None:
+            return []
+
+    if mesh is not None:
+        print(f"\n  Circumference at the cutting plane "
+              f"(least-squares ellipse, Ramanujan II, section of the cut mesh "
+              f"{SECTION_INSET_MM:.0f} mm inside each face):")
+        print("      note: a watertight mesh always sections to a closed loop, "
+              "so ring coverage reads 100% here and cannot catch a limb whose "
+              "back was never reconstructed. Stage 3's cloud is where that shows.")
+    else:
+        print(f"\n  Circumference at the cutting plane "
+              f"(least-squares ellipse, Ramanujan II, slab ±{slab_half_mm:.0f} mm):")
 
     out = []
     for i, mk in enumerate(markers):
         try:
-            r = fit_slice(pts, mk["centroid"], mk["normal"], linear_scale,
-                          slab_half_mm)
+            if mesh is not None:
+                ring = section_ring(mesh, mk["centroid"], mk["normal"],
+                                    linear_scale)
+                if ring is None:
+                    print(f"    plane {i}: FAILED — the plane took no outline "
+                          f"from the cut mesh")
+                    continue
+                r = fit_slice(ring, mk["centroid"], mk["normal"], linear_scale,
+                              slab_half_mm, points_already_on_plane=True)
+            else:
+                r = fit_slice(pts, mk["centroid"], mk["normal"], linear_scale,
+                              slab_half_mm)
         except Exception as exc:
             print(f"    plane {i}: FAILED — {type(exc).__name__}: {exc}")
             continue

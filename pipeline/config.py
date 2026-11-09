@@ -395,6 +395,20 @@ LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "on") == "on"
 # different plane. See docs/experiments/2026-09_test_captures/EXPERIMENT_LOG.md.
 BAND_CUT_EDGE = os.environ.get("BAND_CUT_EDGE", "inner")
 
+# How the band's inner edge is found, once BAND_CUT_EDGE says to use it.
+#
+#   wedge  cut the limb into wedges, take the band point furthest inward in
+#          each one, and put the plane at the mode of those. Measured along
+#          each band's OWN normal, so a band tied at an angle does not have
+#          its tilt counted as width.
+#   axis   the original method: one 2nd/98th percentile over the whole band,
+#          measured along the line joining the two band centres.
+#
+# Against Einstar scans of four legs, per band: axis 5.5 mm mean error and
+# 12.8 mm worst, wedge 2.0 mm mean and 2.7 mm worst. Most of that gain is the
+# direction, not the statistic. See pipeline/core/band_edges.py.
+BAND_EDGE_METHOD = os.environ.get("BAND_EDGE_METHOD", "wedge")
+
 # Flatten the reference cube's points onto the cube that fits them, and fill
 # the empty patches on its faces (pipeline/core/box_mending.py). The gaps are
 # what make Poisson tunnel on the cube, which forces Stage 4's loosest alpha
