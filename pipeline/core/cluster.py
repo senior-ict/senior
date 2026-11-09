@@ -90,6 +90,41 @@ def reference_match_share(cluster, reference_points):
     return float((distances < REFERENCE_MATCH_TOLERANCE).mean())
 
 
+def identify_subject_cluster(clusters, subject_points):
+    """Which of these clusters is the limb, decided by Stage 0's own mask.
+
+    Returns (index, grounds), or (None, reason) when the projection cannot
+    separate the clusters and the caller should fall back to identifying the
+    reference instead. The same floor and margin as the reference vote are
+    used, so one evidence rule governs both.
+    """
+    if subject_points is None or len(subject_points) == 0:
+        return None, "no limb mask was projected"
+
+    shares = []
+    for cluster in clusters:
+        shares.append(reference_match_share(cluster, subject_points))
+
+    best_index = int(np.argmax(shares))
+    best_share = shares[best_index]
+    runner_up_share = 0.0
+    for index, share in enumerate(shares):
+        if index != best_index and share > runner_up_share:
+            runner_up_share = share
+
+    detail = ", ".join(f"#{index + 1}={share:.1%}" for index, share in enumerate(shares))
+    if best_share < REFERENCE_MATCH_MIN_SHARE:
+        return None, (f"limb projection too weak: {detail}, "
+                      f"needs {REFERENCE_MATCH_MIN_SHARE:.0%}")
+    if best_share < REFERENCE_MATCH_MARGIN * runner_up_share:
+        return None, (f"limb projection inconclusive: {detail}, "
+                      f"needs a {REFERENCE_MATCH_MARGIN:g}x lead")
+
+    print(f"    Limb projection: {detail} of each cluster's points sit under "
+          f"Stage 0's limb mask")
+    return best_index, "projected limb mask"
+
+
 def identify_reference_cluster(clusters, reference_points):
     """Which of these clusters is the reference cube, and on what grounds.
 
@@ -130,7 +165,8 @@ def identify_reference_cluster(clusters, reference_points):
     return fallback_index, "cubeness only (a guess)"
 
 
-def detect_top_k_objects(pcd, k=2, visualize=False, reference_points=None):
+def detect_top_k_objects(pcd, k=2, visualize=False, reference_points=None,
+                         subject_points=None):
     """Detect top-k clusters, then identify which one is the reference cube.
 
     Returns: (box_cluster, obj_cluster)
@@ -221,8 +257,19 @@ def detect_top_k_objects(pcd, k=2, visualize=False, reference_points=None):
               f"black/white={black_white:.3f} {extent_text}")
         candidates.append(cluster)
 
-    box_idx, grounds = identify_reference_cluster(candidates, reference_points)
-    obj_idx = 1 - box_idx
+    # The limb's own mask decides when it can. It is the only evidence that
+    # survives the reference object being taken out of the scene, and asking
+    # it first means the reference becomes whatever the limb is not, rather
+    # than the limb becoming whatever the reference is not.
+    obj_idx, subject_grounds = identify_subject_cluster(candidates, subject_points)
+    if obj_idx is not None:
+        box_idx = 1 - obj_idx
+        grounds = f"elimination, the limb being found by {subject_grounds}"
+    else:
+        if subject_points is not None and len(subject_points):
+            print(f"    {subject_grounds}")
+        box_idx, grounds = identify_reference_cluster(candidates, reference_points)
+        obj_idx = 1 - box_idx
 
     print(f"    → cluster #{box_idx+1}: {len(top[box_idx][0].points):,} pts — "
           f"REFERENCE (box.ply), by {grounds}")

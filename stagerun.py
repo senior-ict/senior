@@ -576,6 +576,33 @@ def _projected_reference_points(args, name):
     return None
 
 
+def _projected_limb_points(args, name):
+    """The limb's own 3D points, from the mask Stage 0 saved.
+
+    None when Stage 0 ran before the mask existed, or when Stage 1 is missing,
+    which leaves the identification exactly where it was.
+    """
+    from pipeline.core.limb3d import limb_points_from_arrays
+    import json
+    import numpy as np
+
+    for candidate in (name, args.src):
+        if not candidate:
+            continue
+        prep = stage_dir(candidate, 0, create=False)
+        manifest_path = os.path.join(prep, "manifest.json")
+        npz = os.path.join(stage_dir(candidate, 1, create=False), "predictions.npz")
+        if not (os.path.exists(manifest_path) and os.path.exists(npz)):
+            continue
+        with open(manifest_path) as handle:
+            manifest = json.load(handle)
+        predictions = np.load(npz)
+        return limb_points_from_arrays(
+            manifest, prep, predictions["world_points"],
+            predictions["world_points_conf"])
+    return None
+
+
 def _cloud_method(args):
     """Which Stage 2 built the cloud this run reads: the flag, else config."""
     from pipeline.config import POINTCLOUD_METHOD
@@ -627,6 +654,7 @@ def run_stage3(args, name):
         n_bands=_detected_band_count(args, name),
         band_planes=_projected_band_planes(args, name),
         reference_points=_projected_reference_points(args, name),
+        subject_points=_projected_limb_points(args, name),
         merge_ghost_sheets=_cloud_method(args) != "tsdf",
         # Stage 3 no longer cuts. It segments the limb, detects the marker
         # planes and publishes both; the cut itself is applied in Stage 5,

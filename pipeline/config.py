@@ -377,7 +377,22 @@ CUT_STAGE = os.environ.get("CUT_STAGE", "mesh")
 # skeleton, move outer spurs in and dents out toward it, and fill empty arcs
 # on it, after the stacked MLS passes (pipeline/core/limb_skeleton.py). On since 2026-09-21: six captures, mean error
 # 5.8% off vs 5.7% on; the rings lose their spurs and gap bridges.
-LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "on") == "on"
+#
+# Turned off on 2026-11-09. Measured on the four 3D-scanner captures, with the
+# band cut corrected, against the scan's own volume:
+#
+#     capture     truth      on        off     what the step costs
+#     1k        1463.7    4059.3    1444.0          +176 points
+#     2k        1566.8    1549.4    1553.5          +0.26 points
+#     3c        2160.0    2391.5    2151.7          +10.3 points
+#     4s        1945.3    1931.3    1931.5          +0.01 points
+#
+# It never helps. The step fits a centre line through the limb and pulls the
+# surface toward it, but on a seated subject the thigh is in the cloud too, so
+# that line bends round the knee and drags the surface with it. Turning it off
+# costs 0.26 and 0.01 of a point on the two captures where it behaved, so there
+# is no price for having it off. Set LIMB_SKELETON=on to put it back.
+LIMB_SKELETON = os.environ.get("LIMB_SKELETON", "off") == "on"
 
 # Where on a painted band the cutting plane belongs. The bands are stripes
 # about 2 cm wide, so this is worth 15-35% of the limb volume -- more than

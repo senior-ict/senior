@@ -691,6 +691,55 @@ def _capture_band_count(per_frame_counts, total_frames=None, min_frac=None):
     return 0
 
 
+# How far the limb mask is eaten back before it is saved. The mask is used to
+# say which reconstructed cluster is the limb, not where the limb's surface
+# is, so only pixels well inside it are wanted: a boundary pixel can sit on
+# the floor behind the leg and would vote for the wrong cluster.
+LIMB_MASK_EROSION_FRAC = 0.06
+
+
+def _mask_holds_a_band(limb_mask, band_boxes):
+    """Whether a marker band sits on this mask, which says it is the right leg.
+
+    The subject stands with both legs in shot and the segmenter is asked for
+    "a human leg", so it can return the other one. The bands are only ever
+    tied to the limb being measured, so a mask carrying one is the limb and a
+    mask carrying none is the wrong leg or the wrong object entirely.
+    """
+    if not band_boxes:
+        return False
+    for box in band_boxes:
+        left, top, right, bottom = (int(round(value)) for value in box[:4])
+        patch = limb_mask[max(0, top):max(0, bottom), max(0, left):max(0, right)]
+        if patch.size and patch.mean() > 0.2:
+            return True
+    return False
+
+
+def _write_limb_mask(limb_mask, band_boxes, out_path):
+    """Write the confident middle of the limb mask, for Stage 3 to project.
+
+    Eroding by a share of the limb's own width keeps the core on any limb,
+    thick or thin, where a fixed number of pixels would eat a slim ankle away
+    and barely touch a calf. A mask with no band on it is not written at all,
+    so it cannot vote for the wrong leg.
+    """
+    if limb_mask is None or not limb_mask.any():
+        return False
+    if not _mask_holds_a_band(limb_mask, band_boxes):
+        return False
+
+    columns = np.flatnonzero(limb_mask.any(axis=0))
+    width = int(columns.max() - columns.min()) + 1
+    radius = max(2, int(round(width * LIMB_MASK_EROSION_FRAC)))
+    element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (radius * 2 + 1,) * 2)
+    core = cv2.erode(limb_mask.astype(np.uint8), element)
+    if not core.any():
+        core = limb_mask.astype(np.uint8)
+    cv2.imwrite(out_path, core * 255)
+    return True
+
+
 def _write_frame_for_vggt(image, window, should_crop, output_size, out_path):
     """Write the frame VGGT will read, cropped or whole.
 
@@ -867,6 +916,7 @@ def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
     records = []
     band_colours = []
     band_counts = []
+    limb_masks_written = 0
     print("=" * 60)
     print(f"STAGE 0: framing {len(paths)} frames  "
           f"(band={band_heights} cube heights, pad={pad:.0%}, "
@@ -968,6 +1018,15 @@ def prepare_frames(image_folder, out_dir, band_heights=LIMB_BAND_CUBE_HEIGHTS,
 
         out_path = os.path.join(out_dir, f"frame_{frame_index:02d}.png")
         _write_frame_for_vggt(img, window, can_crop, output_size, out_path)
+
+        # The limb mask goes out at the frame's own resolution. Stage 3 maps it
+        # into the model's input itself, the same way it maps the cube's box.
+        limb_mask_dir = os.path.join(out_dir, "limb_mask")
+        os.makedirs(limb_mask_dir, exist_ok=True)
+        if _write_limb_mask(leg, bands,
+                            os.path.join(limb_mask_dir,
+                                         f"frame_{frame_index:02d}.png")):
+            limb_masks_written += 1
         if not can_crop and not can_pass_through:
             # Rejected AND not croppable: the frame still goes out whole so it
             # can be inspected, and the mode records that VGGT will be the one

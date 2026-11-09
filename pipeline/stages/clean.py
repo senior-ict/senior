@@ -70,7 +70,8 @@ def _load_and_thin(dense_ply):
     return cloud
 
 
-def _split_into_objects(dense_cloud, num_objects, reference_points=None):
+def _split_into_objects(dense_cloud, num_objects, reference_points=None,
+                        subject_points=None):
     """Separate the scene into the reference cube and the subject.
 
     The floor is removed from a *copy* first, because while it is present it
@@ -86,7 +87,8 @@ def _split_into_objects(dense_cloud, num_objects, reference_points=None):
     without_floor, _ = remove_dominant_plane(without_floor)
 
     box_cluster, object_cluster = detect_top_k_objects(
-        without_floor, k=num_objects, reference_points=reference_points)
+        without_floor, k=num_objects, reference_points=reference_points,
+        subject_points=subject_points)
     if box_cluster is None:
         box_cluster = without_floor
         object_cluster = None
@@ -510,7 +512,7 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
                             fill_enabled=True, apply_cut=True,
                             override_planes=None, cut_mode=None, n_bands=None,
                             band_planes=None, merge_ghost_sheets=True,
-                            reference_points=None):
+                            reference_points=None, subject_points=None):
     """Cluster-first clean pipeline.
 
     Phase A: Segment the dense cloud once (floor removal + DBSCAN), detect
@@ -556,7 +558,8 @@ def _segment_and_export(dense_ply, output_dir, num_objects=2, seed=42,
     print("─" * 40)
 
     box_dense, obj_dense = _split_into_objects(pcd_dense, num_objects,
-                                               reference_points)
+                                               reference_points,
+                                               subject_points=subject_points)
 
     markers = []
     if segment_leg:
@@ -1083,7 +1086,7 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
                       fill_enabled=True, clean_ply_path=None, apply_cut=False,
                       marker_colour=None, override_planes=None, cut_mode=None,
                       n_bands=None, band_planes=None, merge_ghost_sheets=True,
-                      reference_points=None):
+                      reference_points=None, subject_points=None):
     """Pipeline wrapper. clean_ply_path is accepted for call-site compatibility
     and ignored — Stage 3 derives its own ghost-filtered clouds from ply_path.
     `merge_ghost_sheets` False skips the wide second MLS pass, for clouds that
@@ -1111,6 +1114,7 @@ def clean_and_extract(ply_path, output_dir, num_objects=2, seed=42,
             band_planes=band_planes,
             merge_ghost_sheets=merge_ghost_sheets,
             reference_points=reference_points,
+            subject_points=subject_points,
         )
         print(f"  Extracted {len(object_paths)} objects:")
         for p in object_paths:
