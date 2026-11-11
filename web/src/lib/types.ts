@@ -86,6 +86,35 @@ export interface SampleDataset {
   };
   volumesCsv: string;
   cuttingLine: string;
+  /** Stage 7's measure.json (volume + circumference at the cuts). Absent on
+   *  samples measured before Stage 7 existed. */
+  measureJson?: string;
+}
+
+/** One cut's circumference, from 07_measure/measure.json. */
+export interface CutCircumference {
+  plane: "top" | "bottom";
+  /** "surface", or where the fallback sliced when the raw surface had a gap. */
+  source?: string;
+  tape_cm: number | null;
+  contour_cm: number | null;
+  area_cm2: number | null;
+  tilt_deg: number;
+  closed: boolean;
+}
+
+/** 07_measure/measure.json */
+export interface MeasureResult {
+  reference_cm: number;
+  cm_per_unit: number;
+  leg: {
+    volume_ml: number;
+    watertight: boolean;
+    edges: { boundary_edges: number; nonmanifold_edges: number };
+    area_cm2: number;
+    size_cm: [number, number, number];
+  } | null;
+  circumference: CutCircumference[];
 }
 
 export type Screen =

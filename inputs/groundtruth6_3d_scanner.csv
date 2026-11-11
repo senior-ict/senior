@@ -1,5 +1,11 @@
-capture,scan_mesh,span_cm,ankle_circumference_cm,knee_circumference_cm,volume_cm3,established,note
-6_3d_scanner_1k,keng_r.ply,,,,1463.7,yes,measured after PyMeshFix closed the mesh and the cut kept only the piece the bands encircle. Before that the cut left 14 pieces and the volume could not be taken at all. The girth columns stay empty because the band girths are read on the uncut mesh and still wrap several pieces, which is why the ankle reads 45.19 cm, wider than the knee
-6_3d_scanner_2k,keng_r_2.ply,28.83,19.09,29.02,1566.8,yes,
-6_3d_scanner_3c,champ_r.ply,26.93,22.38,31.24,2160.0,yes,the scanner left this mesh open, so these numbers were measured after PyMeshFix closed it, the same repair Stage 5 uses. Pass --repair to reproduce
-6_3d_scanner_4s,sunshine_r.ply,26.50,22.29,32.76,1945.3,yes,
+capture,scan_mesh,span_cm,ankle_circumference_cm,knee_circumference_cm,volume_cm3,ankle_hand_cm,knee_hand_cm,contact,established,note
+6_3d_scanner_1k,keng_r.ply,,,,1463.7,,,,yes,"measured after PyMeshFix closed the mesh and the cut kept only the piece the bands encircle. Before that the cut left 14 pieces and the volume could not be taken at all. The girth columns stay empty because the band girths are read on the uncut mesh and still wrap several pieces, which is why the ankle reads 45.19 cm, wider than the knee"
+6_3d_scanner_2k,keng_r_2.ply,28.83,19.09,29.02,1566.8,,,,yes,
+6_3d_scanner_3c,champ_r.ply,26.93,22.38,31.24,2160.0,,,,yes,"the scanner left this mesh open, so these numbers were measured after PyMeshFix closed it, the same repair Stage 5 uses. Pass --repair to reproduce"
+6_3d_scanner_4s,sunshine_r.ply,26.50,22.29,32.76,1945.3,,,,yes,
+j_r,,,24.95,37.3,3370.7,24.5,37.5,tnk_8j,,
+j_l,,,24.51,38.09,3245.6,24.5,37.5,tnk_8j,,
+n_r,,,20.95,33.01,2044.6,20.2,32,nut_jpr,,
+n_l,,,21.18,32.86,2066.7,21,32,nut_jpr,,
+ph_r,,,25.94,39.23,2881.4,26,38.5,p.pw_st,,
+ph_l,,,27.44,39.72,3097.2,27,38.5,p.pw_st,,

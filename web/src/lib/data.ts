@@ -77,30 +77,30 @@ export const SAMPLES: SampleDataset[] = [
   },
 ];
 
-/** Stage list for the processing screen. Times measured on an RTX 4060,
- *  6 photos. Do not inflate these.
+/** Stage list for the processing screen.
  *
- * The pipeline runs in two passes with the user in between, so the same stage
- * numbers mean different things either side of the review. Naming them by what
- * they produce in THAT pass is the only honest labelling: on the first pass
- * stages 4-6 build the limb's solid and measure the reference cube, but do not
- * measure the limb: its extent is not known until the cut is confirmed. */
+ * Stages 0-4 are senior (framing, VGGT, point cloud, segment, reconstruct);
+ * stages 5-7 are leg-scan-measure (exact cut, pymeshfix fill, volume and
+ * circumference). The pipeline runs in two passes with the user in between:
+ * the first pass reconstructs the limb but leaves it uncut and only measures
+ * the reference cube; the second applies the cut the user confirmed. */
 export const MEASURE_STAGES = [
   { n: 1, label: "VGGT inference", out: "predictions.npz", seconds: 50 },
   { n: 2, label: "Point cloud export", out: "points.ply", seconds: 2 },
   { n: 3, label: "Segment, mend the cube, find the cut", out: "leg.ply", seconds: 8 },
   { n: 4, label: "Surface reconstruction", out: "leg_recon.ply", seconds: 8 },
-  { n: 5, label: "Watertight solid, left uncut", out: "leg_no_cut.ply", seconds: 2 },
-  { n: 6, label: "Measure the reference", out: "volumes.csv", seconds: 2 },
+  { n: 5, label: "Publish the limb, left uncut", out: "leg_no_cut.ply", seconds: 1 },
+  { n: 6, label: "Watertight reference cube (pymeshfix)", out: "box.ply", seconds: 1 },
+  { n: 7, label: "Measure the reference", out: "volumes.csv", seconds: 1 },
 ] as const;
 
 /** The second pass: the cut the user confirmed, then the object itself. Only
- *  stages 5 and 6 appear. The cut is a plane slice through the watertight solid
- *  Stage 5 already built, so neither the segmentation nor the surface
- *  reconstruction is repeated — an edit costs seconds. */
+ *  stages 5-7 run — the cut is an exact plane slice of Stage 4's surface, so
+ *  neither segmentation nor reconstruction is repeated. */
 export const CUT_STAGES = [
-  { n: 5, label: "Apply the confirmed cut", out: "leg_cut.ply", seconds: 3 },
-  { n: 6, label: "Volume by surface integration", out: "volumes.csv", seconds: 2 },
+  { n: 5, label: "Cut along the confirmed planes", out: "leg_cut_open.ply", seconds: 1 },
+  { n: 6, label: "Fill to watertight (pymeshfix)", out: "leg_cut.ply", seconds: 2 },
+  { n: 7, label: "Volume + circumference", out: "measure.json", seconds: 1 },
 ] as const;
 
 export const STAGES = MEASURE_STAGES;

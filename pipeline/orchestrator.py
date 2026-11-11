@@ -1,4 +1,8 @@
-"""Top-level pipeline orchestrator — runs Stages 1-7 end to end."""
+"""Top-level pipeline orchestrator — runs Stages 0-7 end to end.
+
+Stages 0-4 are senior (framing, VGGT, point cloud, segment, reconstruct);
+stages 5-7 are leg-scan-measure (cut, pymeshfix fill, volume + circumference).
+"""
 import glob
 import os
 import shutil
@@ -11,6 +15,7 @@ from vggt.utils.device import get_device
 
 from pipeline.cli import parse_args
 from pipeline.config import (BAND_CUT_EDGE, BOX_MENDING, CUT_STAGE, FRAME_FIT,
+                             REFERENCE_REAL_SIZE_CM,
                              IMAGE_EXTENSIONS, LIMB_SKELETON, POINTCLOUD_METHOD)
 from pipeline.utils.runlog import RunLogger
 from pipeline.utils.seeding import seed_everything
@@ -19,8 +24,9 @@ from pipeline.stages.inference import run_inference
 from pipeline.stages.pointcloud import export_ply
 from pipeline.stages.clean import clean_and_extract
 from pipeline.stages.reconstruct import reconstruct_mesh_stage
-from pipeline.stages.watertight import watertight_stage
-from pipeline.stages.volume import compute_volumes
+from pipeline.stages.cut import cut_stage
+from pipeline.stages.fill_watertight import fill_stage
+from pipeline.stages.measure import measure_stage
 
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -31,8 +37,9 @@ STAGE_DIRS = {
     2: "02_pointcloud",
     3: "03_clean",
     4: "04_recon",
-    5: "05_watertight",
-    6: "06_volume",
+    5: "05_cut",
+    6: "06_fill",
+    7: "07_measure",
 }
 
 # Final deliverables, promoted out of for_debug/ to the top of output/.
@@ -60,7 +67,7 @@ def _print_banner(args, device):
     print(f"║  Seed          : {args.seed:<40}║")
     print(f"║  Leg segment   : {str(args.segment_leg):<40}║")
     print(f"║  Frame fit     : {args.frame_fit:<40}║")
-    print(f"║  Cut at        : {'Stage 3, on the cloud' if CUT_STAGE == 'cloud' else 'Stage 5, on the mesh':<40}║")
+    print(f"║  Cut at        : {'Stage 5, exact mesh cut':<40}║")
     print(f"║  Limb skeleton : {'on' if LIMB_SKELETON else 'off':<40}║")
     band_edge_label = "the stripes' inner edges" if BAND_CUT_EDGE == "inner" else "the stripe centres"
     print(f"║  Band cut at   : {band_edge_label:<40}║")
@@ -166,7 +173,7 @@ def _print_summary(total_time, inference_time, ply_path, scene_recon_path,
 
 
 def main():
-    """Runs Stages 0-6 end to end, then publishes the final meshes and writes the run log."""
+    """Runs Stages 0-7 end to end, then publishes the final meshes and writes the run log."""
     args = parse_args()
     args.frame_fit = getattr(args, "frame_fit", None) or FRAME_FIT
     device = get_device()
@@ -287,7 +294,7 @@ def main():
                 manifest, predictions["world_points"],
                 predictions["world_points_conf"])
 
-        # ── Stages 3-5: Clean + Reconstruct + Watertight ──
+        # ── Stages 3-4: Clean + Reconstruct (senior) ──
         scene_recon_path = None
         recon_mesh_paths = []
         scene_wt_path = None
@@ -305,11 +312,8 @@ def main():
                 n_bands=n_bands,
                 band_planes=band_planes,
                 reference_points=reference_points,
-                # CUT_STAGE = "cloud" cuts the point cloud here, as v2 did;
-                # Stage 5 then finds no uncut limb and leaves the solid as is.
-                apply_cut=(CUT_STAGE == "cloud"),
-                # A fused cloud has one sheet; the wide merge pass would only
-                # smooth it, and on its sparser spacing crushes the cube.
+                # The cut is always applied to the mesh, in Stage 5.
+                apply_cut=False,
                 merge_ghost_sheets=(getattr(args, "pointcloud_method", None)
                                     or POINTCLOUD_METHOD) != "tsdf")
             print(f"[DBG-stage] stage3 clean_and_extract: {time.time() - _dbg_t:.2f}s")
@@ -322,45 +326,49 @@ def main():
                     obj_method=args.obj_recon_method)
                 print(f"[DBG-stage] stage4 reconstruct: {time.time() - _dbg_t:.2f}s")
 
-                if recon_mesh_paths and not args.no_watertight:
+                limb = next((p for p in recon_mesh_paths
+                             if os.path.basename(p) in ("leg_recon.ply", "obj_recon.ply")), None)
+                box = next((p for p in recon_mesh_paths
+                            if os.path.basename(p) == "box_recon.ply"), None)
+
+                # ── Stage 5: Cut (leg-scan-measure) ──
+                # run.py never defers, so the detected planes are applied; an
+                # empty list means nothing to cut and the whole limb is measured.
+                open_cut = None
+                if limb is not None:
                     _dbg_t = time.time()
-                    # Stage 3 detects the planes and publishes them; Stage 5 is
-                    # where they are actually applied, to the repaired solid.
-                    detected_planes_path = os.path.join(
-                        stage_dirs[3], "debug", "cutting_line_levelled.json")
-                    # An empty list means there was nothing to cut, so the whole
-                    # object is measured. run.py never defers, so this is never
-                    # None here.
+                    detected = os.path.join(stage_dirs[3], "debug",
+                                            "cutting_line_levelled.json")
                     cut_planes = []
-                    if os.path.exists(detected_planes_path):
+                    if os.path.exists(detected):
                         import json as _json
-                        with open(detected_planes_path) as planes_file:
-                            cut_planes = _json.load(planes_file).get("markers", [])
-                    scene_wt_path, wt_mesh_paths = watertight_stage(
-                        recon_mesh_paths, stage_dirs[5],
-                        cut_planes=cut_planes,
-                        height_axis=args.segment_height_axis)
-                    print(f"[DBG-stage] stage5 watertight: {time.time() - _dbg_t:.2f}s")
+                        with open(detected) as fh:
+                            cut_planes = _json.load(fh).get("markers", [])
+                    open_cut = cut_stage(limb, stage_dirs[5], cut_planes=cut_planes,
+                                         height_axis=args.segment_height_axis)
+                    print(f"[DBG-stage] stage5 cut: {time.time() - _dbg_t:.2f}s")
+
+                # ── Stage 6: Fill to watertight (pymeshfix) ──
+                if not args.no_watertight:
+                    _dbg_t = time.time()
+                    written = fill_stage(open_cut, box, stage_dirs[6])
+                    wt_mesh_paths = [p for k, p in written.items() if k != "scene_colour"]
+                    scene_wt_path = written.get("scene_colour")
+                    print(f"[DBG-stage] stage6 fill: {time.time() - _dbg_t:.2f}s")
+
+                    # ── Stage 7: Volume + circumference ──
+                    _dbg_t = time.time()
+                    res = measure_stage(os.path.join(stage_dirs[6], "mesh"),
+                                        os.path.join(stage_dirs[5], "mesh", "leg_no_cut.ply"),
+                                        os.path.join(stage_dirs[5], "cut_planes.json"),
+                                        stage_dirs[7])
+                    print(f"[DBG-stage] stage7 measure: {time.time() - _dbg_t:.2f}s")
+                    if res is not None:
+                        box_vol_cm3 = REFERENCE_REAL_SIZE_CM ** 3
+                        if res["leg"]:
+                            obj_vol_cm3 = res["leg"]["volume_ml"]
         else:
             print("\n  (Skipping mesh stages — --skip_mesh was set)")
-
-        # ── Stage 6: Volumes ──
-        vol_objects = wt_mesh_paths or recon_mesh_paths
-        if vol_objects:
-            _dbg_t = time.time()
-            vol_df = compute_volumes(vol_objects,
-                                     voxel_res=args.voxel_res,
-                                     auto_res=args.auto_res,
-                                     clean_dir=stage_dirs[3])
-            print(f"[DBG-stage] stage6 volumes: {time.time() - _dbg_t:.2f}s")
-            if vol_df is not None:
-                vol_df.to_csv(os.path.join(stage_dirs[6], "volumes.csv"), index=False)
-                box_rows = vol_df[vol_df["is_ref"]]
-                obj_rows = vol_df[~vol_df["is_ref"]]
-                if not box_rows.empty:
-                    box_vol_cm3 = float(box_rows.iloc[0]["real_vol_cm3"])
-                if not obj_rows.empty:
-                    obj_vol_cm3 = float(obj_rows.iloc[0]["real_vol_cm3"])
 
         _publish_final_meshes(args.output_dir, wt_mesh_paths, recon_mesh_paths,
                               scene_wt_path or scene_recon_path)

@@ -1,5 +1,10 @@
 # VGGT Volume Measurement Pipeline
 
+> **senior-p3:** this is senior's reference document. Stages 0-4 below still
+> apply as written. Stages 5-6 are REPLACED by leg-scan-measure's method —
+> Stage 5 exact plane cut, Stage 6 pymeshfix fill, Stage 7 signed-tetrahedron
+> volume + convex-hull circumference. See README.md for the current pipeline.
+
 Measures the real-world volume of an object from a handful of phone photos,
 using an ArUco-marked cube of known size as the scale reference.
 

@@ -115,8 +115,8 @@ export async function runJob(id: string, strict: boolean) {
   );
 }
 
-/** Re-measure with planes the user placed. Stages 3-6 only — stage 1's
- *  predictions are already on disk, which is why an edit costs seconds. */
+/** Re-measure with planes the user placed. Stages 5-7 only (cut, pymeshfix
+ *  fill, measure) — everything before is on disk, so an edit costs seconds. */
 export async function recut(id: string, planes: CutPlane[]) {
   return json(
     await fetch(`${API}/jobs/${id}/recut`, {
@@ -156,6 +156,7 @@ export function jobDataset(id: string, frames: number): SampleDataset {
     },
     volumesCsv: f("volumes.csv"),
     cuttingLine: f("cutting_line.json"),
+    measureJson: f("measure.json"),
   };
 }
 

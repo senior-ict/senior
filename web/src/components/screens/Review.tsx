@@ -6,7 +6,8 @@ import * as THREE from "three";
 import { Button, Caveat, Label, Panel, Slider } from "@/components/ui/primitives";
 import { linearScale, loadCutPlanes, loadVolumes, newPlaneId } from "@/lib/data";
 import { MAX_PLANES } from "@/components/three/CutReview";
-import { SLAB_HALF_MM, type CrossSectionResult } from "@/lib/crosssection";
+import { SLAB_HALF_MM } from "@/lib/crosssection";
+import type { SectionResult } from "@/lib/meshslice";
 import type { CutPlane, SampleDataset, VolumeRow } from "@/lib/types";
 import { jobFrameUrls, loadCameras, loadLevelling } from "@/lib/api";
 import type { CameraData, FrameCamera, LevellingData } from "@/lib/imagecamera";
@@ -100,8 +101,8 @@ function controlsFromNormal(
 
 /** Girth of the limb where a plane crosses it, fitted while the plane moves.
  *
- * The same measurement Stage 6 prints, from the same code ported to TypeScript
- * (`lib/crosssection.ts`), so a reviewer can put the cut at a height they have a
+ * The same measurement Stage 7 prints (leg-scan-measure's surface slice, ported
+ * to TypeScript in `lib/meshslice.ts`), so a reviewer can put the cut at a height they have a
  * tape measurement for and compare on the spot — the one limb dimension that can
  * be checked without water.
  *
@@ -111,7 +112,7 @@ function controlsFromNormal(
  * extrapolates the missing side. If this panel showed only the centimetres, that
  * failure would look exactly like a measurement.
  */
-function CircumferenceReadout({ section }: { section?: CrossSectionResult }) {
+function CircumferenceReadout({ section }: { section?: SectionResult }) {
   if (!section) return null;
   if (!section.ok) {
     return (
@@ -123,6 +124,34 @@ function CircumferenceReadout({ section }: { section?: CrossSectionResult }) {
         }}
       >
         no circumference here — {section.reason}
+      </div>
+    );
+  }
+
+  if ("kind" in section) {
+    // leg-scan-measure: exact slice of the surface, tape = convex hull.
+    return (
+      <div style={{ margin: "0 0 12px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ font: "500 11px/1 var(--sans)", letterSpacing: "0.04em",
+                         textTransform: "uppercase", color: "var(--muted)" }}>
+            Circumference
+          </span>
+          <span style={{ font: "500 15px/1.2 var(--mono)", marginLeft: "auto" }}>
+            {section.tapeCm.toFixed(2)} cm
+          </span>
+        </div>
+        <div style={{ font: "400 11px/1.6 var(--mono)", color: "var(--muted)", marginTop: 4 }}>
+          tape (convex hull) · outline {section.contourCm.toFixed(2)} cm
+          {section.areaCm2 != null && <> · area {section.areaCm2.toFixed(1)} cm²</>}
+          {section.loopCount > 1 && <> · {section.loopCount} loops</>}
+        </div>
+        {!section.closed && (
+          <Caveat>
+            Gap in the scan at this height — the outline is not a closed loop,
+            so the tape length may read a little low.
+          </Caveat>
+        )}
       </div>
     );
   }
@@ -205,7 +234,7 @@ export function Review({
   const [offset, setOffset] = useState(new THREE.Vector3());
   // Circumference at each plane, recomputed in the viewport whenever a plane
   // moves. Empty until the cloud has loaded.
-  const [sections, setSections] = useState<Record<string, CrossSectionResult>>({});
+  const [sections, setSections] = useState<Record<string, SectionResult>>({});
   const offsetY = offset.y;
   // Where the object actually is horizontally at mid height, in scene cm.
   const [midAxis, setMidAxis] = useState(new THREE.Vector2());
@@ -227,7 +256,7 @@ export function Review({
   const scale = scaleRaw ?? 1;
   const scaleError =
     rows && scaleRaw === null
-      ? "This run was measured by a Stage 6 that does not report the reference "
+      ? "This run was measured by a stage that does not report the reference "
         + "cube's edge length, so the scene cannot be drawn to scale."
       : null;
 

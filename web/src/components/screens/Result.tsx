@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Caveat, Label, Panel, Stat } from "@/components/ui/primitives";
 import { linearScale, loadVolumes, REFERENCE_CM } from "@/lib/data";
-import type { SampleDataset, VolumeRow } from "@/lib/types";
+import type { MeasureResult, SampleDataset, VolumeRow } from "@/lib/types";
 
 const Viewport = dynamic(
   () => import("@/components/three/Viewport").then((m) => m.Viewport),
@@ -40,8 +40,16 @@ export function Result({
   /** A mesh that fails to load, as opposed to a CSV that fails to parse. */
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [measure, setMeasure] = useState<MeasureResult | null>(null);
+
   useEffect(() => {
     loadVolumes(dataset.volumesCsv).then(setRows).catch((e) => setErr(String(e)));
+    setMeasure(null);
+    if (dataset.measureJson)
+      fetch(dataset.measureJson, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setMeasure)
+        .catch(() => setMeasure(null));
   }, [dataset]);
 
   const scale = useMemo(() => (rows ? linearScale(rows) : null), [rows]);
@@ -49,7 +57,7 @@ export function Result({
   // arbitrary units would label the grid with a lie.
   const scaleError =
     rows && scale === null
-      ? "This run was measured by a Stage 6 that does not report the reference "
+      ? "This run was measured by a stage that does not report the reference "
         + "cube's edge length, so the scene cannot be drawn to scale."
       : null;
   const obj = rows?.find((r) => !r.is_ref);
@@ -220,6 +228,64 @@ export function Result({
               </>
             )}
           </Panel>
+
+          {measure?.leg && (
+            <Panel>
+              <Label>Closed solid</Label>
+              <div
+                style={{
+                  font: "500 13px/1.5 var(--sans)",
+                  marginTop: 8,
+                  color: measure.leg.watertight ? "var(--accent)" : "var(--warn)",
+                }}
+              >
+                {measure.leg.watertight
+                  ? "Fully closed — the volume is reliable"
+                  : "Not fully closed — the volume may be off"}
+              </div>
+              <div style={{ font: "400 11.5px/1.6 var(--mono)", color: "var(--muted)", marginTop: 4 }}>
+                open edges {measure.leg.edges.boundary_edges} · non-manifold{" "}
+                {measure.leg.edges.nonmanifold_edges} · surface{" "}
+                {measure.leg.area_cm2.toFixed(0)} cm²
+              </div>
+            </Panel>
+          )}
+
+          {measure && measure.circumference.length > 0 && (
+            <Panel>
+              <Label>Circumference at the cuts</Label>
+              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                {measure.circumference
+                  .slice()
+                  .sort((a, b) => (a.plane === "top" ? -1 : 1) - (b.plane === "top" ? -1 : 1))
+                  .map((c) => (
+                    <div key={c.plane}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ font: "500 12px/1 var(--sans)", textTransform: "capitalize" }}>
+                          {c.plane} cut
+                        </span>
+                        <span style={{ font: "500 16px/1.2 var(--mono)", marginLeft: "auto" }}>
+                          {c.tape_cm == null ? "—" : `${c.tape_cm.toFixed(2)} cm`}
+                        </span>
+                      </div>
+                      <div style={{ font: "400 11px/1.6 var(--mono)", color: "var(--muted)" }}>
+                        {c.contour_cm == null
+                          ? "plane misses the limb"
+                          : <>outline {c.contour_cm.toFixed(2)} cm
+                              {c.area_cm2 != null && <> · area {c.area_cm2.toFixed(1)} cm²</>}
+                              {" "}· tilt {c.tilt_deg.toFixed(1)}°
+                              {!c.closed && " · gap in scan"}
+                              {c.source && c.source !== "surface" && ` · ${c.source}`}</>}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <div style={{ font: "400 11.5px/1.55 var(--sans)", color: "var(--muted)", marginTop: 8 }}>
+                Tape length: the convex hull of the outline where the plane
+                meets the surface, so small dents and scan noise do not change it.
+              </div>
+            </Panel>
+          )}
 
           {/* The live self-check. See prompt.md §7. */}
           {ref && (

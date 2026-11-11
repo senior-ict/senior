@@ -6,7 +6,8 @@ import type { FrameCamera } from "@/lib/imagecamera";
 import { useThree } from "@react-three/fiber";
 import { Bounds } from "@react-three/drei";
 import type { CutPlane } from "@/lib/types";
-import { fitSlice, type CrossSectionResult } from "@/lib/crosssection";
+import { fitSlice } from "@/lib/crosssection";
+import { circumferenceOnPlane, type SectionResult } from "@/lib/meshslice";
 import { dirToScene, pointToScene, usePly } from "./usePly";
 
 /** At most two cuts bound a segment; see segmentation.py:MAX_MARKERS. */
@@ -442,7 +443,7 @@ export function CutReview({
   activePlaneId: string | null;
   onCounts?: (kept: number, dropped: number) => void;
   /** Circumference at each plane, keyed by plane id, recomputed as it moves. */
-  onCrossSections?: (sections: Record<string, CrossSectionResult>) => void;
+  onCrossSections?: (sections: Record<string, SectionResult>) => void;
   /** Vertical extent of the loaded cloud in scene cm, the whole translation
    *  the loader applied, and the object's horizontal axis at mid height —
    *  everything a manually added plane needs to land on the object. */
@@ -470,17 +471,20 @@ export function CutReview({
     const r = splitByPlanes(pos, planes, scale, off);
     onCounts?.(r.keep.length / 3, r.drop.length / 3);
 
-    // Circumference at each plane, on the same points and the same pose the
-    // split just used, so the number and the picture cannot disagree. The fit
-    // is `lib/crosssection.ts`, a port of the Stage 6 code, and it runs on the
-    // UNCUT cloud: what is being measured is the limb's girth where the plane
-    // crosses it, which does not depend on which side the cut keeps.
-    const sections: Record<string, CrossSectionResult> = {};
+    // Circumference at each plane, on the UNCUT surface: the limb's girth
+    // where the plane crosses it does not depend on which side the cut keeps.
+    // A mesh uses leg-scan-measure's exact surface slice + convex hull
+    // (`lib/meshslice.ts`, the same maths Stage 7 runs); a point cloud (older
+    // samples) falls back to senior's ellipse fit (`lib/crosssection.ts`).
+    const sections: Record<string, SectionResult> = {};
     const floorY = geometry.boundingBox?.min.y ?? null;
+    const index = geometry.index?.array;
     for (const p of planes.slice(0, MAX_PLANES)) {
       const c = pointToScene(p.centroid, scale, off);
       const n = dirToScene(p.normal);
-      sections[p.id] = fitSlice(pos, [c.x, c.y, c.z], [n.x, n.y, n.z], floorY);
+      sections[p.id] = index
+        ? circumferenceOnPlane(pos, index, [c.x, c.y, c.z], [n.x, n.y, n.z])
+        : fitSlice(pos, [c.x, c.y, c.z], [n.x, n.y, n.z], floorY);
     }
     onCrossSections?.(sections);
     return r;
@@ -509,11 +513,9 @@ export function CutReview({
   // not mounted at all; it comes back the moment the photo view closes.
   const scene = (
     <group>
-        {/* Stage 5 publishes a watertight solid, and that is what the cut is
-            actually applied to, so the review draws it as a surface. Jobs
-            measured before the cut moved — and the bundled samples — still
-            arrive as point clouds, which have no index; those fall back to the
-            point split. */}
+        {/* Stage 5 publishes Stage 4's surface, and that is what the cut is
+            actually applied to, so the review draws it as a surface. A point
+            cloud (no index) falls back to the point split. */}
         {geometry.index ? (
           <Surface
             geometry={geometry}

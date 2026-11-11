@@ -43,7 +43,7 @@ LOG_TAIL = 40
 #   queued           accepted, waiting for the worker
 #   prep             stage 0 running
 #   awaiting-framing stage 0 done, waiting for the user to accept the framing
-#   running          stages 1-6 (or 3-6 on a recut)
+#   running          stages 1-7 (or 5-7 on a recut)
 #   awaiting-cut     measured UNCUT; the detected planes are published and the
 #                    user has to approve or move them before the cut is applied
 #   done             a confirmed cut has been measured
@@ -61,7 +61,7 @@ class Job:
     frames: int = 0
     error: str | None = None
     log: list[str] = field(default_factory=list)
-    # True once stages 1-6 have produced a volume, so a recut knows stage 1's
+    # True once stages 1-7 have produced a volume, so a recut knows stage 1's
     # predictions.npz is on disk and does not have to be recomputed.
     measured: bool = False
 
@@ -228,7 +228,7 @@ class Registry:
 def _postcondition(job: Job, extra: list[str], done_state: str) -> str | None:
     """Refuse to report success if a deferred cut leaked a measured subject.
 
-    The reference-calibration pass runs stages 1-6 with --no-cut, so it looks
+    The reference-calibration pass runs stages 1-7 with --no-cut, so it looks
     from the outside like a full measurement. The one thing that must be true
     when it finishes is that the subject was NOT measured: no leg_cut.ply, and
     no subject row in volumes.csv. If either appears, a volume exists for a cut
@@ -239,19 +239,14 @@ def _postcondition(job: Job, extra: list[str], done_state: str) -> str | None:
     if "--no-cut" not in extra:
         return None
 
-    # The cut now happens in Stage 5, on the repaired solid, so the thing that
-    # must not exist after a deferred pass is a cut MESH. Stage 3 publishes only
-    # leg.ply and box.ply and has no way to cut anything, which is why there is
-    # no longer a check against its objects directory.
-    for stage_dir_name in ("04_recon", "05_watertight"):
-        for mesh_name in ("leg_cut.ply", "leg_cut_recon.ply"):
-            cut_mesh = os.path.join(job.dir, stage_dir_name, "mesh", mesh_name)
-            if os.path.exists(cut_mesh):
-                return (f"deferred-cut violation: {stage_dir_name}/mesh/{mesh_name} "
-                        f"exists after a --no-cut pass, so a cut was applied "
-                        f"before it was confirmed")
+    # The cut happens in Stage 5, so after a deferred pass no cut mesh may
+    # exist in Stage 5 or 6, and Stage 7 may report no subject.
+    for rel in ("05_cut/mesh/leg_cut_open.ply", "06_fill/mesh/leg_cut.ply"):
+        if os.path.exists(os.path.join(job.dir, rel)):
+            return (f"deferred-cut violation: {rel} exists after a --no-cut "
+                    f"pass, so a cut was applied before it was confirmed")
 
-    csv_path = os.path.join(job.dir, "06_volume", "volumes.csv")
+    csv_path = os.path.join(job.dir, "07_measure", "volumes.csv")
     if os.path.exists(csv_path):
         import csv as _csv
         with open(csv_path, newline="") as fh:

@@ -14,12 +14,12 @@ Stage 0 is a gate: it decides whether a set of photos can be measured at all,
 and a frame that clips the reference cube corrupts the scale for every number
 downstream while looking perfectly normal. So an upload runs stage 0 alone and
 stops, the user is shown what was rejected and why, and only then do stages
-1-6 run.
+1-7 run.
 
-The cut is treated the same way. Stages 1-6 run with `--no-cut`, so the limb is
-reconstructed and measured whole while the marker planes are only detected and
-published. The user approves or moves them, and stages 3-6 re-run to apply the
-cut they chose. Cutting on the first pass instead would put a volume on screen
+The cut is treated the same way. Stages 1-7 run with `--no-cut`, so the limb is
+reconstructed but not cut or measured while the marker planes are only detected
+and published. The user approves or moves them, and stages 5-7 (cut, pymeshfix
+fill, measure -- the leg-scan-measure half) re-run to apply the cut they chose. Cutting on the first pass instead would put a volume on screen
 that was derived from a cut nobody had agreed to, and then ask them to confirm
 it -- the confirmation would be theatre.
 """
@@ -75,37 +75,31 @@ app.add_middleware(
 # does not encode the pipeline's directory layout, and a stage that moves its
 # output breaks one line rather than several components.
 #
-# Each entry is a list of candidates, best first. Stage 5 makes a mesh
-# watertight and stage 4 only reconstructs it, so a run that stopped early
-# still serves something viewable.
+# Each entry is a list of candidates, best first.
 ARTIFACTS = {
-    "leg_mesh.ply":     ["05_watertight/mesh/leg_cut.ply",
-                         "04_recon/mesh/leg_cut_recon.ply"],
-    "box_mesh.ply":     ["05_watertight/mesh/box.ply",
+    # Stage 6 = pymeshfix watertight solids; Stage 5 = the open cut piece; a
+    # run that stopped early still serves something viewable.
+    "leg_mesh.ply":     ["06_fill/mesh/leg_cut.ply",
+                         "05_cut/mesh/leg_cut_open.ply"],
+    "leg_mesh.stl":     ["06_fill/mesh/leg_cut.stl"],
+    "box_mesh.ply":     ["06_fill/mesh/box.ply",
                          "04_recon/mesh/box_recon.ply"],
-    "scene_mesh.ply":   ["05_watertight/mesh/scene_colour.ply",
-                         "05_watertight/mesh/scene.ply",
+    "scene_mesh.ply":   ["06_fill/mesh/scene_colour.ply",
                          "04_recon/mesh/scene_recon.ply"],
-    # The uncut limb the review screen draws and the surgeon places the cut
-    # on. Stage 5's watertight solid comes first: a surface is far easier to
-    # place a cut on than a point cloud, and it is the same geometry Stage 5
-    # actually cuts. The Stage 3 cloud remains as a fallback for jobs measured
-    # before the cut moved.
-    "leg_no_cut.ply":   ["05_watertight/mesh/leg_no_cut.ply",
-                         "03_clean/objects/leg.ply",
-                         "03_clean/objects/leg_no_cut.ply"],
-    "volumes.csv":      ["06_volume/volumes.csv"],
+    # The uncut limb surface the review screen draws and the cut is placed on.
+    # It is Stage 4's reconstruction, published by Stage 5 -- the same surface
+    # Stage 5 cuts.
+    "leg_no_cut.ply":   ["05_cut/mesh/leg_no_cut.ply",
+                         "04_recon/mesh/leg_recon.ply"],
+    "volumes.csv":      ["07_measure/volumes.csv"],
+    "measure.json":     ["07_measure/measure.json"],
+    "circumference.csv": ["07_measure/circumference.csv"],
     # The levelled file, never the other one: cutting_line.json is written
     # before levelling while every mesh is written after, so the two do not
-    # share a frame. The review copy wins when it exists, so a reload after an
-    # edit shows the planes the volume was actually computed from.
+    # share a frame.
     "cutting_line.json": ["03_clean/debug/cutting_line_review.json",
                           "03_clean/debug/cutting_line_levelled.json"],
     "prep/framing.json": ["00_prep/framing.json"],
-    # What the image-cut view needs to line the mesh up with a photograph:
-    # VGGT's per-frame camera, and the rotation Stage 3 levelled the scene by.
-    # Together they take a levelled mesh vertex back to pixel coordinates in the
-    # frame VGGT actually saw.
     "cameras.json":     ["01_inference/raw/cameras.json"],
     "levelling.json":   ["03_clean/debug/levelling.json"],
 }
@@ -222,20 +216,16 @@ def run_job(job_id: str, req: RunRequest):
     # This is the REFERENCE CALIBRATION pass, and the name matters because the
     # stage range makes it look like a full measurement. It is not.
     #
-    # --no-cut tells Stage 3 to detect the cutting planes and publish them
-    # without applying them, and to write no leg_cut.ply at all. Stages 4-6
-    # therefore run on the reference cube alone: they exist here only to produce
-    # the cm-per-unit scale that the Review screen needs to draw the cutting
-    # plane in real units. The subject is not reconstructed and not measured
-    # until a person has agreed where it ends — a volume from a cut nobody
+    # --no-cut: Stage 3 detects and publishes the planes, Stage 4 reconstructs
+    # the limb surface, Stage 5 publishes it uncut (leg_no_cut.ply) without
+    # cutting, and Stages 6-7 fill and measure the reference cube alone -- they
+    # exist here only to produce the cm-per-unit scale the Review screen needs
+    # to draw the cutting plane in real units. The subject is not cut or
+    # measured until a person has agreed where it ends — a volume from a cut nobody
     # approved is the one output this pipeline must never produce, and showing a
     # number on screen before the review would make the review a formality.
     #
-    # Deriving that scale more cheaply was tried and rejected: an oriented
-    # bounding box on Stage 3's own cube cloud gives 40.6 cm/unit against Stage
-    # 6's 60.86 — 33% out, because that cloud carries the floor-extension wall
-    # points. See docs/archive/2026-08/experiments.md, E-preconfirm-scale.
-    REGISTRY.submit(job, "1-6",
+    REGISTRY.submit(job, "1-7",
                     ["-i", os.path.join(job.dir, "00_prep", "images"), "--no-cut"],
                     running_state="running", done_state="awaiting-cut")
     job.measured = True
@@ -246,10 +236,10 @@ def run_job(job_id: str, req: RunRequest):
 def recut(job_id: str, req: RecutRequest):
     """Re-measure with cutting planes the user placed.
 
-    Stages 5-6 only. The cut is applied to the watertight solid Stage 5 already
-    built, so an edit re-runs neither the segmentation nor the surface
-    reconstruction -- measured at about 7 seconds against the whole of stages
-    3-6 before. Nothing before Stage 5 depends on where the planes go.
+    Stages 5-7 only: exact plane cut on Stage 4's surface, pymeshfix fill, then
+    volume and circumference. An edit re-runs neither the segmentation nor the
+    surface reconstruction -- a few seconds. Nothing before Stage 5 depends on
+    where the planes go.
     """
     job = _lookup(job_id)
     if not job.measured or job.state not in ("awaiting-cut", "done", "failed"):
@@ -266,11 +256,11 @@ def recut(job_id: str, req: RecutRequest):
         json.dump({"markers": [p.model_dump() for p in req.planes],
                    "space": "levelled"}, f, indent=2)
 
-    # Stage 5 holds the repaired solid, so the cut is a plane slice on geometry
-    # that already exists. Everything before it -- segmentation, marker
+    # Stage 4's surface already exists, so the cut is a plane slice on it.
+    # Everything before it -- segmentation, marker
     # detection, reconstruction -- is independent of where the planes go and is
     # not repeated.
-    REGISTRY.submit(job, "5-6", ["--planes", path],
+    REGISTRY.submit(job, "5-7", ["--planes", path],
                     running_state="running", done_state="done")
     return {"job_id": job.id, "state": "queued", "planes": len(req.planes)}
 

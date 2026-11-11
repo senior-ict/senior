@@ -14,9 +14,10 @@ Layout:
     work/<name>/01_inference/   predictions.npz, input_frames.png, summary.txt
     work/<name>/02_pointcloud/  points.ply, summary.txt
     work/<name>/03_clean/       clean clouds, summary.txt
-    work/<name>/04_recon/       meshes
-    work/<name>/05_watertight/  watertight meshes
-    work/<name>/06_volume/      volumes.csv
+    work/<name>/04_recon/       meshes (senior: Poisson surface, still open)
+    work/<name>/05_cut/         leg_no_cut.ply, leg_cut_open.ply   (leg-scan-measure cut)
+    work/<name>/06_fill/        leg_cut.ply, box.ply watertight     (pymeshfix)
+    work/<name>/07_measure/     volumes.csv, circumference.csv, measure.json
 """
 import argparse
 import json
@@ -35,8 +36,9 @@ STAGE_DIRS = {
     2: "02_pointcloud",
     3: "03_clean",
     4: "04_recon",
-    5: "05_watertight",
-    6: "06_volume",
+    5: "05_cut",
+    6: "06_fill",
+    7: "07_measure",
 }
 
 
@@ -750,84 +752,96 @@ def run_stage4(args, name):
     _write_summary(d, lines)
 
 
+def _cut_planes_for(args, name):
+    """Which planes Stage 5 cuts on, in priority order.
+
+    --no-cut defers (None): nothing may be measured until a person confirms.
+    Else the planes a review handed back (--planes), else the ones Stage 3
+    detected, else [] -- nothing to cut, the whole limb is the measurement.
+    """
+    if getattr(args, "no_cut", False):
+        return None
+    planes = _review_planes(args)
+    if planes is not None:
+        return planes
+    detected = os.path.join(src_dir(args, name, 3), "debug", "cutting_line_levelled.json")
+    if os.path.exists(detected):
+        with open(detected) as fh:
+            return json.load(fh).get("markers", [])
+    return []
+
+
+def _limb_recon(args, name):
+    """Stage 4's limb surface (leg_recon.ply / obj_recon.ply)."""
+    mesh_dir = os.path.join(src_dir(args, name, 4), "mesh")
+    for stem in ("leg_recon", "obj_recon", "leg_cut_recon"):
+        p = os.path.join(mesh_dir, stem + ".ply")
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def run_stage5(args, name):
-    """Repairs Stage 4's meshes into watertight solids, skipping the merged scene mesh."""
-    import glob
-    from pipeline.stages.watertight import watertight_stage
+    """Cuts Stage 4's limb surface with the confirmed planes (leg-scan-measure)."""
+    from pipeline.stages.cut import cut_stage
 
-    prev = os.path.join(src_dir(args, name, 4), "mesh")
-    # scene_recon.ply is the MERGE of the per-object meshes, not another object.
-    # Feeding it back in makes Stage 5 merge every object twice, and the
-    # coincident duplicate geometry turns two closed surfaces into thousands of
-    # non-manifold fragments (measured: 2 components -> 7,554, euler 4 -> 3113).
-    # The orchestrator passes recon_mesh_paths, which already excludes it; only
-    # this glob had to rediscover that.
-    recon = sorted(p for p in glob.glob(os.path.join(prev, "*_recon.ply"))
-                   if os.path.basename(p) != "scene_recon.ply")
-    if not recon:
-        sys.exit("ERROR: stage 4 recon meshes missing — run stage 4 first")
-
-    # Which planes this stage cuts on, in priority order: the ones a review
-    # handed back, else the ones Stage 3 detected. --no-cut defers entirely, so
-    # the uncut solid is published and nothing is cut until a person confirms.
-    cut_planes = None
-    if not getattr(args, "no_cut", False):
-        cut_planes = _review_planes(args)
-        if cut_planes is None:
-            detected = os.path.join(src_dir(args, name, 3), "debug",
-                                    "cutting_line_levelled.json")
-            if os.path.exists(detected):
-                with open(detected) as planes_file:
-                    cut_planes = json.load(planes_file).get("markers", [])
-            else:
-                # Stage 3 found no marker planes, so there is nothing to cut and
-                # the whole object is the measurement. That is an empty list, not
-                # None: None is reserved for a cut deliberately deferred, which
-                # must produce no measurement at all.
-                cut_planes = []
-
+    limb = _limb_recon(args, name)
+    if limb is None:
+        sys.exit("ERROR: stage 4 limb mesh missing — run stage 4 first")
     d = stage_dir(name, 5)
-    _clear_meshes(d)
-    scene, wt = watertight_stage(recon, d, cut_planes=cut_planes,
-                                 height_axis=args.segment_height_axis)
-
-    lines = ["STAGE 5 — watertight", ""]
-    lines += ["  " + _mesh_stats(p) for p in (wt or [])]
+    out = cut_stage(limb, d, cut_planes=_cut_planes_for(args, name),
+                    height_axis=args.segment_height_axis)
+    lines = ["STAGE 5 — cut (leg-scan-measure)", ""]
+    for p in sorted(os.listdir(os.path.join(d, "mesh"))):
+        lines.append("  " + _mesh_stats(os.path.join(d, "mesh", p)))
+    lines.append("")
+    lines.append(f"  cut piece: {out or 'deferred (--no-cut)'}")
     _write_summary(d, lines)
 
 
 def run_stage6(args, name):
-    """Computes real-world volumes, preferring Stage 5's meshes and falling back to Stage 4's."""
-    import glob
-    from pipeline.stages.volume import compute_volumes
+    """Fills the cut piece and the reference cube to watertight with pymeshfix."""
+    from pipeline.stages.cut import OPEN_CUT_NAME
+    from pipeline.stages.fill_watertight import fill_stage
 
-    for n in (5, 4):
-        prev = os.path.join(src_dir(args, name, n), "mesh")
-        meshes = sorted(glob.glob(os.path.join(prev, "*.ply")))
-        # scene* is the merge of the others, and leg_no_cut is the UNCUT limb
-        # published for review. Measuring either reports a volume nobody asked
-        # for -- in leg_no_cut's case, one for a cut nobody has confirmed.
-        meshes = [p for p in meshes
-                  if not os.path.basename(p).startswith("scene")
-                  and os.path.basename(p) != "leg_no_cut.ply"]
-        if meshes:
-            break
-    if not meshes:
-        sys.exit("ERROR: no meshes from stage 4/5 — run those first")
-
+    open_cut = os.path.join(src_dir(args, name, 5), "mesh", OPEN_CUT_NAME)
+    box = os.path.join(src_dir(args, name, 4), "mesh", "box_recon.ply")
+    if not os.path.exists(box) and not os.path.exists(open_cut):
+        sys.exit("ERROR: nothing to fill — run stages 4-5 first")
     d = stage_dir(name, 6)
-    df = compute_volumes(meshes, voxel_res=args.voxel_res,
-                         auto_res=args.auto_res,
-                         clean_dir=src_dir(args, name, 3))
-    lines = [f"STAGE 6 — volume   (from {prev})", ""]
-    if df is not None:
-        df.to_csv(os.path.join(d, "volumes.csv"), index=False)
-        lines.append(df.to_string(index=False))
+    written = fill_stage(open_cut, box, d, joincomp=args.meshfix_join,
+                         remove_small=args.meshfix_keep_main)
+    lines = ["STAGE 6 — fill to watertight (pymeshfix)   "
+             f"joincomp={args.meshfix_join} keep_main={args.meshfix_keep_main}", ""]
+    lines += ["  " + _mesh_stats(p) for k, p in written.items() if k != "scene_colour"]
+    _write_summary(d, lines)
+
+
+def run_stage7(args, name):
+    """Volume (signed tetrahedra) and circumference at the cuts, in real units."""
+    from pipeline.stages.measure import measure_stage
+
+    fill_mesh = os.path.join(src_dir(args, name, 6), "mesh")
+    cut_dir = src_dir(args, name, 5)
+    d = stage_dir(name, 7)
+    res = measure_stage(fill_mesh, os.path.join(cut_dir, "mesh", "leg_no_cut.ply"),
+                        os.path.join(cut_dir, "cut_planes.json"), d)
+    lines = ["STAGE 7 — measure (leg-scan-measure)", ""]
+    if res is None:
+        lines.append("  no reference cube — nothing scaled")
+    else:
+        lines.append(f"  cm per unit: {res['cm_per_unit']:.6f}")
+        if res["leg"]:
+            lines.append(f"  volume: {res['leg']['volume_ml']:.2f} mL  "
+                         f"watertight={res['leg']['watertight']}")
+        for c in res["circumference"]:
+            t = "-" if c["tape_cm"] is None else f"{c['tape_cm']:.2f} cm"
+            lines.append(f"  circumference {c['plane']}: {t}")
     _write_summary(d, lines)
 
 
 RUNNERS = {0: run_stage0, 1: run_stage1, 2: run_stage2, 3: run_stage3,
-           4: run_stage4, 5: run_stage5, 6: run_stage6}
+           4: run_stage4, 5: run_stage5, 6: run_stage6, 7: run_stage7}
 
 
 def parse_stages(spec):
@@ -927,8 +941,15 @@ def main():
     p.add_argument("--recon-method", dest="recon_method", default="poisson")
     p.add_argument("--box-recon-method", dest="box_recon_method", default=None)
     p.add_argument("--obj-recon-method", dest="obj_recon_method", default=None)
-    p.add_argument("--voxel-res", dest="voxel_res", type=int, default=150)
-    p.add_argument("--no-auto-res", dest="auto_res", action="store_false")
+    p.add_argument("--voxel-res", dest="voxel_res", type=int, default=150,
+                   help=argparse.SUPPRESS)  # senior's voxel fallback; unused since Stage 7
+    p.add_argument("--no-auto-res", dest="auto_res", action="store_false",
+                   help=argparse.SUPPRESS)
+    p.add_argument("--meshfix-join", dest="meshfix_join", action="store_true",
+                   help="stage 6: pymeshfix joins nearby pieces (leg-scan-measure "
+                        "'Join nearby pieces', off by default)")
+    p.add_argument("--meshfix-keep-all", dest="meshfix_keep_main", action="store_false",
+                   help="stage 6: keep every piece instead of only the main one")
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
